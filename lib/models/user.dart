@@ -6,7 +6,7 @@ class User{
   String email;
   String phone;
   String profileImages;
-
+  
   User({
     required this.id,
     required this.name,
@@ -15,3 +15,5 @@ class User{
     required this.profileImages,
   });
 }
+
+

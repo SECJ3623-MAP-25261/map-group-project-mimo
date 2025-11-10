@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
+import '../../../../dbase/data.dart';
 
 class ProfileScreen extends StatelessWidget {
 
   
-  final String name = "Haikal Japri";
-  final String email = "haikal04@graduate.utm.my";
+  // final String name = "Haikal Japri";
+  // final String email = "haikal04@graduate.utm.my";
+  final user = user1;
 
   @override
   Widget build(BuildContext context) {
@@ -41,7 +43,7 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
               Text(
-                name,
+                user.name,
                 style: const TextStyle(
                   color:  Colors.white,
                   fontSize: 18,
@@ -50,7 +52,7 @@ class ProfileScreen extends StatelessWidget {
               ),
 
               Text(
-                email,
+                user.email,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,
