@@ -1,0 +1,27 @@
+import 'package:flutter/material.dart';
+import 'screen/profile/profile.dart';
+import 'screen/profile/edit_profile.dart';
+
+void main() {
+  runApp(CampusClosetApp());
+}
+
+class CampusClosetApp extends StatelessWidget {
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'Campus Closet',
+      debugShowCheckedModeBanner: false,
+      theme: ThemeData(primarySwatch: Colors.blue),
+
+      // 🧭 Initial screen shown when the app starts
+      initialRoute: '/profile',
+
+      // 🗺️ Named routes
+      routes: {
+        '/profile': (context) => ProfileScreen(),
+        '/editProfile': (context) => EditProfileScreen(),
+      },
+    );
+  }
+}
