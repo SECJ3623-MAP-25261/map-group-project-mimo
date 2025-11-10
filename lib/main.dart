@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'accounts/profile/screen/profile/profile.dart';
 import 'accounts/profile/screen/profile/edit_profile.dart';
-import 'accounts/registration/main.dart';
+import 'accounts/registration/registration.dart';
 
 void main() {
   runApp(CampusClosetApp());
