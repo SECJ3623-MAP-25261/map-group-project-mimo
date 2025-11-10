@@ -7,6 +7,8 @@ void main() {
 }
 
 class CampusClosetApp extends StatelessWidget {
+  const CampusClosetApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
