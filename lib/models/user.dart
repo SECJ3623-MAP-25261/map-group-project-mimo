@@ -17,7 +17,7 @@ class User {
 class Renter {
   String userId;
   int pendingRequests;
-  int rentedOut;
+  int itemListed;
   int returned;
   int reviews;
   double earnings;
@@ -25,7 +25,7 @@ class Renter {
   Renter({
     required this.userId,
     this.pendingRequests = 0,
-    this.rentedOut = 0,
+    this.itemListed = 0,
     this.returned = 0,
     this.reviews = 0,
     this.earnings = 0.0,

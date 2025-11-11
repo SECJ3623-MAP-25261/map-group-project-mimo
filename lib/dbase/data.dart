@@ -11,7 +11,7 @@ final user1 = User(
 final renter1 = Renter(
   userId: user1.id,
   pendingRequests: 2,
-  rentedOut: 3,
+  itemListed: 3,
   returned: 1,
   reviews: 5,
   earnings: 150.75,
