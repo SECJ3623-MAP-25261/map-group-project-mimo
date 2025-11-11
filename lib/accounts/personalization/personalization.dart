@@ -93,6 +93,7 @@ class RenterDashboard extends StatelessWidget {
               _menuButton(context, 'Add New Item', Icons.add),
               _menuButton(context, 'View Rental Requests', Icons.inventory),
               _menuButton(context, 'Transaction History', Icons.receipt_long),
+              _menuButton(context, 'Help & Support', Icons.help_outline),
 
               const SizedBox(height: 20),
 
@@ -194,7 +195,7 @@ class RenterDashboard extends StatelessWidget {
   }
 }
 
-// Placeholder page (temporary for navigation)
+// Placeholder page for navigation
 class PlaceholderPage extends StatelessWidget {
   final String title;
   const PlaceholderPage({super.key, required this.title});
