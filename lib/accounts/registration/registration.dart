@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'package:profile_managemenr/authentication/login.dart';
 
 void main() {
   runApp(const RegistrationApp());
@@ -139,6 +140,14 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
   }
 
+  void _navigateToLogin() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(builder: (context) => const LoginPage()),
+    );
+
+  }
+
   void _submitForm() async {
     if (_isGuestMode) {
       setState(() {
@@ -233,7 +242,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         children: [
           _buildHeader(),
           const SizedBox(height: 30),
-          _buildUserTypeToggle(),
           const SizedBox(height: 25),
           _buildRoleChangeInfo(),
           const SizedBox(height: 25),
@@ -241,6 +249,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           const SizedBox(height: 20),
           if (_successMessage.isNotEmpty) _buildSuccessMessage(),
           _buildForm(),
+          const SizedBox(height: 20),
+          _buildLoginButton(),
         ],
       ),
     );
@@ -271,68 +281,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildUserTypeToggle() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0f0f23).withOpacity(0.8),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: const Color(0xFF4096ff).withOpacity(0.3),
-        ),
-      ),
-      padding: const EdgeInsets.all(4),
-      child: Row(
-        children: [
-          Expanded(
-            child: _buildToggleOption('Rentee', 'rentee'),
-          ),
-          Expanded(
-            child: _buildToggleOption('Renter', 'renter'),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildToggleOption(String label, String type) {
-    final isActive = _userType == type;
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _userType = type;
-        });
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
-        decoration: BoxDecoration(
-          gradient: isActive
-              ? const LinearGradient(
-                  colors: [Color(0xFF4096ff), Color(0xFF69c0ff)],
-                )
-              : null,
-          borderRadius: BorderRadius.circular(8),
-          boxShadow: isActive
-              ? [
-                  BoxShadow(
-                    color: const Color(0xFF4096ff).withOpacity(0.3),
-                    blurRadius: 12,
-                    offset: const Offset(0, 4),
-                  ),
-                ]
-              : null,
-        ),
-        child: Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: isActive ? Colors.white : const Color(0xFFa0a0a0),
-          ),
-        ),
-      ),
     );
   }
 
@@ -863,6 +811,38 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ),
       ),
+    );
+  }
+
+  // Login button widget
+  Widget _buildLoginButton() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          'Already have an account? ',
+          style: TextStyle(
+            color: Color(0xFFa0a0a0),
+            fontSize: 14,
+          ),
+        ),
+        TextButton(
+          onPressed: _navigateToLogin,
+          style: TextButton.styleFrom(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+            minimumSize: Size.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text(
+            'Login',
+            style: TextStyle(
+              color: Color(0xFF4096ff),
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

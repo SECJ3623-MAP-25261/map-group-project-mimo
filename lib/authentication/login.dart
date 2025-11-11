@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'forget_password.dart';
+import 'package:profile_managemenr/accounts/registration/registration.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -10,6 +11,11 @@ class LoginPage extends StatefulWidget {
 
 class _LoginPageState extends State<LoginPage> {
   bool rememberMe = false;
+
+  void _navigateToRegister(){
+    Navigator.push(context,
+    MaterialPageRoute(builder: (context) => const RegistrationApp()),);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -148,6 +154,7 @@ class _LoginPageState extends State<LoginPage> {
                     ),
                   ),
                 ),
+                _buildRegisterButton(),
               ],
             ),
 
@@ -159,6 +166,35 @@ class _LoginPageState extends State<LoginPage> {
           ],
         ),
       ),
+    );
+  }
+
+
+Widget _buildRegisterButton() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          "Don't have an account? ",
+          style: TextStyle(
+            color: Colors.white70,
+            fontSize: 14,
+          ),
+        ),
+        GestureDetector(
+          onTap: _navigateToRegister,
+          child: const Text(
+            'Register',
+            style: TextStyle(
+              color: Color(0xFF6AE0C4),
+              fontSize: 14,
+              fontWeight: FontWeight.bold,
+              decoration: TextDecoration.underline,
+              decorationColor: Color(0xFF6AE0C4),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }
