@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:profile_managemenr/authentication/login.dart';
+import 'package:profile_managemenr/main.dart';
 
 void main() {
   runApp(const RegistrationApp());
@@ -148,47 +149,32 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   }
 
-  void _submitForm() async {
-    if (_isGuestMode) {
-      setState(() {
-        _isSubmitting = true;
-      });
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      setState(() {
-        _successMessage = 'Welcome! You are now browsing as a guest with limited features.';
-        _isSubmitting = false;
-      });
-      return;
-    }
-
-    if (_formKey.currentState!.validate() && _termsAccepted) {
-      setState(() {
-        _isSubmitting = true;
-      });
-
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      setState(() {
-        _successMessage = 'Registration successful! Welcome $_userType. Please verify your email later.';
-        _isSubmitting = false;
-      });
-
-      _formKey.currentState!.reset();
-      _nameController.clear();
-      _emailController.clear();
-      _phoneController.clear();
-      _passwordController.clear();
-      _confirmPasswordController.clear();
-      setState(() {
-        _termsAccepted = false;
-        _emailStatus = '';
-        _passwordStrength = 0.0;
-        _passwordStrengthLabel = 'Password strength';
-      });
-    }
+void _submitForm() async {
+  if (_isGuestMode) {
+    
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (context) => const MyApp()), 
+    );
+    return;
   }
+
+  
+  if (_formKey.currentState!.validate() && _termsAccepted) {
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+
+    setState(() {
+      _successMessage = 'Registration successful! Welcome $_userType. Please verify your email later.';
+      _isSubmitting = false;
+    });
+
+    
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -221,40 +207,43 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Widget _buildRegistrationCard() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF1a1a2e).withOpacity(0.9),
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: const Color(0xFF4096ff).withOpacity(0.2),
+  return Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFF1a1a2e).withOpacity(0.9),
+      borderRadius: BorderRadius.circular(20),
+      border: Border.all(
+        color: const Color(0xFF4096ff).withOpacity(0.2),
+      ),
+      boxShadow: [
+        BoxShadow(
+          color: Colors.black.withOpacity(0.3),
+          blurRadius: 40,
+          offset: const Offset(0, 20),
         ),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
-            blurRadius: 40,
-            offset: const Offset(0, 20),
-          ),
-        ],
-      ),
-      padding: const EdgeInsets.all(30),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          _buildHeader(),
-          const SizedBox(height: 30),
-          const SizedBox(height: 25),
-          _buildRoleChangeInfo(),
-          const SizedBox(height: 25),
-          _buildGuestOption(),
-          const SizedBox(height: 20),
-          if (_successMessage.isNotEmpty) _buildSuccessMessage(),
-          _buildForm(),
-          const SizedBox(height: 20),
-          _buildLoginButton(),
-        ],
-      ),
-    );
-  }
+      ],
+    ),
+    padding: const EdgeInsets.all(30),
+    child: Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildHeader(),
+        const SizedBox(height: 30),
+        _buildRoleChangeInfo(),
+        const SizedBox(height: 25),
+        _buildGuestOption(),
+        const SizedBox(height: 20),
+        if (_successMessage.isNotEmpty) _buildSuccessMessage(),
+        // Form is now WITHOUT the submit button
+        _buildForm(),
+        const SizedBox(height: 20),
+        // 👇 Submit button is OUTSIDE the IgnorePointer
+        _buildSubmitButton(),
+        const SizedBox(height: 20),
+        _buildLoginButton(),
+      ],
+    ),
+  );
+}
 
   Widget _buildHeader() {
     return Column(
@@ -420,70 +409,69 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   }
 
   Widget _buildForm() {
-    return Opacity(
-      opacity: _isGuestMode ? 0.6 : 1.0,
-      child: IgnorePointer(
-        ignoring: _isGuestMode,
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              _buildTextField(
-                controller: _nameController,
-                label: 'Full Name',
-                hint: 'Enter your full name',
-                validator: (value) {
-                  if (value == null || value.trim().length < 2) {
-                    return 'Name must be at least 2 characters';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              _buildEmailField(),
-              const SizedBox(height: 20),
-              _buildTextField(
-                controller: _phoneController,
-                label: 'Phone Number',
-                hint: 'Enter your phone number',
-                keyboardType: TextInputType.phone,
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a phone number';
-                  }
-                  final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-                  if (!RegExp(r'^[\+]?[1-9][\d]{0,15}$').hasMatch(cleaned)) {
-                    return 'Please enter a valid phone number';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 20),
-              _buildPasswordField(),
-              const SizedBox(height: 20),
-              _buildTextField(
-                controller: _confirmPasswordController,
-                label: 'Confirm Password',
-                hint: 'Confirm your password',
-                obscureText: true,
-                validator: (value) {
-                  if (value != _passwordController.text) {
-                    return 'Passwords do not match';
-                  }
-                  return null;
-                },
-              ),
-              const SizedBox(height: 25),
-              _buildTermsCheckbox(),
-              const SizedBox(height: 25),
-              _buildSubmitButton(),
-            ],
-          ),
+  return Opacity(
+    opacity: _isGuestMode ? 0.6 : 1.0,
+    child: IgnorePointer(
+      ignoring: _isGuestMode,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            _buildTextField(
+              controller: _nameController,
+              label: 'Full Name',
+              hint: 'Enter your full name',
+              validator: (value) {
+                if (value == null || value.trim().length < 2) {
+                  return 'Name must be at least 2 characters';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            _buildEmailField(),
+            const SizedBox(height: 20),
+            _buildTextField(
+              controller: _phoneController,
+              label: 'Phone Number',
+              hint: 'Enter your phone number',
+              keyboardType: TextInputType.phone,
+              validator: (value) {
+                if (value == null || value.isEmpty) {
+                  return 'Please enter a phone number';
+                }
+                final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+                if (!RegExp(r'^[\+]?[1-9][\d]{0,15}$').hasMatch(cleaned)) {
+                  return 'Please enter a valid phone number';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 20),
+            _buildPasswordField(),
+            const SizedBox(height: 20),
+            _buildTextField(
+              controller: _confirmPasswordController,
+              label: 'Confirm Password',
+              hint: 'Confirm your password',
+              obscureText: true,
+              validator: (value) {
+                if (value != _passwordController.text) {
+                  return 'Passwords do not match';
+                }
+                return null;
+              },
+            ),
+            const SizedBox(height: 25),
+            _buildTermsCheckbox(),
+            // ❌ NO _buildSubmitButton() here
+          ],
         ),
       ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildTextField({
     required TextEditingController controller,
