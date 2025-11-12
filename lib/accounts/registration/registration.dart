@@ -1,7 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+<<<<<<< HEAD
 import 'package:campus_closet/accounts/authentication/login.dart';
 import 'package:campus_closet/main.dart';
+=======
+import 'package:profile_managemenr/accounts/authentication/login.dart';
+import 'package:profile_managemenr/main.dart';
+import 'package:profile_managemenr/dbase/data.dart';
+import 'package:profile_managemenr/models/user.dart';
+
+>>>>>>> 0f565fb517835cc6ce3ac3f2029780fc16004f04
 
 void main() {
   runApp(const RegistrationApp());
@@ -168,9 +176,23 @@ void _submitForm() async {
     await Future.delayed(const Duration(milliseconds: 1500));
 
     setState(() {
-      _successMessage = 'Registration successful! Welcome $_userType. Please verify your email later.';
-      _isSubmitting = false;
-    });
+  // Create new user
+  final newUser = User(
+    id: DateTime.now().millisecondsSinceEpoch.toString(),
+    name: _nameController.text.trim(),
+    email: _emailController.text.trim(),
+    phone: _phoneController.text.trim(),
+    profileImages: '',
+  );
+
+  // Add to dummy database
+  dummyUsers.add(newUser);
+
+  _successMessage =
+      'Registration successful! Welcome ${newUser.name}. You can now login.';
+  _isSubmitting = false;
+});
+
 
     
   }

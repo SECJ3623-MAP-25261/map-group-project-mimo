@@ -10,8 +10,9 @@ import 'view_activity.dart';
 class ProfileScreen extends StatelessWidget {
   // final String name = "Haikal Japri";
   // final String email = "haikal04@graduate.utm.my";
-  final user = user1;
+  //final user = user1;
   final renter = renter1;
+ final user1 = dummyUsers;
 
   //const ProfileScreen({super.key});
 
@@ -51,7 +52,7 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
               Text(
-                user.name,
+                user1[0].name,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -60,7 +61,7 @@ class ProfileScreen extends StatelessWidget {
               ),
 
               Text(
-                user.email,
+                user1[0].email,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
               ),
 
@@ -140,7 +141,7 @@ class ProfileScreen extends StatelessWidget {
             context,
             MaterialPageRoute(
               builder: (context) =>
-                  CampusClosetApp(renter: renter1, user: user1),
+                  CampusClosetApp(renter: renter1, user: dummyUsers[0]),
             ),
           );
         }
