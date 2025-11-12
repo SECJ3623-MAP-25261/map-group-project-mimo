@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:campus_closet/accounts/profile/screen/profile/profile.dart';
+import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
 
 void main() => runApp(const MyApp());
 

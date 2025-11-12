@@ -1,15 +1,9 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:campus_closet/accounts/authentication/login.dart';
-import 'package:campus_closet/main.dart';
-import 'package:campus_closet/models/user.dart';
-import 'package:campus_closet/accounts/authentication/login.dart';
-import 'package:campus_closet/main.dart';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/main.dart';
 import 'package:profile_managemenr/dbase/data.dart';
 import 'package:profile_managemenr/models/user.dart';
-
 
 void main() {
   runApp(const RegistrationApp());
@@ -24,8 +18,39 @@ class RegistrationApp extends StatelessWidget {
       title: 'Account Registration',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: const Color(0xFF0f0f23),
+        brightness: Brightness.light,
+        scaffoldBackgroundColor: const Color(0xFFF9FAFB), // Very light gray
+        primaryColor: const Color(0xFF2a9d8f), // Teal - professional & cheerful
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: const Color(0xFF2a9d8f),
+          brightness: Brightness.light,
+        ),
+        inputDecorationTheme: InputDecorationTheme(
+          filled: true,
+          fillColor: const Color(0xFFF1F3F5),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD0D5DD), width: 1),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFD0D5DD), width: 1),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFF2a9d8f), width: 2),
+          ),
+          errorBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: const BorderSide(color: Color(0xFFe76f51), width: 2),
+          ),
+          hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        ),
+        textTheme: TextTheme(
+          bodyMedium: const TextStyle(color: Color(0xFF374151)),
+          labelMedium: const TextStyle(color: Color(0xFF4B5563), fontSize: 14),
+        ),
       ),
       home: const RegistrationScreen(),
     );
@@ -229,19 +254,16 @@ void _submitForm() async {
     );
   }
 
-  Widget _buildRegistrationCard() {
+ Widget _buildRegistrationCard() {
   return Container(
     decoration: BoxDecoration(
-      color: const Color(0xFF1a1a2e).withOpacity(0.9),
+      color: Colors.white,
       borderRadius: BorderRadius.circular(20),
-      border: Border.all(
-        color: const Color(0xFF4096ff).withOpacity(0.2),
-      ),
       boxShadow: [
         BoxShadow(
-          color: Colors.black.withOpacity(0.3),
-          blurRadius: 40,
-          offset: const Offset(0, 20),
+          color: const Color(0xFF000000).withOpacity(0.06),
+          blurRadius: 20,
+          offset: const Offset(0, 8),
         ),
       ],
     ),
@@ -250,18 +272,16 @@ void _submitForm() async {
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
         _buildHeader(),
-        const SizedBox(height: 30),
+        const SizedBox(height: 24),
         _buildRoleChangeInfo(),
-        const SizedBox(height: 25),
+        const SizedBox(height: 20),
         _buildGuestOption(),
         const SizedBox(height: 20),
         if (_successMessage.isNotEmpty) _buildSuccessMessage(),
-        // Form is now WITHOUT the submit button
         _buildForm(),
         const SizedBox(height: 20),
-        // 👇 Submit button is OUTSIDE the IgnorePointer
         _buildSubmitButton(),
-        const SizedBox(height: 20),
+        const SizedBox(height: 16),
         _buildLoginButton(),
       ],
     ),
@@ -269,167 +289,158 @@ void _submitForm() async {
 }
 
   Widget _buildHeader() {
-    return Column(
-      children: [
-        ShaderMask(
-          shaderCallback: (bounds) => const LinearGradient(
-            colors: [Color(0xFF4096ff), Color(0xFF69c0ff)],
-          ).createShader(bounds),
-          child: const Text(
-            'Account Registration',
-            style: TextStyle(
-              fontSize: 28,
-              fontWeight: FontWeight.w700,
-              color: Colors.white,
-            ),
-          ),
+  return Column(
+    children: [
+      Text(
+        'Account Registration',
+        style: TextStyle(
+          fontSize: 28,
+          fontWeight: FontWeight.bold,
+          color: const Color(0xFF111827), // Near-black for readability
         ),
-        const SizedBox(height: 8),
-        const Text(
-          'Create your account',
-          style: TextStyle(
-            color: Color(0xFFa0a0a0),
-            fontSize: 16,
+      ),
+      const SizedBox(height: 6),
+      const Text(
+        'Create your account',
+        style: TextStyle(
+          color: Color(0xFF6B7280), // Muted gray
+          fontSize: 16,
+        ),
+      ),
+    ],
+  );
+}
+
+Widget _buildRoleChangeInfo() {
+  return Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFF2a9d8f).withOpacity(0.1),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(
+        color: const Color(0xFF2a9d8f).withOpacity(0.3),
+      ),
+    ),
+    padding: const EdgeInsets.all(16),
+    child: Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Icon(Icons.info, size: 18, color: Color(0xFF2a9d8f)),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Flexible Role Selection',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF2a9d8f),
+                  fontSize: 14,
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'You can change your role anytime after registration in your profile settings',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF6B7280),
+                  height: 1.4,
+                ),
+              ),
+            ],
           ),
         ),
       ],
-    );
-  }
-
-  Widget _buildRoleChangeInfo() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF4096ff).withOpacity(0.1),
-        border: Border.all(
-          color: const Color(0xFF4096ff).withOpacity(0.2),
-        ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          const Text('ℹ️', style: TextStyle(fontSize: 18)),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Flexible Role Selection',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: Color(0xFF4096ff),
-                    fontSize: 14,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'You can change your role anytime after registration in your profile settings',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFFa0a0a0),
-                    height: 1.4,
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildGuestOption() {
-    return Container(
-      decoration: BoxDecoration(
-        color: const Color(0xFF0f0f23).withOpacity(0.6),
-        border: Border.all(
-          color: const Color(0xFF4096ff).withOpacity(0.2),
+  return Container(
+    decoration: BoxDecoration(
+      color: const Color(0xFFF9FAFB),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFFD1D5DB)),
+    ),
+    padding: const EdgeInsets.all(16),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: const [
+              Text(
+                'Continue as Guest',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Color(0xFF1F2937),
+                ),
+              ),
+              SizedBox(height: 4),
+              Text(
+                'Limited features available',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Color(0xFF6B7280),
+                ),
+              ),
+            ],
+          ),
         ),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      padding: const EdgeInsets.all(16),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: const [
-                Text(
-                  'Continue as Guest',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w500,
-                    color: Colors.white,
-                  ),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  'Limited features available',
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: Color(0xFFa0a0a0),
-                  ),
-                ),
-              ],
+        GestureDetector(
+          onTap: () {
+            setState(() {
+              _isGuestMode = !_isGuestMode;
+            });
+          },
+          child: Container(
+            width: 48,
+            height: 24,
+            decoration: BoxDecoration(
+              color: _isGuestMode
+                  ? const Color(0xFF2a9d8f)
+                  : const Color(0xFFD1D5DB),
+              borderRadius: BorderRadius.circular(12),
             ),
-          ),
-          GestureDetector(
-            onTap: () {
-              setState(() {
-                _isGuestMode = !_isGuestMode;
-              });
-            },
-            child: Container(
-              width: 48,
-              height: 24,
-              decoration: BoxDecoration(
-                color: _isGuestMode
-                    ? const Color(0xFF4096ff)
-                    : const Color(0xFF4096ff).withOpacity(0.3),
-                borderRadius: BorderRadius.circular(12),
-              ),
-              child: AnimatedAlign(
-                duration: const Duration(milliseconds: 300),
-                alignment: _isGuestMode ? Alignment.centerRight : Alignment.centerLeft,
-                child: Container(
-                  width: 20,
-                  height: 20,
-                  margin: const EdgeInsets.all(2),
-                  decoration: const BoxDecoration(
-                    color: Colors.white,
-                    shape: BoxShape.circle,
-                  ),
+            child: AnimatedAlign(
+              duration: const Duration(milliseconds: 300),
+              alignment: _isGuestMode ? Alignment.centerRight : Alignment.centerLeft,
+              child: Container(
+                width: 20,
+                height: 20,
+                margin: const EdgeInsets.all(2),
+                decoration: const BoxDecoration(
+                  color: Colors.white,
+                  shape: BoxShape.circle,
                 ),
               ),
             ),
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
 
-  Widget _buildSuccessMessage() {
-    return Container(
-      margin: const EdgeInsets.only(bottom: 20),
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF52c41a).withOpacity(0.1),
-        border: Border.all(
-          color: const Color(0xFF52c41a).withOpacity(0.3),
-        ),
-        borderRadius: BorderRadius.circular(8),
+Widget _buildSuccessMessage() {
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFF4CAF50).withOpacity(0.1),
+      borderRadius: BorderRadius.circular(8),
+      border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
+    ),
+    child: Text(
+      _successMessage,
+      textAlign: TextAlign.center,
+      style: const TextStyle(
+        color: Color(0xFF2E7D32),
+        fontWeight: FontWeight.w500,
       ),
-      child: Text(
-        _successMessage,
-        textAlign: TextAlign.center,
-        style: const TextStyle(
-          color: Color(0xFF52c41a),
-        ),
-      ),
-    );
-  }
+    ),
+  );
+}
 
   Widget _buildForm() {
   return Opacity(
@@ -496,364 +507,255 @@ void _submitForm() async {
   );
 }
 
-  Widget _buildTextField({
-    required TextEditingController controller,
-    required String label,
-    required String hint,
-    bool obscureText = false,
-    TextInputType? keyboardType,
-    String? Function(String?)? validator,
-  }) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          label,
-          style: const TextStyle(
-            fontWeight: FontWeight.w500,
-            color: Color(0xFFe0e0e0),
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: controller,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          validator: validator,
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF666666)),
-            filled: true,
-            fillColor: const Color(0xFF0f0f23).withOpacity(0.8),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFF4096ff).withOpacity(0.3),
-                width: 2,
-              ),
+ Widget _buildTextField({
+  required TextEditingController controller,
+  required String label,
+  required String hint,
+  bool obscureText = false,
+  TextInputType? keyboardType,
+  String? Function(String?)? validator,
+}) {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        label,
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF374151),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFF4096ff).withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF4096ff),
-                width: 2,
-              ),
-            ),
-            errorBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFFff4d4f),
-                width: 2,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 8),
+      TextFormField(
+        controller: controller,
+        obscureText: obscureText,
+        keyboardType: keyboardType,
+        validator: validator,
+        // Let the global theme handle style & decoration
+      ),
+    ],
+  );
+}
 
-  Widget _buildEmailField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Email Address',
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: Color(0xFFe0e0e0),
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _emailController,
-          keyboardType: TextInputType.emailAddress,
-          validator: (value) {
-            if (value == null || !_isValidEmail(value)) {
-              return 'Please enter a valid email';
-            }
-            if (_existingEmails.contains(value.toLowerCase())) {
-              return 'Email already exists';
-            }
-            return null;
-          },
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Enter your email',
-            hintStyle: const TextStyle(color: Color(0xFF666666)),
-            filled: true,
-            fillColor: const Color(0xFF0f0f23).withOpacity(0.8),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFF4096ff).withOpacity(0.3),
-                width: 2,
-              ),
+Widget _buildEmailField() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Email Address',
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF374151),
             ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFF4096ff).withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF4096ff),
-                width: 2,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-          ),
-        ),
-        const SizedBox(height: 4),
-        if (_emailStatus.isNotEmpty)
-          Text(
-            _emailStatus == 'checking'
-                ? 'Checking availability...'
-                : _emailStatus == 'taken'
-                    ? '✗ Email already exists'
-                    : '✓ Email available',
-            style: TextStyle(
-              fontSize: 12,
-              color: _emailStatus == 'checking'
-                  ? const Color(0xFF4096ff)
-                  : _emailStatus == 'taken'
-                      ? const Color(0xFFff4d4f)
-                      : const Color(0xFF52c41a),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildPasswordField() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Password',
-          style: TextStyle(
-            fontWeight: FontWeight.w500,
-            color: Color(0xFFe0e0e0),
-            fontSize: 14,
-          ),
-        ),
-        const SizedBox(height: 8),
-        TextFormField(
-          controller: _passwordController,
-          obscureText: !_passwordVisible,
-          validator: (value) {
-            if (value == null || value.length < 8) {
-              return 'Password must be at least 8 characters';
-            }
-            return null;
-          },
-          style: const TextStyle(color: Colors.white),
-          decoration: InputDecoration(
-            hintText: 'Create a strong password',
-            hintStyle: const TextStyle(color: Color(0xFF666666)),
-            filled: true,
-            fillColor: const Color(0xFF0f0f23).withOpacity(0.8),
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFF4096ff).withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide(
-                color: const Color(0xFF4096ff).withOpacity(0.3),
-                width: 2,
-              ),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: const BorderSide(
-                color: Color(0xFF4096ff),
-                width: 2,
-              ),
-            ),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            suffixIcon: IconButton(
-              icon: Text(
-                _passwordVisible ? 'Hide' : 'Show',
-                style: const TextStyle(
-                  color: Color(0xFF4096ff),
-                  fontSize: 14,
-                ),
-              ),
-              onPressed: () {
-                setState(() {
-                  _passwordVisible = !_passwordVisible;
-                });
-              },
-            ),
-          ),
-        ),
-        const SizedBox(height: 8),
+      ),
+      const SizedBox(height: 8),
+      TextFormField(
+        controller: _emailController,
+        keyboardType: TextInputType.emailAddress,
+        validator: (value) {
+          if (value == null || !_isValidEmail(value)) {
+            return 'Please enter a valid email';
+          }
+          if (_existingEmails.contains(value.toLowerCase())) {
+            return 'Email already exists';
+          }
+          return null;
+        },
+      ),
+      const SizedBox(height: 4),
+      if (_emailStatus.isNotEmpty)
         Text(
-          _passwordStrengthLabel,
-          style: const TextStyle(
+          _emailStatus == 'checking'
+              ? 'Checking availability...'
+              : _emailStatus == 'taken'
+                  ? '✗ Email already exists'
+                  : '✓ Email available',
+          style: TextStyle(
             fontSize: 12,
-            color: Color(0xFFa0a0a0),
+            color: _emailStatus == 'checking'
+                ? const Color(0xFF2a9d8f) // teal
+                : _emailStatus == 'taken'
+                    ? const Color(0xFFe76f51) // coral (error)
+                    : const Color(0xFF4CAF50), // green (success)
           ),
         ),
-        const SizedBox(height: 4),
-        ClipRRect(
-          borderRadius: BorderRadius.circular(2),
-          child: LinearProgressIndicator(
-            value: _passwordStrength,
-            backgroundColor: const Color(0xFF4096ff).withOpacity(0.2),
-            valueColor: AlwaysStoppedAnimation<Color>(_passwordStrengthColor),
-            minHeight: 4,
+    ],
+  );
+}
+
+Widget _buildPasswordField() {
+  return Column(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Text(
+        'Password',
+        style: Theme.of(context).textTheme.labelMedium?.copyWith(
+              fontWeight: FontWeight.w500,
+              color: const Color(0xFF374151),
+            ),
+      ),
+      const SizedBox(height: 8),
+      TextFormField(
+        controller: _passwordController,
+        obscureText: !_passwordVisible,
+        validator: (value) {
+          if (value == null || value.length < 8) {
+            return 'Password must be at least 8 characters';
+          }
+          return null;
+        },
+        decoration: InputDecoration(
+          suffixIcon: IconButton(
+            icon: Text(
+              _passwordVisible ? 'Hide' : 'Show',
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.primary,
+                fontSize: 14,
+              ),
+            ),
+            onPressed: () {
+              setState(() {
+                _passwordVisible = !_passwordVisible;
+              });
+            },
           ),
         ),
-      ],
-    );
-  }
+      ),
+      const SizedBox(height: 8),
+      Text(
+        _passwordStrengthLabel,
+        style: TextStyle(
+          fontSize: 12,
+          color: _passwordStrength == 0
+              ? const Color(0xFF9CA3AF)
+              : _passwordStrengthColor,
+        ),
+      ),
+      const SizedBox(height: 4),
+      ClipRRect(
+        borderRadius: BorderRadius.circular(2),
+        child: LinearProgressIndicator(
+          value: _passwordStrength,
+          backgroundColor: const Color(0xFFE5E7EB),
+          valueColor: AlwaysStoppedAnimation<Color>(_passwordStrengthColor),
+          minHeight: 4,
+        ),
+      ),
+    ],
+  );
+}
 
   Widget _buildTermsCheckbox() {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        SizedBox(
-          width: 18,
-          height: 18,
-          child: Checkbox(
-            value: _termsAccepted,
-            onChanged: (value) {
-              setState(() {
-                _termsAccepted = value ?? false;
-              });
-            },
-            activeColor: const Color(0xFF4096ff),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: GestureDetector(
-            onTap: () {
-              setState(() {
-                _termsAccepted = !_termsAccepted;
-              });
-            },
-            child: RichText(
-              text: const TextSpan(
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Color(0xFFa0a0a0),
-                  height: 1.4,
-                ),
-                children: [
-                  TextSpan(text: 'I agree to the '),
-                  TextSpan(
-                    text: 'Terms & Conditions',
-                    style: TextStyle(color: Color(0xFF4096ff)),
-                  ),
-                  TextSpan(text: ' and '),
-                  TextSpan(
-                    text: 'Privacy Policy',
-                    style: TextStyle(color: Color(0xFF4096ff)),
-                  ),
-                ],
+  return Row(
+    crossAxisAlignment: CrossAxisAlignment.start,
+    children: [
+      Checkbox(
+        value: _termsAccepted,
+        onChanged: (value) {
+          setState(() {
+            _termsAccepted = value ?? false;
+          });
+        },
+        activeColor: const Color(0xFF2a9d8f),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+      ),
+      Expanded(
+        child: GestureDetector(
+          onTap: () {
+            setState(() {
+              _termsAccepted = !_termsAccepted;
+            });
+          },
+          child: RichText(
+            text: TextSpan(
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF4B5563),
+                height: 1.5,
               ),
+              children: [
+                const TextSpan(text: 'I agree to the '),
+                TextSpan(
+                  text: 'Terms & Conditions',
+                  style: const TextStyle(color: Color(0xFF2a9d8f), fontWeight: FontWeight.w600),
+                ),
+                const TextSpan(text: ' and '),
+                TextSpan(
+                  text: 'Privacy Policy',
+                  style: const TextStyle(color: Color(0xFF2a9d8f), fontWeight: FontWeight.w600),
+                ),
+              ],
             ),
           ),
         ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 
   Widget _buildSubmitButton() {
-    return Container(
-      decoration: BoxDecoration(
-        gradient: const LinearGradient(
-          colors: [Color(0xFF4096ff), Color(0xFF69c0ff)],
-        ),
-        borderRadius: BorderRadius.circular(12),
-        boxShadow: [
-          BoxShadow(
-            color: const Color(0xFF4096ff).withOpacity(0.3),
-            blurRadius: 12,
-            offset: const Offset(0, 4),
-          ),
-        ],
-      ),
-      child: Material(
-        color: Colors.transparent,
-        child: InkWell(
-          onTap: _isSubmitting ? null : _submitForm,
+  return SizedBox(
+    width: double.infinity,
+    child: ElevatedButton(
+      onPressed: _isSubmitting ? null : _submitForm,
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF2a9d8f),
+        foregroundColor: Colors.white,
+        padding: const EdgeInsets.symmetric(vertical: 16),
+        shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
-          child: Container(
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            child: Center(
-              child: _isSubmitting
-                  ? const SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                        valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
-                      ),
-                    )
-                  : Text(
-                      _isGuestMode ? 'Continue as Guest' : 'Create Account',
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w600,
-                        color: Colors.white,
-                      ),
-                    ),
-            ),
-          ),
         ),
+        elevation: 0,
+        disabledBackgroundColor: const Color(0xFF9CA3AF),
       ),
-    );
-  }
+      child: _isSubmitting
+          ? const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+              ),
+            )
+          : Text(
+              _isGuestMode ? 'Continue as Guest' : 'Create Account',
+              style: const TextStyle(
+                fontSize: 16,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+    ),
+  );
+}
 
   // Login button widget
-  Widget _buildLoginButton() {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          'Already have an account? ',
+ Widget _buildLoginButton() {
+  return Row(
+    mainAxisAlignment: MainAxisAlignment.center,
+    children: [
+      const Text(
+        'Already have an account? ',
+        style: TextStyle(
+          color: Color(0xFF4B5563),
+          fontSize: 14,
+        ),
+      ),
+      TextButton(
+        onPressed: _navigateToLogin,
+        style: TextButton.styleFrom(
+          padding: EdgeInsets.zero,
+          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+        ),
+        child: const Text(
+          'Login',
           style: TextStyle(
-            color: Color(0xFFa0a0a0),
+            color: Color(0xFF2a9d8f),
             fontSize: 14,
+            fontWeight: FontWeight.w600,
           ),
         ),
-        TextButton(
-          onPressed: _navigateToLogin,
-          style: TextButton.styleFrom(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            minimumSize: Size.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: const Text(
-            'Login',
-            style: TextStyle(
-              color: Color(0xFF4096ff),
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
-        ),
-      ],
-    );
-  }
+      ),
+    ],
+  );
+}
 }
