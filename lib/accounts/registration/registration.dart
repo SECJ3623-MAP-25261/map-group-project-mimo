@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'package:profile_managemenr/authentication/login.dart';
-import 'package:profile_managemenr/main.dart';
+import 'package:campus_closet/accounts/authentication/login.dart';
+import 'package:campus_closet/main.dart';
 
 void main() {
   runApp(const RegistrationApp());
