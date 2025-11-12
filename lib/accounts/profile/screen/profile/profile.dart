@@ -2,6 +2,13 @@ import 'package:flutter/material.dart';
 import '../../../../dbase/data.dart';
 import 'package:campus_closet/accounts/personalization/personalization.dart';
 
+import 'change_password.dart';
+import 'update_contact.dart';
+import 'notification.dart';
+import 'view_activity.dart';
+
+
+
 class ProfileScreen extends StatelessWidget {
   // final String name = "Haikal Japri";
   // final String email = "haikal04@graduate.utm.my";
@@ -31,8 +38,8 @@ class ProfileScreen extends StatelessWidget {
                 backgroundColor: Colors.blueGrey[700],
                 backgroundImage: AssetImage(
                   'assets/images/profile_placeholder.png',
+                  ),
                 ),
-              ),
 
               const SizedBox(height: 30),
               const SizedBox(height: 10),
@@ -75,6 +82,7 @@ class ProfileScreen extends StatelessWidget {
                 child: const Text(
                   "Edit Profile",
                   style: TextStyle(color: Colors.white, fontSize: 16),
+                  
                 ),
               ),
 
@@ -98,20 +106,21 @@ class ProfileScreen extends StatelessWidget {
                 ),
               ),
 
+
               // === List of Options ===
               _buildProfileOption("Change Password", Icons.lock, context),
               _buildProfileOption("Update Email / Phone", Icons.email, context),
               _buildProfileOption(
-                "Manage Notifications",
+                "Manage Notifications", 
                 Icons.notifications,
-                context,
-              ),
+                 context,
+                 ),
               _buildProfileOption("View Activity", Icons.history, context),
               _buildProfileOption(
                 "Personalization Settings",
-                Icons.color_lens,
-                context,
-              ),
+                 Icons.color_lens,
+                  context,
+                  ),
 
               const SizedBox(height: 40),
               const Text(
@@ -138,6 +147,7 @@ class ProfileScreen extends StatelessWidget {
             ),
           );
         }
+        
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 32),
