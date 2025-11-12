@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
+import 'package:profile_managemenr/accounts/authentication/login.dart';
 
 void main() => runApp(const MyApp());
 
@@ -18,50 +19,11 @@ class MyApp extends StatelessWidget {
           foregroundColor: Colors.white,
         ),
       ),
-      home: const CampusClosetScreen(),
+      home: const LoginPage(),
     );
   }
 }
 
-/*class CampusClosetScreen extends StatefulWidget {
-  const CampusClosetScreen({super.key});
-
-  @override
-  State<CampusClosetScreen> createState() => _CampusClosetScreenState();
-}*/
-
-/*class _CampusClosetScreenState extends State<CampusClosetScreen> {
-  final String _activeFilter = 'all';
-  final List<String> _filters = ['all', 'tops', 'bottoms', 'dresses', 'outerwear', 'shoes'];
-
-  void _showAddItemModal() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('List an Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            TextField(decoration: InputDecoration(labelText: 'Item Name')),
-            TextField(decoration: InputDecoration(labelText: 'Category')),
-            TextField(decoration: InputDecoration(labelText: 'Price')),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Submit'),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}*/
 
 class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});

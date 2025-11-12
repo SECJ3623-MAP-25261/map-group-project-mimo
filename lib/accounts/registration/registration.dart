@@ -187,7 +187,7 @@ void _submitForm() async {
     
     Navigator.pushReplacement(
       context,
-      MaterialPageRoute(builder: (context) => const MyApp()), 
+      MaterialPageRoute(builder: (context) => const CampusClosetScreen()), 
     );
     return;
   }
