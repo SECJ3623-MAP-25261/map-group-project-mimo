@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../dbase/data.dart';
-import 'package:campus_closet/accounts/personalization/personalization.dart';
+import 'package:profile_managemenr/accounts/personalization/personalization.dart';
 
 import 'change_password.dart';
 import 'update_contact.dart';
