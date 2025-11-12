@@ -1,19 +1,25 @@
 import 'package:campus_closet/models/user.dart';
 import 'package:flutter/material.dart';
 import '../../../../dbase/data.dart';
+import 'package:campus_closet/accounts/personalization/personalization.dart';
+import 'change_password.dart';
+import 'update_contact.dart';
+import 'notification.dart';
+import 'view_activity.dart';
+
 
 class ProfileScreen extends StatelessWidget {
-
-  
   // final String name = "Haikal Japri";
   // final String email = "haikal04@graduate.utm.my";
   final user = user1;
-<<<<<<< Updated upstream
+  //final user = user1;
+  final renter = renter1;
+ final user1 = dummyUsers;
 
-=======
+  //const ProfileScreen({super.key});
+
   final renter = renter1;
   //const ProfileScreen({super.key});
->>>>>>> Stashed changes
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -27,13 +33,14 @@ class ProfileScreen extends StatelessWidget {
             borderRadius: BorderRadius.circular(20),
           ),
           child: Column(
-            mainAxisSize:MainAxisSize.min,
+            mainAxisSize: MainAxisSize.min,
             children: [
-
               CircleAvatar(
                 radius: 45,
                 backgroundColor: Colors.blueGrey[700],
-                backgroundImage: AssetImage('assets/images/profile_placeholder.png'),
+                backgroundImage: AssetImage(
+                  'assets/images/profile_placeholder.png',
+                  ),
                 ),
 
               const SizedBox(height: 30),
@@ -49,29 +56,27 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
               Text(
-<<<<<<< Updated upstream
                 user.name,
-=======
                 user1.name,
->>>>>>> Stashed changes
+                user1[0].name,
                 style: const TextStyle(
-                  color:  Colors.white,
+                  color: Colors.white,
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
                 ),
               ),
 
               Text(
-<<<<<<< Updated upstream
                 user.email,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 14,
                 ),
-=======
                 user1.email,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
->>>>>>> Stashed changes
+                user1[0].email,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
+
               ),
 
               const SizedBox(height: 20),
@@ -88,7 +93,7 @@ class ProfileScreen extends StatelessWidget {
                 },
                 child: const Text(
                   "Edit Profile",
-                  style:  TextStyle(color: Colors.white, fontSize: 16),
+                  style: TextStyle(color: Colors.white, fontSize: 16),
                   
                 ),
               ),
@@ -110,21 +115,30 @@ class ProfileScreen extends StatelessWidget {
                 child: const Text(
                   "Delete Account",
                   style: TextStyle(color: Colors.white, fontSize: 16),
-                )
+                ),
               ),
 
 
               // === List of Options ===
               _buildProfileOption("Change Password", Icons.lock, context),
               _buildProfileOption("Update Email / Phone", Icons.email, context),
-<<<<<<< Updated upstream
               _buildProfileOption("Manage Notifications", Icons.notifications, context),
               _buildProfileOption("View Activity", Icons.history, context),
-=======
               _buildProfileOption("Manage Notifications", Icons.notifications,context,),
               _buildProfileOption("View Activity", Icons.history, context),
               _buildProfileOption("Personalization Settings",Icons.color_lens,context,),
->>>>>>> Stashed changes
+              _buildProfileOption(
+                "Manage Notifications", 
+                Icons.notifications,
+                 context,
+                 ),
+              _buildProfileOption("View Activity", Icons.history, context),
+              _buildProfileOption(
+                "Personalization Settings",
+                 Icons.color_lens,
+                  context,
+                  ),
+
 
               const SizedBox(height: 40),
               const Text(
@@ -142,14 +156,13 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildProfileOption(String text, IconData icon, BuildContext context) {
     return GestureDetector(
       onTap: () {
-<<<<<<< Updated upstream
         // Add navigation for each option
-=======
         if (text == "Personalization Settings") {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) =>
+
                   CampusClosetApp(renter: renter1, user: user1),
             ),
           );
@@ -171,7 +184,11 @@ class ProfileScreen extends StatelessWidget {
           Navigator.push(context, MaterialPageRoute(builder: (context)=>ViewActivityPage()));
          }
         
->>>>>>> Stashed changes
+                  CampusClosetApp(renter: renter1, user: dummyUsers[0]),
+            ),
+          );
+        }
+        
       },
       child: Padding(
         padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 32),

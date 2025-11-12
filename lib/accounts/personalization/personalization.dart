@@ -5,6 +5,10 @@ import '../../../../models/user.dart';
 
 void main() {
   runApp(CampusClosetApp(renter: renter1, user: user1));
+import 'package:campus_closet/accounts/profile/screen/profile/edit_profile.dart';
+
+void main() {
+  runApp(CampusClosetApp(renter: renter1, user: dummyUsers[0]));
 }
 
 class CampusClosetApp extends StatelessWidget {
