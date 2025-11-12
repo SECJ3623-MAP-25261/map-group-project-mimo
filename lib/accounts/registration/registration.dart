@@ -1,15 +1,15 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-<<<<<<< HEAD
 import 'package:campus_closet/accounts/authentication/login.dart';
 import 'package:campus_closet/main.dart';
-=======
+import 'package:campus_closet/models/user.dart';
+import 'package:campus_closet/accounts/authentication/login.dart';
+import 'package:campus_closet/main.dart';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/main.dart';
 import 'package:profile_managemenr/dbase/data.dart';
 import 'package:profile_managemenr/models/user.dart';
 
->>>>>>> 0f565fb517835cc6ce3ac3f2029780fc16004f04
 
 void main() {
   runApp(const RegistrationApp());
@@ -47,6 +47,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  final String _userType = 'rentee';
   String _userType = 'rentee';
   bool _isGuestMode = false;
   bool _passwordVisible = false;

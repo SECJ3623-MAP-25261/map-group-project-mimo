@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:campus_closet/accounts/profile/screen/profile/profile.dart';
 import '../../../../dbase/data.dart';
 import '../../../../models/user.dart';
+
+void main() {
+  runApp(CampusClosetApp(renter: renter1, user: user1));
 import 'package:campus_closet/accounts/profile/screen/profile/edit_profile.dart';
 
 void main() {
