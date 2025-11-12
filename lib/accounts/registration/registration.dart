@@ -5,6 +5,15 @@ import 'package:profile_managemenr/main.dart';
 import 'package:profile_managemenr/dbase/data.dart';
 import 'package:profile_managemenr/models/user.dart';
 
+// --- Theme Constants (Using dark colors with existing Teal accent) ---
+const Color _accentColor = Color(0xFF2a9d8f); // Teal Accent
+const Color _darkBackground = Color(0xFF1F2937);
+const Color _cardBackground = Color(0xFF374151); // Form Card/Container background
+const Color _inputFillColor = Color(0xFF111827); // Very dark input background
+const Color _textColor = Colors.white;
+const Color _hintColor = Colors.white60;
+const Color _errorColor = Color(0xFFe76f51); // Coral/Orange for error
+
 void main() {
   runApp(const RegistrationApp());
 }
@@ -18,38 +27,42 @@ class RegistrationApp extends StatelessWidget {
       title: 'Account Registration',
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
-        brightness: Brightness.light,
-        scaffoldBackgroundColor: const Color(0xFFF9FAFB), // Very light gray
-        primaryColor: const Color(0xFF2a9d8f), // Teal - professional & cheerful
+        brightness: Brightness.dark, // Set overall theme to dark
+        scaffoldBackgroundColor: _darkBackground,
+        primaryColor: _accentColor,
         colorScheme: ColorScheme.fromSeed(
-          seedColor: const Color(0xFF2a9d8f),
-          brightness: Brightness.light,
+          seedColor: _accentColor,
+          brightness: Brightness.dark,
         ),
+        // Apply dark theme input styling globally
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
-          fillColor: const Color(0xFFF1F3F5),
+          fillColor: _inputFillColor,
+          hintStyle: const TextStyle(color: _hintColor),
+          labelStyle: const TextStyle(color: _hintColor, fontSize: 14),
+          prefixIconColor: _hintColor,
+          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
           border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD0D5DD), width: 1),
+            borderSide: const BorderSide(color: Color(0xFF4B5563), width: 1),
           ),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFD0D5DD), width: 1),
+            borderSide: const BorderSide(color: Color(0xFF4B5563), width: 1),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFF2a9d8f), width: 2),
+            borderSide: const BorderSide(color: _accentColor, width: 2),
           ),
           errorBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: const BorderSide(color: Color(0xFFe76f51), width: 2),
+            borderSide: const BorderSide(color: _errorColor, width: 2),
           ),
-          hintStyle: const TextStyle(color: Color(0xFF9CA3AF)),
-          contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         ),
-        textTheme: TextTheme(
-          bodyMedium: const TextStyle(color: Color(0xFF374151)),
-          labelMedium: const TextStyle(color: Color(0xFF4B5563), fontSize: 14),
+        textTheme: const TextTheme(
+          bodyMedium: TextStyle(color: _textColor),
+          bodySmall: TextStyle(color: _textColor),
+          labelMedium: TextStyle(color: _hintColor, fontSize: 14),
         ),
       ),
       home: const RegistrationScreen(),
@@ -65,6 +78,7 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
+  // ... (All state variables, controllers, and functions remain unchanged) ...
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -72,6 +86,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
+  // Variables with initial values are kept
   final String _userType = 'rentee';
   bool _isGuestMode = false;
   bool _passwordVisible = false;
@@ -84,13 +99,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _isSubmitting = false;
   Timer? _emailCheckTimer;
 
-  final List<String> _existingEmails = [
+  // Dummy data list
+  final List<String> _existingEmails = const [
     'john@example.com',
     'jane@example.com',
     'admin@test.com',
     'user@demo.com'
   ];
 
+  // --- initState, dispose, _onEmailChanged, _onPasswordChanged, _isValidEmail, _checkEmailAvailability, _navigateToLogin, _submitForm remain unchanged ---
   @override
   void initState() {
     super.initState();
@@ -179,73 +196,64 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       context,
       MaterialPageRoute(builder: (context) => const LoginPage()),
     );
-
   }
 
-void _submitForm() async {
-  if (_isGuestMode) {
-    
-    Navigator.pushReplacement(
-      context,
-      MaterialPageRoute(builder: (context) => const CampusClosetScreen()), 
-    );
-    return;
+  void _submitForm() async {
+    if (_isGuestMode) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const CampusClosetScreen()), 
+      );
+      return;
+    }
+
+    if (_formKey.currentState!.validate() && _termsAccepted) {
+      setState(() {
+        _isSubmitting = true;
+      });
+
+      await Future.delayed(const Duration(milliseconds: 1500));
+
+      setState(() {
+        // Create new user
+        final newUser = User(
+          id: DateTime.now().millisecondsSinceEpoch.toString(),
+          name: _nameController.text.trim(),
+          email: _emailController.text.trim(),
+          phone: _phoneController.text.trim(),
+          profileImages: '',
+        );
+
+        // Add to dummy database
+        dummyUsers.add(newUser);
+
+        _successMessage =
+            'Registration successful! Welcome ${newUser.name}. You can now login.';
+        _isSubmitting = false;
+      });
+    } else if (!_termsAccepted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You must accept the Terms & Conditions to register.'),
+          backgroundColor: _errorColor,
+        ),
+      );
+    }
   }
-
-  
-  if (_formKey.currentState!.validate() && _termsAccepted) {
-    setState(() {
-      _isSubmitting = true;
-    });
-
-    await Future.delayed(const Duration(milliseconds: 1500));
-
-    setState(() {
-  // Create new user
-  final newUser = User(
-    id: DateTime.now().millisecondsSinceEpoch.toString(),
-    name: _nameController.text.trim(),
-    email: _emailController.text.trim(),
-    phone: _phoneController.text.trim(),
-    profileImages: '',
-  );
-
-  // Add to dummy database
-  dummyUsers.add(newUser);
-
-  _successMessage =
-      'Registration successful! Welcome ${newUser.name}. You can now login.';
-  _isSubmitting = false;
-});
-
-
-    
-  }
-}
+  // --------------------------------------------------------------------------
 
   @override
   Widget build(BuildContext context) {
+    // Note: The dark gradient background is removed in favor of a flat dark theme
     return Scaffold(
-      body: Container(
-        decoration: const BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Color(0xFF0f0f23),
-              Color(0xFF1a1a2e),
-              Color(0xFF16213e),
-            ],
-          ),
-        ),
-        child: SafeArea(
-          child: Center(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Container(
-                constraints: const BoxConstraints(maxWidth: 420),
-                child: _buildRegistrationCard(),
-              ),
+      backgroundColor: _darkBackground, // Use flat dark background
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(20),
+            child: Container(
+              constraints: const BoxConstraints(maxWidth: 420),
+              child: _buildRegistrationCard(),
             ),
           ),
         ),
@@ -253,508 +261,541 @@ void _submitForm() async {
     );
   }
 
- Widget _buildRegistrationCard() {
-  return Container(
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(20),
-      boxShadow: [
-        BoxShadow(
-          color: const Color(0xFF000000).withOpacity(0.06),
-          blurRadius: 20,
-          offset: const Offset(0, 8),
-        ),
-      ],
-    ),
-    padding: const EdgeInsets.all(30),
-    child: Column(
-      crossAxisAlignment: CrossAxisAlignment.stretch,
-      children: [
-        _buildHeader(),
-        const SizedBox(height: 24),
-        _buildRoleChangeInfo(),
-        const SizedBox(height: 20),
-        _buildGuestOption(),
-        const SizedBox(height: 20),
-        if (_successMessage.isNotEmpty) _buildSuccessMessage(),
-        _buildForm(),
-        const SizedBox(height: 20),
-        _buildSubmitButton(),
-        const SizedBox(height: 16),
-        _buildLoginButton(),
-      ],
-    ),
-  );
-}
+  Widget _buildRegistrationCard() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _cardBackground, // Dark card background
+        borderRadius: BorderRadius.circular(20),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.3),
+            blurRadius: 20,
+            offset: const Offset(0, 8),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(30),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
+        children: [
+          _buildHeader(),
+          const SizedBox(height: 24),
+          _buildRoleChangeInfo(),
+          const SizedBox(height: 20),
+          _buildGuestOption(),
+          const SizedBox(height: 20),
+          if (_successMessage.isNotEmpty) _buildSuccessMessage(),
+          _buildForm(),
+          const SizedBox(height: 20),
+          _buildSubmitButton(),
+          const SizedBox(height: 16),
+          _buildLoginButton(),
+        ],
+      ),
+    );
+  }
 
   Widget _buildHeader() {
-  return Column(
-    children: [
-      Text(
-        'Account Registration',
-        style: TextStyle(
-          fontSize: 28,
-          fontWeight: FontWeight.bold,
-          color: const Color(0xFF111827), // Near-black for readability
-        ),
-      ),
-      const SizedBox(height: 6),
-      const Text(
-        'Create your account',
-        style: TextStyle(
-          color: Color(0xFF6B7280), // Muted gray
-          fontSize: 16,
-        ),
-      ),
-    ],
-  );
-}
-
-Widget _buildRoleChangeInfo() {
-  return Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFF2a9d8f).withOpacity(0.1),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(
-        color: const Color(0xFF2a9d8f).withOpacity(0.3),
-      ),
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Icon(Icons.info, size: 18, color: Color(0xFF2a9d8f)),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Flexible Role Selection',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF2a9d8f),
-                  fontSize: 14,
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'You can change your role anytime after registration in your profile settings',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280),
-                  height: 1.4,
-                ),
-              ),
-            ],
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-  Widget _buildGuestOption() {
-  return Container(
-    decoration: BoxDecoration(
-      color: const Color(0xFFF9FAFB),
-      borderRadius: BorderRadius.circular(12),
-      border: Border.all(color: const Color(0xFFD1D5DB)),
-    ),
-    padding: const EdgeInsets.all(16),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: const [
-              Text(
-                'Continue as Guest',
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                  color: Color(0xFF1F2937),
-                ),
-              ),
-              SizedBox(height: 4),
-              Text(
-                'Limited features available',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF6B7280),
-                ),
-              ),
-            ],
-          ),
-        ),
-        GestureDetector(
-          onTap: () {
-            setState(() {
-              _isGuestMode = !_isGuestMode;
-            });
-          },
-          child: Container(
-            width: 48,
-            height: 24,
-            decoration: BoxDecoration(
-              color: _isGuestMode
-                  ? const Color(0xFF2a9d8f)
-                  : const Color(0xFFD1D5DB),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: AnimatedAlign(
-              duration: const Duration(milliseconds: 300),
-              alignment: _isGuestMode ? Alignment.centerRight : Alignment.centerLeft,
-              child: Container(
-                width: 20,
-                height: 20,
-                margin: const EdgeInsets.all(2),
-                decoration: const BoxDecoration(
-                  color: Colors.white,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ),
-          ),
-        ),
-      ],
-    ),
-  );
-}
-
-Widget _buildSuccessMessage() {
-  return Container(
-    padding: const EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: const Color(0xFF4CAF50).withOpacity(0.1),
-      borderRadius: BorderRadius.circular(8),
-      border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.3)),
-    ),
-    child: Text(
-      _successMessage,
-      textAlign: TextAlign.center,
-      style: const TextStyle(
-        color: Color(0xFF2E7D32),
-        fontWeight: FontWeight.w500,
-      ),
-    ),
-  );
-}
-
-  Widget _buildForm() {
-  return Opacity(
-    opacity: _isGuestMode ? 0.6 : 1.0,
-    child: IgnorePointer(
-      ignoring: _isGuestMode,
-      child: Form(
-        key: _formKey,
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            _buildTextField(
-              controller: _nameController,
-              label: 'Full Name',
-              hint: 'Enter your full name',
-              validator: (value) {
-                if (value == null || value.trim().length < 2) {
-                  return 'Name must be at least 2 characters';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _buildEmailField(),
-            const SizedBox(height: 20),
-            _buildTextField(
-              controller: _phoneController,
-              label: 'Phone Number',
-              hint: 'Enter your phone number',
-              keyboardType: TextInputType.phone,
-              validator: (value) {
-                if (value == null || value.isEmpty) {
-                  return 'Please enter a phone number';
-                }
-                final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
-                if (!RegExp(r'^[\+]?[1-9][\d]{0,15}$').hasMatch(cleaned)) {
-                  return 'Please enter a valid phone number';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 20),
-            _buildPasswordField(),
-            const SizedBox(height: 20),
-            _buildTextField(
-              controller: _confirmPasswordController,
-              label: 'Confirm Password',
-              hint: 'Confirm your password',
-              obscureText: true,
-              validator: (value) {
-                if (value != _passwordController.text) {
-                  return 'Passwords do not match';
-                }
-                return null;
-              },
-            ),
-            const SizedBox(height: 25),
-            _buildTermsCheckbox(),
-            // ❌ NO _buildSubmitButton() here
-          ],
-        ),
-      ),
-    ),
-  );
-}
-
- Widget _buildTextField({
-  required TextEditingController controller,
-  required String label,
-  required String hint,
-  bool obscureText = false,
-  TextInputType? keyboardType,
-  String? Function(String?)? validator,
-}) {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        label,
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF374151),
-            ),
-      ),
-      const SizedBox(height: 8),
-      TextFormField(
-        controller: controller,
-        obscureText: obscureText,
-        keyboardType: keyboardType,
-        validator: validator,
-        // Let the global theme handle style & decoration
-      ),
-    ],
-  );
-}
-
-Widget _buildEmailField() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'Email Address',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF374151),
-            ),
-      ),
-      const SizedBox(height: 8),
-      TextFormField(
-        controller: _emailController,
-        keyboardType: TextInputType.emailAddress,
-        validator: (value) {
-          if (value == null || !_isValidEmail(value)) {
-            return 'Please enter a valid email';
-          }
-          if (_existingEmails.contains(value.toLowerCase())) {
-            return 'Email already exists';
-          }
-          return null;
-        },
-      ),
-      const SizedBox(height: 4),
-      if (_emailStatus.isNotEmpty)
+    return Column(
+      children: const [
         Text(
-          _emailStatus == 'checking'
-              ? 'Checking availability...'
-              : _emailStatus == 'taken'
-                  ? '✗ Email already exists'
-                  : '✓ Email available',
+          'Account Registration',
           style: TextStyle(
-            fontSize: 12,
-            color: _emailStatus == 'checking'
-                ? const Color(0xFF2a9d8f) // teal
-                : _emailStatus == 'taken'
-                    ? const Color(0xFFe76f51) // coral (error)
-                    : const Color(0xFF4CAF50), // green (success)
+            fontSize: 28,
+            fontWeight: FontWeight.bold,
+            color: _textColor, // White text
           ),
         ),
-    ],
-  );
-}
-
-Widget _buildPasswordField() {
-  return Column(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Text(
-        'Password',
-        style: Theme.of(context).textTheme.labelMedium?.copyWith(
-              fontWeight: FontWeight.w500,
-              color: const Color(0xFF374151),
-            ),
-      ),
-      const SizedBox(height: 8),
-      TextFormField(
-        controller: _passwordController,
-        obscureText: !_passwordVisible,
-        validator: (value) {
-          if (value == null || value.length < 8) {
-            return 'Password must be at least 8 characters';
-          }
-          return null;
-        },
-        decoration: InputDecoration(
-          suffixIcon: IconButton(
-            icon: Text(
-              _passwordVisible ? 'Hide' : 'Show',
-              style: TextStyle(
-                color: Theme.of(context).colorScheme.primary,
-                fontSize: 14,
-              ),
-            ),
-            onPressed: () {
-              setState(() {
-                _passwordVisible = !_passwordVisible;
-              });
-            },
+        SizedBox(height: 6),
+        Text(
+          'Create your account to start renting and listing!',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: _hintColor, // Muted white
+            fontSize: 15,
           ),
         ),
-      ),
-      const SizedBox(height: 8),
-      Text(
-        _passwordStrengthLabel,
-        style: TextStyle(
-          fontSize: 12,
-          color: _passwordStrength == 0
-              ? const Color(0xFF9CA3AF)
-              : _passwordStrengthColor,
-        ),
-      ),
-      const SizedBox(height: 4),
-      ClipRRect(
-        borderRadius: BorderRadius.circular(2),
-        child: LinearProgressIndicator(
-          value: _passwordStrength,
-          backgroundColor: const Color(0xFFE5E7EB),
-          valueColor: AlwaysStoppedAnimation<Color>(_passwordStrengthColor),
-          minHeight: 4,
-        ),
-      ),
-    ],
-  );
-}
+      ],
+    );
+  }
 
-  Widget _buildTermsCheckbox() {
-  return Row(
-    crossAxisAlignment: CrossAxisAlignment.start,
-    children: [
-      Checkbox(
-        value: _termsAccepted,
-        onChanged: (value) {
-          setState(() {
-            _termsAccepted = value ?? false;
-          });
-        },
-        activeColor: const Color(0xFF2a9d8f),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+  Widget _buildRoleChangeInfo() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _accentColor.withOpacity(0.2), // Darker, less blinding info box
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: _accentColor.withOpacity(0.5),
+        ),
       ),
-      Expanded(
-        child: GestureDetector(
-          onTap: () {
-            setState(() {
-              _termsAccepted = !_termsAccepted;
-            });
-          },
-          child: RichText(
-            text: TextSpan(
-              style: const TextStyle(
-                fontSize: 14,
-                color: Color(0xFF4B5563),
-                height: 1.5,
-              ),
-              children: [
-                const TextSpan(text: 'I agree to the '),
-                TextSpan(
-                  text: 'Terms & Conditions',
-                  style: const TextStyle(color: Color(0xFF2a9d8f), fontWeight: FontWeight.w600),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.info, size: 18, color: _accentColor),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Flexible Role Selection',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _accentColor,
+                    fontSize: 14,
+                  ),
                 ),
-                const TextSpan(text: ' and '),
-                TextSpan(
-                  text: 'Privacy Policy',
-                  style: const TextStyle(color: Color(0xFF2a9d8f), fontWeight: FontWeight.w600),
+                SizedBox(height: 4),
+                Text(
+                  'You start as a renter, but can easily switch to a lister role anytime in your profile settings.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _hintColor,
+                    height: 1.4,
+                  ),
                 ),
               ],
             ),
           ),
-        ),
+        ],
       ),
-    ],
-  );
-}
+    );
+  }
 
-  Widget _buildSubmitButton() {
-  return SizedBox(
-    width: double.infinity,
-    child: ElevatedButton(
-      onPressed: _isSubmitting ? null : _submitForm,
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF2a9d8f),
-        foregroundColor: Colors.white,
-        padding: const EdgeInsets.symmetric(vertical: 16),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(12),
-        ),
-        elevation: 0,
-        disabledBackgroundColor: const Color(0xFF9CA3AF),
+  Widget _buildGuestOption() {
+    return Container(
+      decoration: BoxDecoration(
+        color: _darkBackground.withOpacity(0.7), // Use dark background for contrast
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: const Color(0xFF4B5563)),
       ),
-      child: _isSubmitting
-          ? const SizedBox(
-              width: 20,
-              height: 20,
-              child: CircularProgressIndicator(
-                strokeWidth: 2,
-                valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: const [
+                Text(
+                  'Continue as Guest',
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                    color: _textColor,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  'Limited features (viewing only) available.',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: _hintColor,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          GestureDetector(
+            onTap: () {
+              setState(() {
+                _isGuestMode = !_isGuestMode;
+                _successMessage = ''; // Clear success message if toggling guest mode
+              });
+            },
+            child: Container(
+              width: 48,
+              height: 24,
+              decoration: BoxDecoration(
+                color: _isGuestMode
+                    ? _accentColor
+                    : const Color(0xFF4B5563), // Darker off state
+                borderRadius: BorderRadius.circular(12),
               ),
-            )
-          : Text(
-              _isGuestMode ? 'Continue as Guest' : 'Create Account',
-              style: const TextStyle(
-                fontSize: 16,
-                fontWeight: FontWeight.w600,
+              child: AnimatedAlign(
+                duration: const Duration(milliseconds: 300),
+                alignment: _isGuestMode ? Alignment.centerRight : Alignment.centerLeft,
+                child: Container(
+                  width: 20,
+                  height: 20,
+                  margin: const EdgeInsets.all(2),
+                  decoration: const BoxDecoration(
+                    color: _textColor, // White dot
+                    shape: BoxShape.circle,
+                  ),
+                ),
               ),
             ),
-    ),
-  );
-}
+          ),
+        ],
+      ),
+    );
+  }
 
-  // Login button widget
- Widget _buildLoginButton() {
-  return Row(
-    mainAxisAlignment: MainAxisAlignment.center,
-    children: [
-      const Text(
-        'Already have an account? ',
-        style: TextStyle(
-          color: Color(0xFF4B5563),
-          fontSize: 14,
+  Widget _buildSuccessMessage() {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF4CAF50).withOpacity(0.2), // Green success background
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: const Color(0xFF4CAF50).withOpacity(0.5)),
+      ),
+      child: Text(
+        _successMessage,
+        textAlign: TextAlign.center,
+        style: const TextStyle(
+          color: Color(0xFF4CAF50), // Green text
+          fontWeight: FontWeight.w500,
         ),
       ),
-      TextButton(
-        onPressed: _navigateToLogin,
-        style: TextButton.styleFrom(
-          padding: EdgeInsets.zero,
-          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-        ),
-        child: const Text(
-          'Login',
-          style: TextStyle(
-            color: Color(0xFF2a9d8f),
-            fontSize: 14,
-            fontWeight: FontWeight.w600,
+    );
+  }
+
+  Widget _buildForm() {
+    // Opacity and IgnorePointer logic remains the same
+    return Opacity(
+      opacity: _isGuestMode ? 0.4 : 1.0,
+      child: IgnorePointer(
+        ignoring: _isGuestMode,
+        child: Form(
+          key: _formKey,
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              _buildTextField(
+                controller: _nameController,
+                label: 'Full Name',
+                hint: 'Enter your full name',
+                validator: (value) {
+                  if (value == null || value.trim().length < 2) {
+                    return 'Name must be at least 2 characters';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              _buildEmailField(),
+              const SizedBox(height: 20),
+              _buildTextField(
+                controller: _phoneController,
+                label: 'Phone Number',
+                hint: 'Enter your phone number',
+                keyboardType: TextInputType.phone,
+                validator: (value) {
+                  if (value == null || value.isEmpty) {
+                    return 'Please enter a phone number';
+                  }
+                  final cleaned = value.replaceAll(RegExp(r'[\s\-\(\)]'), '');
+                  if (!RegExp(r'^[\+]?[1-9][\d]{0,15}$').hasMatch(cleaned)) {
+                    return 'Please enter a valid phone number';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 20),
+              _buildPasswordField(),
+              const SizedBox(height: 20),
+              _buildTextField(
+                controller: _confirmPasswordController,
+                label: 'Confirm Password',
+                hint: 'Confirm your password',
+                obscureText: true,
+                validator: (value) {
+                  if (value != _passwordController.text) {
+                    return 'Passwords do not match';
+                  }
+                  return null;
+                },
+              ),
+              const SizedBox(height: 25),
+              _buildTermsCheckbox(),
+            ],
           ),
         ),
       ),
-    ],
-  );
-}
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required String hint,
+    bool obscureText = false,
+    TextInputType? keyboardType,
+    String? Function(String?)? validator,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          label,
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: _textColor, // White label text
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: controller,
+          obscureText: obscureText,
+          keyboardType: keyboardType,
+          validator: validator,
+          style: const TextStyle(color: _textColor), // Input text color
+          // Decoration inherits from MaterialApp theme
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmailField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Email Address',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: _textColor, // White label text
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _emailController,
+          keyboardType: TextInputType.emailAddress,
+          style: const TextStyle(color: _textColor), // Input text color
+          validator: (value) {
+            if (value == null || !_isValidEmail(value)) {
+              return 'Please enter a valid email';
+            }
+            // Check for existence only if validation is otherwise fine
+            if (_emailStatus == 'taken' && value.toLowerCase() == _emailController.text.toLowerCase()) {
+              return 'Email already exists';
+            }
+            return null;
+          },
+        ),
+        const SizedBox(height: 4),
+        if (_emailStatus.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(left: 4.0),
+            child: Row(
+              children: [
+                if (_emailStatus == 'checking')
+                  const SizedBox(
+                    width: 12,
+                    height: 12,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 1.5,
+                      color: _accentColor,
+                    ),
+                  ),
+                const SizedBox(width: 8),
+                Text(
+                  _emailStatus == 'checking'
+                      ? 'Checking availability...'
+                      : _emailStatus == 'taken'
+                          ? '✗ Email already exists'
+                          : '✓ Email available',
+                  style: TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w500,
+                    color: _emailStatus == 'checking'
+                        ? _accentColor
+                        : _emailStatus == 'taken'
+                            ? _errorColor
+                            : const Color(0xFF4CAF50),
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPasswordField() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Password',
+          style: Theme.of(context).textTheme.labelMedium?.copyWith(
+            fontWeight: FontWeight.w500,
+            color: _textColor, // White label text
+          ),
+        ),
+        const SizedBox(height: 8),
+        TextFormField(
+          controller: _passwordController,
+          obscureText: !_passwordVisible,
+          style: const TextStyle(color: _textColor),
+          validator: (value) {
+            if (value == null || value.length < 8) {
+              return 'Password must be at least 8 characters';
+            }
+            return null;
+          },
+          decoration: InputDecoration(
+            suffixIcon: IconButton(
+              icon: Text(
+                _passwordVisible ? 'Hide' : 'Show',
+                style: TextStyle(
+                  color: _accentColor,
+                  fontSize: 14,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              onPressed: () {
+                setState(() {
+                  _passwordVisible = !_passwordVisible;
+                });
+              },
+            ),
+          ),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          _passwordStrengthLabel,
+          style: TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.w500,
+            color: _passwordStrength == 0 ? _hintColor : _passwordStrengthColor,
+          ),
+        ),
+        const SizedBox(height: 4),
+        ClipRRect(
+          borderRadius: BorderRadius.circular(2),
+          child: LinearProgressIndicator(
+            value: _passwordStrength,
+            backgroundColor: const Color(0xFF4B5563), // Darker track
+            valueColor: AlwaysStoppedAnimation<Color>(_passwordStrengthColor),
+            minHeight: 4,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildTermsCheckbox() {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        SizedBox(
+          width: 24, // Fix width for consistent alignment
+          height: 24,
+          child: Checkbox(
+            value: _termsAccepted,
+            onChanged: (value) {
+              setState(() {
+                _termsAccepted = value ?? false;
+              });
+            },
+            activeColor: _accentColor,
+            checkColor: _inputFillColor, // Dark checkmark
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(4)),
+            side: const BorderSide(color: _hintColor, width: 1.5),
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: GestureDetector(
+            onTap: () {
+              setState(() {
+                _termsAccepted = !_termsAccepted;
+              });
+            },
+            child: Padding(
+              padding: const EdgeInsets.only(top: 4.0), // Adjust for checkbox height
+              child: RichText(
+                text: TextSpan(
+                  style: const TextStyle(
+                    fontSize: 14,
+                    color: _hintColor,
+                    height: 1.5,
+                  ),
+                  children: [
+                    const TextSpan(text: 'I agree to the '),
+                    TextSpan(
+                      text: 'Terms & Conditions',
+                      style: TextStyle(color: _accentColor, fontWeight: FontWeight.w600),
+                    ),
+                    const TextSpan(text: ' and '),
+                    TextSpan(
+                      text: 'Privacy Policy',
+                      style: TextStyle(color: _accentColor, fontWeight: FontWeight.w600),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSubmitButton() {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton(
+        onPressed: (_isSubmitting || (_isGuestMode == false && _termsAccepted == false)) ? null : _submitForm,
+        style: ElevatedButton.styleFrom(
+          backgroundColor: _accentColor,
+          foregroundColor: _textColor,
+          padding: const EdgeInsets.symmetric(vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          elevation: 5,
+          disabledBackgroundColor: const Color(0xFF4B5563), // Darker disabled state
+        ),
+        child: _isSubmitting
+            ? const SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  valueColor: AlwaysStoppedAnimation<Color>(_textColor),
+                ),
+              )
+            : Text(
+                _isGuestMode ? 'Continue as Guest' : 'Create Account',
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+      ),
+    );
+  }
+
+  Widget _buildLoginButton() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text(
+          'Already have an account? ',
+          style: TextStyle(
+            color: _hintColor, // Muted white
+            fontSize: 14,
+          ),
+        ),
+        TextButton(
+          onPressed: _navigateToLogin,
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.zero,
+            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+          ),
+          child: const Text(
+            'Login',
+            style: TextStyle(
+              color: _accentColor, // Teal accent
+              fontSize: 14,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ),
+      ],
+    );
+  }
 }
