@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../../../../dbase/data.dart';
-import 'package:profile_managemenr/accounts/personalization/personalization.dart';
+import 'package:campus_closet/accounts/personalization/personalization.dart';
 
 class ProfileScreen extends StatelessWidget {
   // final String name = "Haikal Japri";
