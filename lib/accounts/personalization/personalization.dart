@@ -5,10 +5,6 @@ import '../../../../models/user.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/edit_profile.dart';
 
 void main() {
-  runApp(CampusClosetApp(renter: renter1, user: user1));
-import 'package:campus_closet/accounts/profile/screen/profile/edit_profile.dart';
-
-void main() {
   runApp(CampusClosetApp(renter: renter1, user: dummyUsers[0]));
 }
 
@@ -71,19 +67,19 @@ class RenterDashboard extends StatelessWidget {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                 children: [
-                  _buildClickableStat(
+                  buildClickableStat(
                     context,
                     value: '${renter.itemListed}',
                     label: 'Items Listed',
                     page: const PlaceholderPage(title: 'Your Items'),
                   ),
-                  _buildClickableStat(
+                  buildClickableStat(
                     context,
                     value: 'RM${renter.earnings.toStringAsFixed(2)}',
                     label: 'Earnings',
                     page: const PlaceholderPage(title: 'Earnings Details'),
                   ),
-                  _buildClickableStat(
+                  buildClickableStat(
                     context,
                     value: '${renter.pendingRequests}',
                     label: 'Requests',
@@ -94,10 +90,10 @@ class RenterDashboard extends StatelessWidget {
               const SizedBox(height: 30),
 
               // Action Buttons
-              _menuButton(context, 'Add New Item', Icons.add),
-              _menuButton(context, 'View Rental Requests', Icons.inventory),
-              _menuButton(context, 'Transaction History', Icons.receipt_long),
-              _menuButton(context, 'Help & Support', Icons.help_outline),
+              menuButton(context, 'Add New Item', Icons.add),
+              menuButton(context, 'View Rental Requests', Icons.inventory),
+              menuButton(context, 'Transaction History', Icons.receipt_long),
+              menuButton(context, 'Help & Support', Icons.help_outline),
 
               const SizedBox(height: 20),
 
@@ -137,7 +133,7 @@ class RenterDashboard extends StatelessWidget {
   }
 
   // Normal menu button
-  static Widget _menuButton(BuildContext context, String title, IconData icon) {
+  Widget menuButton(BuildContext context, String title, IconData icon) {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: ElevatedButton.icon(
@@ -162,7 +158,7 @@ class RenterDashboard extends StatelessWidget {
   }
 
   // Clickable stats box
-  static Widget _buildClickableStat(
+  Widget buildClickableStat(
     BuildContext context, {
     required String value,
     required String label,

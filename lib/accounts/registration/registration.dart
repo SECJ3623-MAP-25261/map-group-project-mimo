@@ -73,7 +73,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _confirmPasswordController = TextEditingController();
 
   final String _userType = 'rentee';
-  String _userType = 'rentee';
   bool _isGuestMode = false;
   bool _passwordVisible = false;
   bool _termsAccepted = false;

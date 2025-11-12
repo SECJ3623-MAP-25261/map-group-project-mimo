@@ -23,15 +23,15 @@ class MyApp extends StatelessWidget {
   }
 }
 
-class CampusClosetScreen extends StatefulWidget {
+/*class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});
 
   @override
   State<CampusClosetScreen> createState() => _CampusClosetScreenState();
-}
+}*/
 
-class _CampusClosetScreenState extends State<CampusClosetScreen> {
-  String _activeFilter = 'all';
+/*class _CampusClosetScreenState extends State<CampusClosetScreen> {
+  final String _activeFilter = 'all';
   final List<String> _filters = ['all', 'tops', 'bottoms', 'dresses', 'outerwear', 'shoes'];
 
   void _showAddItemModal() {
@@ -61,7 +61,7 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
       ),
     );
   }
-}
+}*/
 
 class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});
@@ -171,7 +171,7 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: const [
                   Text('👕', style: TextStyle(fontSize: 64, color: Colors.grey)),
-                  const Text('👕', style: TextStyle(fontSize: 64, color: Colors.grey)),
+                  Text('👕', style: TextStyle(fontSize: 64, color: Colors.grey)),
                   SizedBox(height: 16),
                   Text(
                     'No items found. Try a different filter!',
@@ -189,5 +189,5 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
   }
 }
 
-}
+
 
