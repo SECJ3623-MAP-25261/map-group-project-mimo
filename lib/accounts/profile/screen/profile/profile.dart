@@ -1,3 +1,4 @@
+import 'package:campus_closet/models/user.dart';
 import 'package:flutter/material.dart';
 import '../../../../dbase/data.dart';
 import 'package:profile_managemenr/accounts/personalization/personalization.dart';
@@ -12,12 +13,15 @@ import 'view_activity.dart';
 class ProfileScreen extends StatelessWidget {
   // final String name = "Haikal Japri";
   // final String email = "haikal04@graduate.utm.my";
+  final user = user1;
   //final user = user1;
   final renter = renter1;
  final user1 = dummyUsers;
 
   //const ProfileScreen({super.key});
 
+  final renter = renter1;
+  //const ProfileScreen({super.key});
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -54,6 +58,8 @@ class ProfileScreen extends StatelessWidget {
 
               const SizedBox(height: 12),
               Text(
+                user.name,
+                user1.name,
                 user1[0].name,
                 style: const TextStyle(
                   color: Colors.white,
@@ -63,8 +69,16 @@ class ProfileScreen extends StatelessWidget {
               ),
 
               Text(
+                user.email,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 14,
+                ),
+                user1.email,
+                style: const TextStyle(color: Colors.white, fontSize: 14),
                 user1[0].email,
                 style: const TextStyle(color: Colors.white, fontSize: 14),
+
               ),
 
               const SizedBox(height: 20),
@@ -110,6 +124,11 @@ class ProfileScreen extends StatelessWidget {
               // === List of Options ===
               _buildProfileOption("Change Password", Icons.lock, context),
               _buildProfileOption("Update Email / Phone", Icons.email, context),
+              _buildProfileOption("Manage Notifications", Icons.notifications, context),
+              _buildProfileOption("View Activity", Icons.history, context),
+              _buildProfileOption("Manage Notifications", Icons.notifications,context,),
+              _buildProfileOption("View Activity", Icons.history, context),
+              _buildProfileOption("Personalization Settings",Icons.color_lens,context,),
               _buildProfileOption(
                 "Manage Notifications", 
                 Icons.notifications,
@@ -121,6 +140,7 @@ class ProfileScreen extends StatelessWidget {
                  Icons.color_lens,
                   context,
                   ),
+
 
               const SizedBox(height: 40),
               const Text(
@@ -138,11 +158,34 @@ class ProfileScreen extends StatelessWidget {
   Widget _buildProfileOption(String text, IconData icon, BuildContext context) {
     return GestureDetector(
       onTap: () {
+        // Add navigation for each option
         if (text == "Personalization Settings") {
           Navigator.push(
             context,
             MaterialPageRoute(
               builder: (context) =>
+
+                  CampusClosetApp(renter: renter1, user: user1),
+            ),
+          );
+        }
+        else if(text == "Change Password"){
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context)=> ChangePasswordPage())
+          );
+        }
+
+        else if(text == "Update Email / Phone"){
+          Navigator.push(context, MaterialPageRoute(builder: (context)=> UpdateContactPage()));
+        }
+         else if(text == "Manage Notifications"){
+          Navigator.push(context,MaterialPageRoute(builder: (context)=>NotificationsPage()));
+         }
+         else if(text=="View Activity"){
+          Navigator.push(context, MaterialPageRoute(builder: (context)=>ViewActivityPage()));
+         }
+        
                   CampusClosetApp(renter: renter1, user: dummyUsers[0]),
             ),
           );
