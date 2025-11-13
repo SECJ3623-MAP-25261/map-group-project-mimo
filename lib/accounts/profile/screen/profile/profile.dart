@@ -9,6 +9,8 @@ import 'view_activity.dart';
 import 'delete_account.dart';
 
 
+
+
 class ProfileScreen extends StatelessWidget {
 
   // Assuming dummyUsers[0] is the current user
@@ -68,6 +70,7 @@ class ProfileScreen extends StatelessWidget {
 
                 const SizedBox(height: 20),
 
+
                 // === User Info ===
                 const Text(
                   "MY PROFILE",
@@ -77,6 +80,7 @@ class ProfileScreen extends StatelessWidget {
                     fontSize: 16,
                     fontWeight: FontWeight.w300,
                     letterSpacing: 2.0,
+
                   ),
                 ),
 
