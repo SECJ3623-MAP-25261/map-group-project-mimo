@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:profile_managemenr/constants/app_colors.dart'; // ✅ Your color system
 
 class NotificationsPage extends StatefulWidget {
   const NotificationsPage({super.key});
@@ -8,29 +9,21 @@ class NotificationsPage extends StatefulWidget {
 }
 
 class _NotificationsPageState extends State<NotificationsPage> {
-  // Define a vibrant accent color for the dark theme, consistent with other screens
-  static const Color _accentColor = Color(0xFF3B82F6); // Professional Blue
-  static const Color _cardColor = Color(0xFF374151); // Input/Card background
-  static const Color _textColor = Colors.white;
-  static const Color _subtitleColor = Colors.white70;
-
-  // Global control switches
+  // ✅ No hardcoded colors — all from AppColors
   bool _isEmailEnabled = true;
   bool _isPushEnabled = true;
 
-  // Specific Push Notification Categories
   bool _orderUpdates = true;
   bool _newMessages = true;
   bool _promotions = false;
   bool _systemAlerts = true;
 
   void _saveSettings() {
-    // In a real application, you would save these booleans to a persistent storage (e.g., database or SharedPreferences).
-
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("✅ Notification settings saved successfully!"),
-        backgroundColor: _accentColor,
+      SnackBar(
+        content: const Text("✅ Notification settings saved successfully!"),
+        backgroundColor: AppColors.accentColor,
+        duration: const Duration(seconds: 2),
       ),
     );
   }
@@ -38,15 +31,16 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF1F2937),
+      backgroundColor: AppColors.lightBackground, // ✅ Light gray background
       appBar: AppBar(
         title: const Text(
           "Manage Notifications",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: const Color(0xFF1F2937),
-        foregroundColor: _textColor,
+        backgroundColor: AppColors.lightBackground,
+        foregroundColor: AppColors.lightTextColor, // dark text
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: ListView(
         padding: const EdgeInsets.all(24),
@@ -65,7 +59,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
             onChanged: (val) {
               setState(() {
                 _isPushEnabled = val;
-                // If globally disabled, disable all sub-settings instantly
                 if (!val) {
                   _orderUpdates = false;
                   _newMessages = false;
@@ -80,8 +73,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
           // === Specific Categories Section ===
           _buildSectionHeader("Push Notification Categories"),
-          
-          // Note: These switches are only enabled if _isPushEnabled is true
+
           _buildCategorySwitch(
             title: "Order Updates (Required)",
             value: _orderUpdates,
@@ -113,7 +105,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
 
           const SizedBox(height: 40),
 
-          // === Save Button ===
           ElevatedButton.icon(
             icon: const Icon(Icons.save),
             label: const Text(
@@ -122,13 +113,11 @@ class _NotificationsPageState extends State<NotificationsPage> {
             ),
             onPressed: _saveSettings,
             style: ElevatedButton.styleFrom(
-              backgroundColor: _accentColor,
-              foregroundColor: _textColor,
+              backgroundColor: AppColors.accentColor,
+              foregroundColor: Colors.white,
               minimumSize: const Size(double.infinity, 50),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(10),
-              ),
-              elevation: 5,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              elevation: 2,
             ),
           ),
         ],
@@ -136,14 +125,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  // Widget to display a title for a section
   Widget _buildSectionHeader(String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 10.0, bottom: 10.0),
       child: Text(
         title,
-        style: const TextStyle(
-          color: _accentColor,
+        style: TextStyle(
+          color: AppColors.accentColor,
           fontSize: 16,
           fontWeight: FontWeight.bold,
         ),
@@ -151,7 +139,6 @@ class _NotificationsPageState extends State<NotificationsPage> {
     );
   }
 
-  // Base switch tile for global controls
   Widget _buildSwitchListTile({
     required String title,
     String? subtitle,
@@ -161,22 +148,31 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: AppColors.lightCardBackground, // ✅ white card
         borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: SwitchListTile(
-        title: Text(title, style: const TextStyle(color: _textColor, fontWeight: FontWeight.w500)),
-        subtitle: subtitle != null ? Text(subtitle, style: const TextStyle(color: _subtitleColor, fontSize: 12)) : null,
+        title: Text(title, style: TextStyle(color: AppColors.lightTextColor, fontWeight: FontWeight.w500)),
+        subtitle: subtitle != null
+            ? Text(subtitle, style: TextStyle(color: AppColors.lightHintColor, fontSize: 12))
+            : null,
         value: value,
         onChanged: onChanged,
-        activeColor: _accentColor,
-        inactiveThumbColor: Colors.white30,
-        tileColor: Colors.transparent, // Use container color
+        activeColor: AppColors.accentColor,
+        inactiveThumbColor: AppColors.lightBorderColor.withOpacity(0.6),
+        inactiveTrackColor: AppColors.lightBorderColor.withOpacity(0.3),
+        tileColor: Colors.transparent,
       ),
     );
   }
 
-  // Switch tile with icon for specific categories
   Widget _buildCategorySwitch({
     required String title,
     required bool value,
@@ -184,27 +180,33 @@ class _NotificationsPageState extends State<NotificationsPage> {
     required IconData icon,
     required bool isEnabled,
   }) {
-    // Determine the color based on whether the whole category is enabled
-    final itemColor = isEnabled ? _textColor : _subtitleColor;
-    final iconColor = isEnabled ? _accentColor : Colors.white30;
+    final textColor = isEnabled ? AppColors.lightTextColor : AppColors.lightHintColor;
+    final iconColor = isEnabled ? AppColors.accentColor : AppColors.lightHintColor.withOpacity(0.5);
 
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 4),
       decoration: BoxDecoration(
-        color: _cardColor,
+        color: AppColors.lightCardBackground,
         borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 4,
+            offset: const Offset(0, 1),
+          ),
+        ],
       ),
       child: SwitchListTile(
         secondary: Icon(icon, color: iconColor, size: 24),
         title: Text(
           title,
-          style: TextStyle(color: itemColor, fontWeight: FontWeight.w500),
+          style: TextStyle(color: textColor, fontWeight: FontWeight.w500),
         ),
         value: value,
-        onChanged: isEnabled ? onChanged : null, // Disable if global push is off
-        activeColor: _accentColor,
-        inactiveThumbColor: Colors.white30,
-        inactiveTrackColor: Colors.white12,
+        onChanged: isEnabled ? onChanged : null,
+        activeColor: AppColors.accentColor,
+        inactiveThumbColor: AppColors.lightBorderColor.withOpacity(0.6),
+        inactiveTrackColor: AppColors.lightBorderColor.withOpacity(0.3),
         tileColor: Colors.transparent,
       ),
     );

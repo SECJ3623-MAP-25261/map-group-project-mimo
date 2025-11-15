@@ -2,7 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
 import '../../../../dbase/data.dart';
 import '../../../../models/user.dart';
-import 'package:profile_managemenr/accounts/profile/screen/profile/edit_profile.dart';
+import '../../../../constants/app_colors.dart';
+import '../../../../constants/app_theme.dart';
 
 void main() {
   runApp(CampusClosetApp(renter: renter1, user: dummyUsers[0]));
@@ -19,9 +20,9 @@ class CampusClosetApp extends StatelessWidget {
     return MaterialApp(
       title: 'Campus Closet',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0D1B2A),
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light, // Change to ThemeMode.system for auto-switching
       home: RenterDashboard(renter: renter, user: user),
     );
   }
@@ -35,105 +36,130 @@ class RenterDashboard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
+      backgroundColor:  AppColors.lightBackground,
       body: Center(
-        child: Container(
-          padding: const EdgeInsets.all(24),
-          margin: const EdgeInsets.all(16),
-          width: 350,
-          decoration: BoxDecoration(
-            color: const Color(0xFF1B263B),
-            borderRadius: BorderRadius.circular(20),
-          ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Welcome, ${user.name} 👕',
-                style: const TextStyle(
-                  color: Color(0xFF00FFC6),
-                  fontSize: 22,
-                  fontWeight: FontWeight.bold,
+        child: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Container(
+            padding: const EdgeInsets.all(24),
+            constraints: const BoxConstraints(maxWidth: 400),
+            decoration: BoxDecoration(
+              color:  AppColors.lightCardBackground,
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
+                  blurRadius: 20,
+                  offset: const Offset(0, 8),
                 ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Manage your items, requests, and earnings.',
-                style: TextStyle(color: Colors.white70),
-              ),
-              const SizedBox(height: 20),
-
-              // Clickable info stats
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                children: [
-                  buildClickableStat(
-                    context,
-                    value: '${renter.itemListed}',
-                    label: 'Items Listed',
-                    page: const PlaceholderPage(title: 'Your Items'),
-                  ),
-                  buildClickableStat(
-                    context,
-                    value: 'RM${renter.earnings.toStringAsFixed(2)}',
-                    label: 'Earnings',
-                    page: const PlaceholderPage(title: 'Earnings Details'),
-                  ),
-                  buildClickableStat(
-                    context,
-                    value: '${renter.pendingRequests}',
-                    label: 'Requests',
-                    page: const PlaceholderPage(title: 'Pending Requests'),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 30),
-
-              // Action Buttons
-              menuButton(context, 'Add New Item', Icons.add),
-              menuButton(context, 'View Rental Requests', Icons.inventory),
-              menuButton(context, 'Transaction History', Icons.receipt_long),
-              menuButton(context, 'Help & Support', Icons.help_outline),
-
-              const SizedBox(height: 20),
-
-              // Back to Profile button
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (_) => ProfileScreen()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF00B4D8),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 30,
-                    vertical: 12,
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Welcome Header
+                Text(
+                  'Welcome, ${user.name} 👕',
+                  style: TextStyle(
+                    color: AppColors.accentColor,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                   ),
                 ),
-                child: const Text(
-                  'Back to Profile 👤',
-                  style: TextStyle(color: Colors.black, fontSize: 16),
+                const SizedBox(height: 8),
+                Text(
+                  'Manage your items, requests, and earnings.',
+                  style: TextStyle(
+                    color:  AppColors.lightHintColor,
+                  ),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 20),
-              const Text(
-                'Campus Closet © 2025',
-                style: TextStyle(color: Colors.white38, fontSize: 12),
-              ),
-            ],
+                const SizedBox(height: 20),
+
+                // Stats Cards
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    buildClickableStat(
+                      context,
+                      value: '${renter.itemListed}',
+                      label: 'Items Listed',
+                      page: const PlaceholderPage(title: 'Your Items'),
+                    ),
+                    buildClickableStat(
+                      context,
+                      value: 'RM${renter.earnings.toStringAsFixed(2)}',
+                      label: 'Earnings',
+                      page: const PlaceholderPage(title: 'Earnings Details'),
+                    ),
+                    buildClickableStat(
+                      context,
+                      value: '${renter.pendingRequests}',
+                      label: 'Requests',
+                      page: const PlaceholderPage(title: 'Pending Requests'),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 30),
+
+                // Action Buttons
+                menuButton(context, 'Add New Item', Icons.add),
+                menuButton(context, 'View Rental Requests', Icons.inventory),
+                menuButton(context, 'Transaction History', Icons.receipt_long),
+                menuButton(context, 'Help & Support', Icons.help_outline),
+
+                const SizedBox(height: 20),
+
+                // Back to Profile button
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (_) =>  ProfileScreen()),
+                    );
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentColor,
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 30,
+                      vertical: 12,
+                    ),
+                    elevation: 2,
+                  ),
+                  child: const Text(
+                    'Back to Profile 👤',
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  ),
+                ),
+                const SizedBox(height: 20),
+                
+                // Footer
+                Text(
+                  'Campus Closet © 2025',
+                  style: TextStyle(
+                    color:  AppColors.lightHintColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  // Normal menu button
+  // Menu button widget
   Widget menuButton(BuildContext context, String title, IconData icon) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Container(
       margin: const EdgeInsets.symmetric(vertical: 6),
       child: ElevatedButton.icon(
@@ -143,15 +169,24 @@ class RenterDashboard extends StatelessWidget {
             MaterialPageRoute(builder: (_) => PlaceholderPage(title: title)),
           );
         },
-        icon: Icon(icon, color: Colors.white),
-        label: Text(title),
+        icon: Icon(
+          icon,
+          color:  AppColors.lightTextColor,
+        ),
+        label: Text(
+          title,
+          style: TextStyle(
+            color:  AppColors.lightTextColor,
+          ),
+        ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color(0xFF2E4057),
+          backgroundColor:  AppColors.lightInputFillColor,
           minimumSize: const Size(double.infinity, 50),
           alignment: Alignment.centerLeft,
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(12),
           ),
+          elevation: isDark ? 0 : 1,
         ),
       ),
     );
@@ -164,31 +199,48 @@ class RenterDashboard extends StatelessWidget {
     required String label,
     required Widget page,
   }) {
-    return GestureDetector(
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => page));
-      },
-      child: Container(
-        padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 14),
-        decoration: BoxDecoration(
-          color: const Color(0xFF2E4057),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white,
-                fontWeight: FontWeight.bold,
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+        },
+        child: Container(
+          margin: const EdgeInsets.symmetric(horizontal: 4),
+          padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
+          decoration: BoxDecoration(
+            color: AppColors.accentColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.accentColor.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                value,
+                style: const TextStyle(
+                  fontSize: 18,
+                  color: AppColors.accentColor,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
               ),
-            ),
-            Text(
-              label,
-              style: const TextStyle(color: Colors.white70, fontSize: 12),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color:  AppColors.lightHintColor,
+                  fontSize: 11,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -202,16 +254,43 @@ class PlaceholderPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: const Color(0xFF0D1B2A),
+      backgroundColor:  AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: const Color(0xFF1B263B),
+        backgroundColor:  AppColors.lightCardBackground,
+        foregroundColor:  AppColors.lightTextColor,
         title: Text(title),
+        elevation: isDark ? 0 : 1,
       ),
       body: Center(
-        child: Text(
-          '$title Page',
-          style: const TextStyle(color: Colors.white, fontSize: 20),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.construction,
+              size: 64,
+              color: AppColors.accentColor,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              '$title',
+              style: TextStyle(
+                color:  AppColors.lightTextColor,
+                fontSize: 20,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Coming soon...',
+              style: TextStyle(
+                color:  AppColors.lightHintColor,
+                fontSize: 16,
+              ),
+            ),
+          ],
         ),
       ),
     );

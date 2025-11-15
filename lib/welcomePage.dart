@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
-import 'package:profile_managemenr/accounts/registration/registration.dart';
+import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/main.dart';
-
+import '../constants/app_colors.dart';
+import '../constants/app_theme.dart';
 
 void main() {
   runApp(const MyApp());
@@ -15,10 +16,9 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Welcome',
-      theme: ThemeData(
-        fontFamily: 'SF Pro Display',
-        useMaterial3: true,
-      ),
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light, // Change to ThemeMode.system for auto-switching
       home: const WelcomeScreen(),
       debugShowCheckedModeBanner: false,
     );
@@ -153,19 +153,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     super.dispose();
   }
 
-  void _showMessage(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        behavior: SnackBarBehavior.floating,
-        backgroundColor: Colors.black87,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-        margin: const EdgeInsets.all(20),
-        duration: const Duration(seconds: 3),
-      ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -174,7 +161,10 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [Color.fromARGB(255, 1, 183, 255), Color.fromARGB(255, 20, 152, 188)],
+            colors: [
+              AppColors.accentColor,
+              Color(0xFF1e8079), // Darker shade of accent
+            ],
           ),
         ),
         child: Stack(
@@ -196,7 +186,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 opacity: _showWelcome ? 1.0 : 0.0,
                 duration: const Duration(milliseconds: 800),
                 child: Container(
-                  color: const Color.fromARGB(255, 6, 201, 255),
+                  color: AppColors.accentColor,
                   child: Center(child: _buildWelcomeContent()),
                 ),
               ),
@@ -227,12 +217,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                       gradient: const LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
-                        colors: [Color.fromARGB(255, 253, 253, 253), Color.fromARGB(255, 255, 255, 255)],
+                        colors: [Colors.white, Color(0xFFF9FAFB)],
                       ),
                       borderRadius: BorderRadius.circular(28),
                       boxShadow: [
                         BoxShadow(
-                          color: const Color.fromARGB(255, 54, 54, 54).withOpacity(0.3),
+                          color: Colors.black.withOpacity(0.2),
                           blurRadius: 40,
                           offset: const Offset(0, 20),
                         ),
@@ -256,16 +246,16 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                         ),
                         // Logo icon
                         logoUrl.isEmpty
-                            ? const Icon(Icons.phone_android, size: 56, color: Colors.white)
+                            ? const Icon(Icons.shopping_bag, size: 56, color: AppColors.accentColor)
                             : ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
-                                child: Image.network(
+                                child: Image.asset(
                                   logoUrl,
                                   width: 80,
                                   height: 80,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.phone_android, size: 56, color: Colors.white),
+                                      const Icon(Icons.shopping_bag, size: 56, color: AppColors.accentColor),
                                 ),
                               ),
                       ],
@@ -288,7 +278,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               style: const TextStyle(
                 fontSize: 32,
                 fontWeight: FontWeight.w700,
-                color: Color.fromARGB(255, 255, 255, 255),
+                color: Colors.white,
               ),
             ),
           ),
@@ -302,9 +292,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             opacity: _textOpacity,
             child: Text(
               tagline,
-              style: TextStyle(
-                fontSize: 17.6,
-                color: const Color(0xFF718096),
+              style: const TextStyle(
+                fontSize: 18,
+                color: Colors.white70,
               ),
             ),
           ),
@@ -323,12 +313,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           // Welcome text
           Column(
             children: [
-              Text(
-                welcomeMessage,
-                style: const TextStyle(
+              const Text(
+                "Welcome Back!",
+                style: TextStyle(
                   fontSize: 40,
                   fontWeight: FontWeight.w700,
-                  color: Color.fromARGB(255, 255, 255, 255),
+                  color: Colors.white,
                   shadows: [
                     Shadow(
                       color: Colors.black12,
@@ -343,8 +333,8 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               Text(
                 "Choose how you'd like to continue with your journey",
                 style: TextStyle(
-                  fontSize: 19.2,
-                  color: const Color.fromARGB(255, 255, 255, 255).withOpacity(0.9),
+                  fontSize: 19,
+                  color: Colors.white.withOpacity(0.9),
                   height: 1.6,
                 ),
                 textAlign: TextAlign.center,
@@ -358,39 +348,39 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             children: [
               _buildAuthButton(
                 text: "Log In",
-                gradient: const LinearGradient(colors: [Color.fromARGB(255, 255, 255, 255), Color.fromARGB(255, 255, 255, 255)]),
-                textColor: const Color.fromARGB(255, 10, 179, 205),
+                backgroundColor: Colors.white,
+                textColor: AppColors.accentColor,
                 onPressed: () {
-                  Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => LoginPage() ));
-                }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const LoginPage()),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               _buildAuthButton(
                 text: "Sign Up",
-                gradient: LinearGradient(
-                  colors: [
-                    const Color.fromARGB(255, 255, 255, 255),
-                    const Color.fromARGB(255, 255, 255, 255),
-                  ],
-                ),
-                textColor: const Color.fromARGB(255, 10, 172, 216),
-                hasBorder: true,
+                backgroundColor: Colors.white,
+                textColor: AppColors.accentColor,
                 onPressed: () {
-                  Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => RegistrationApp() ));
-                }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const RegistrationApp()),
+                  );
+                },
               ),
               const SizedBox(height: 16),
               _buildAuthButton(
                 text: "Continue as Guest",
-                gradient: const LinearGradient(colors: [Color.fromARGB(0, 0, 0, 0), Colors.transparent]),
+                backgroundColor: Colors.transparent,
                 textColor: Colors.white,
                 hasBorder: true,
                 onPressed: () {
-                  Navigator.push(context,
-                  MaterialPageRoute(builder: (context) => CampusClosetScreen() ));
-                }
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const CampusClosetScreen()),
+                  );
+                },
               ),
             ],
           ),
@@ -401,7 +391,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
 
   Widget _buildAuthButton({
     required String text,
-    required Gradient gradient,
+    required Color backgroundColor,
     required Color textColor,
     bool hasBorder = false,
     required VoidCallback onPressed,
@@ -415,7 +405,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           width: double.infinity,
           padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 32),
           decoration: BoxDecoration(
-            gradient: gradient,
+            color: backgroundColor,
             borderRadius: BorderRadius.circular(12),
             border: hasBorder
                 ? Border.all(color: Colors.white.withOpacity(0.5), width: 2)
@@ -434,7 +424,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             text,
             textAlign: TextAlign.center,
             style: TextStyle(
-              fontSize: 17.6,
+              fontSize: 18,
               fontWeight: FontWeight.w600,
               color: textColor,
             ),

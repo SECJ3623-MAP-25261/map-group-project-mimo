@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:profile_managemenr/constants/app_colors.dart';
 
 class ChangePasswordPage extends StatefulWidget {
   const ChangePasswordPage({super.key});
@@ -8,23 +9,14 @@ class ChangePasswordPage extends StatefulWidget {
 }
 
 class _ChangePasswordPageState extends State<ChangePasswordPage> {
-  // Global key to manage the form state for validation
   final _formKey = GlobalKey<FormState>();
-
-  // Controllers for text fields
   final _currentPasswordController = TextEditingController();
   final _newPasswordController = TextEditingController();
   final _confirmNewPasswordController = TextEditingController();
 
-  // State variables for password visibility
   bool _currentPasswordVisible = false;
   bool _newPasswordVisible = false;
   bool _confirmNewPasswordVisible = false;
-
-  // Define a vibrant accent color for the dark theme
-  static const Color _accentColor = Color(0xFF3B82F6); // Professional Blue
-  static const Color _cardColor = Color(0xFF374151); // Input/Card background
-  static const Color _borderColor = Color(0xFF4B5563); // Border color
 
   @override
   void dispose() {
@@ -36,30 +28,30 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
 
   void _submitPasswordChange() {
     if (_formKey.currentState!.validate()) {
-      // 1. Check if new passwords match
       if (_newPasswordController.text != _confirmNewPasswordController.text) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("New passwords do not match."), backgroundColor: Color(0xFFEF4444)),
+          SnackBar(
+            content: const Text("New passwords do not match."),
+            backgroundColor: AppColors.errorColor,
+            duration: const Duration(seconds: 2),
+          ),
         );
         return;
       }
 
-      // In a real application, you would send this data to a backend API here.
-
-      // 2. Show Success and navigate back
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("✅ Password updated successfully!"), backgroundColor: _accentColor),
+        SnackBar(
+          content: const Text("✅ Password updated successfully!"),
+          backgroundColor: AppColors.accentColor,
+          duration: const Duration(seconds: 2),
+        ),
       );
-      // Wait briefly before popping, allowing the user to see the success message
       Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          Navigator.pop(context);
-        }
+        if (mounted) Navigator.pop(context);
       });
     }
   }
 
-  // Helper method to create professional-looking text fields with toggles
   Widget _buildPasswordField({
     required TextEditingController controller,
     required String labelText,
@@ -70,28 +62,28 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
     return TextFormField(
       controller: controller,
       obscureText: !isVisible,
-      style: const TextStyle(color: Colors.white), // Input text color
+      style: TextStyle(color: AppColors.lightTextColor), // dark gray text
       decoration: InputDecoration(
         labelText: labelText,
-        labelStyle: const TextStyle(color: Colors.white70),
+        labelStyle: TextStyle(color: AppColors.lightHintColor),
         filled: true,
-        fillColor: _cardColor,
+        fillColor: AppColors.lightInputFillColor,
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _borderColor),
+          borderSide: BorderSide(color: AppColors.lightBorderColor),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _borderColor),
+          borderSide: BorderSide(color: AppColors.lightBorderColor),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(10),
-          borderSide: const BorderSide(color: _accentColor, width: 2),
+          borderSide: BorderSide(color: AppColors.accentColor, width: 2),
         ),
         suffixIcon: IconButton(
           icon: Icon(
             isVisible ? Icons.visibility_off : Icons.visibility,
-            color: Colors.white54,
+            color: AppColors.lightHintColor,
           ),
           onPressed: onToggle,
         ),
@@ -103,16 +95,14 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      // Keep dark background from your ProfileScreen
-      backgroundColor: const Color(0xFF1F2937), 
+      backgroundColor: AppColors.lightBackground, // light gray bg
       appBar: AppBar(
-        title: const Text(
-          "Change Password",
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        backgroundColor: const Color(0xFF1F2937), // Match Scaffold background
-        foregroundColor: Colors.white,
+        title: const Text("Change Password", style: TextStyle(fontWeight: FontWeight.bold)),
+        backgroundColor: AppColors.lightBackground,
+        foregroundColor: AppColors.lightTextColor, // dark text for app bar
         elevation: 0,
+        // Remove shadow and match background
+        surfaceTintColor: Colors.transparent,
       ),
       body: Form(
         key: _formKey,
@@ -121,22 +111,25 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
-              // Info Banner
+              // Info Banner (light version)
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: _accentColor.withOpacity(0.1),
+                  color: AppColors.accentColor.withOpacity(0.1),
                   borderRadius: BorderRadius.circular(10),
-                  border: Border.all(color: _accentColor.withOpacity(0.3)),
+                  border: Border.all(color: AppColors.accentColor.withOpacity(0.3)),
                 ),
                 child: Row(
-                  children: const [
-                    Icon(Icons.security, color: _accentColor),
-                    SizedBox(width: 10),
+                  children: [
+                    Icon(Icons.security, color: AppColors.accentColor),
+                    const SizedBox(width: 10),
                     Expanded(
                       child: Text(
                         "Use a strong, unique password to protect your account.",
-                        style: TextStyle(color: Colors.white70, fontSize: 14),
+                        style: TextStyle(
+                          color: AppColors.lightHintColor,
+                          fontSize: 14,
+                        ),
                       ),
                     ),
                   ],
@@ -144,75 +137,47 @@ class _ChangePasswordPageState extends State<ChangePasswordPage> {
               ),
               const SizedBox(height: 30),
 
-              // Current Password Field
               _buildPasswordField(
                 controller: _currentPasswordController,
                 labelText: "Current Password",
                 isVisible: _currentPasswordVisible,
-                onToggle: () {
-                  setState(() {
-                    _currentPasswordVisible = !_currentPasswordVisible;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter your current password.';
-                  }
-                  // In a real app, you'd check this against the stored hash
-                  return null; 
-                },
+                onToggle: () => setState(() => _currentPasswordVisible = !_currentPasswordVisible),
+                validator: (value) => value?.isEmpty ?? true
+                    ? 'Please enter your current password.'
+                    : null,
               ),
               const SizedBox(height: 20),
 
-              // New Password Field
               _buildPasswordField(
                 controller: _newPasswordController,
                 labelText: "New Password",
                 isVisible: _newPasswordVisible,
-                onToggle: () {
-                  setState(() {
-                    _newPasswordVisible = !_newPasswordVisible;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.length < 8) {
-                    return 'Password must be at least 8 characters.';
-                  }
-                  return null;
-                },
+                onToggle: () => setState(() => _newPasswordVisible = !_newPasswordVisible),
+                validator: (value) => (value == null || value.length < 8)
+                    ? 'Password must be at least 8 characters.'
+                    : null,
               ),
               const SizedBox(height: 20),
 
-              // Confirm New Password Field
               _buildPasswordField(
                 controller: _confirmNewPasswordController,
                 labelText: "Confirm New Password",
                 isVisible: _confirmNewPasswordVisible,
-                onToggle: () {
-                  setState(() {
-                    _confirmNewPasswordVisible = !_confirmNewPasswordVisible;
-                  });
-                },
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please confirm your new password.';
-                  }
-                  return null;
-                },
+                onToggle: () => setState(() => _confirmNewPasswordVisible = !_confirmNewPasswordVisible),
+                validator: (value) => value?.isEmpty ?? true
+                    ? 'Please confirm your new password.'
+                    : null,
               ),
               const SizedBox(height: 40),
 
-              // Update Button
               ElevatedButton(
                 onPressed: _submitPasswordChange,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _accentColor,
+                  backgroundColor: AppColors.accentColor,
                   foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 5,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 2,
                 ),
                 child: const Text(
                   "Update Password",

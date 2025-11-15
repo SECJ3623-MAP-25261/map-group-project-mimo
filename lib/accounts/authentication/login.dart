@@ -1,9 +1,7 @@
 import 'package:flutter/material.dart';
 import 'forget_password.dart';
-import 'package:profile_managemenr/accounts/registration/registration.dart';
-// Assuming you have a home screen or dashboard to navigate to after login
-// import 'package:profile_managemenr/home_screen.dart'; 
-
+import 'package:profile_managemenr/accounts/registration/registration_app.dart';
+import '../../constants/app_colors.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -20,14 +18,6 @@ class _LoginPageState extends State<LoginPage> {
   bool _rememberMe = false;
   bool _passwordVisible = false;
   bool _isLoading = false;
-
-  // Consistent theme colors
-  static const Color _primaryAccentColor = Color(0xFF3B82F6); // Vibrant Blue
-  static const Color _darkBackground = Color(0xFF1F2937); // Slightly lighter dark background
-  static const Color _cardBackground = Color(0xFF374151); // Input field background
-  static const Color _textColor = Colors.white;
-  static const Color _hintColor = Colors.white54;
-  static const Color _borderColor = Color(0xFF4B5563);
 
   @override
   void dispose() {
@@ -63,12 +53,10 @@ class _LoginPageState extends State<LoginPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Login Successful! Welcome back.'),
-          backgroundColor: _primaryAccentColor,
+          backgroundColor: AppColors.accentColor,
           duration: Duration(seconds: 2),
         ),
       );
-
-      
 
       setState(() {
         _isLoading = false;
@@ -78,20 +66,22 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    
     return Scaffold(
-      backgroundColor: _darkBackground,
-      body: Center( // Center the login form on the screen
+      backgroundColor:  AppColors.lightBackground,
+      body: Center(
         child: SingleChildScrollView(
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 40),
           child: Container(
-            constraints: const BoxConstraints(maxWidth: 400), // Max width for the card
+            constraints: const BoxConstraints(maxWidth: 400),
             padding: const EdgeInsets.all(30),
             decoration: BoxDecoration(
-              color: _cardBackground,
+              color:  AppColors.lightCardBackground,
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
+                  color: Colors.black.withOpacity(isDark ? 0.3 : 0.08),
                   blurRadius: 20,
                   offset: const Offset(0, 10),
                 ),
@@ -100,25 +90,25 @@ class _LoginPageState extends State<LoginPage> {
             child: Form(
               key: _formKey,
               child: Column(
-                mainAxisSize: MainAxisSize.min, // Keep column size minimal
+                mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
                   const Text(
                     'Welcome Back!',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _primaryAccentColor,
+                      color: AppColors.accentColor,
                       fontSize: 28,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 1.2,
                     ),
                   ),
                   const SizedBox(height: 10),
-                  const Text(
+                  Text(
                     'Login to your account',
                     textAlign: TextAlign.center,
                     style: TextStyle(
-                      color: _hintColor,
+                      color:  AppColors.lightHintColor,
                       fontSize: 16,
                     ),
                   ),
@@ -127,20 +117,34 @@ class _LoginPageState extends State<LoginPage> {
                   // Email or Phone Input
                   TextFormField(
                     controller: _emailPhoneController,
-                    style: const TextStyle(color: _textColor),
+                    style: TextStyle(
+                      color:  AppColors.lightTextColor,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Email or Phone',
-                      labelStyle: const TextStyle(color: _hintColor),
-                      prefixIcon: const Icon(Icons.person_outline, color: _primaryAccentColor),
+                      labelStyle: TextStyle(
+                        color:  AppColors.lightHintColor,
+                      ),
+                      prefixIcon: const Icon(Icons.person_outline, color: AppColors.accentColor),
                       filled: true,
-                      fillColor: _darkBackground.withOpacity(0.5), // Use a slightly darker fill
+                      fillColor:  AppColors.lightInputFillColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                        borderSide: BorderSide(
+                          color:  AppColors.lightBorderColor,
+                          width: 1,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color:  AppColors.lightBorderColor,
+                          width: 1,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _primaryAccentColor, width: 2),
+                        borderSide: const BorderSide(color: AppColors.accentColor, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -156,15 +160,19 @@ class _LoginPageState extends State<LoginPage> {
                   TextFormField(
                     controller: _passwordController,
                     obscureText: !_passwordVisible,
-                    style: const TextStyle(color: _textColor),
+                    style: TextStyle(
+                      color:  AppColors.lightTextColor,
+                    ),
                     decoration: InputDecoration(
                       labelText: 'Password',
-                      labelStyle: const TextStyle(color: _hintColor),
-                      prefixIcon: const Icon(Icons.lock_outline, color: _primaryAccentColor),
+                      labelStyle: TextStyle(
+                        color:  AppColors.lightHintColor,
+                      ),
+                      prefixIcon: const Icon(Icons.lock_outline, color: AppColors.accentColor),
                       suffixIcon: IconButton(
                         icon: Icon(
                           _passwordVisible ? Icons.visibility_off : Icons.visibility,
-                          color: _hintColor,
+                          color:  AppColors.lightHintColor,
                         ),
                         onPressed: () {
                           setState(() {
@@ -173,14 +181,24 @@ class _LoginPageState extends State<LoginPage> {
                         },
                       ),
                       filled: true,
-                      fillColor: _darkBackground.withOpacity(0.5),
+                      fillColor:  AppColors.lightInputFillColor,
                       border: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                        borderSide: BorderSide(
+                          color:  AppColors.lightBorderColor,
+                          width: 1,
+                        ),
+                      ),
+                      enabledBorder: OutlineInputBorder(
+                        borderRadius: BorderRadius.circular(12),
+                        borderSide: BorderSide(
+                          color:  AppColors.lightBorderColor,
+                          width: 1,
+                        ),
                       ),
                       focusedBorder: OutlineInputBorder(
                         borderRadius: BorderRadius.circular(12),
-                        borderSide: const BorderSide(color: _primaryAccentColor, width: 2),
+                        borderSide: const BorderSide(color: AppColors.accentColor, width: 2),
                       ),
                     ),
                     validator: (value) {
@@ -205,13 +223,19 @@ class _LoginPageState extends State<LoginPage> {
                                 _rememberMe = value!;
                               });
                             },
-                            activeColor: _primaryAccentColor,
-                            checkColor: _textColor,
-                            side: const BorderSide(color: _hintColor, width: 1.5),
+                            activeColor: AppColors.accentColor,
+                            checkColor: Colors.white,
+                            side: BorderSide(
+                              color:  AppColors.lightHintColor,
+                              width: 1.5,
+                            ),
                           ),
-                          const Text(
+                          Text(
                             'Remember me',
-                            style: TextStyle(color: _hintColor, fontSize: 13),
+                            style: TextStyle(
+                              color:  AppColors.lightHintColor,
+                              fontSize: 13,
+                            ),
                           ),
                         ],
                       ),
@@ -220,7 +244,7 @@ class _LoginPageState extends State<LoginPage> {
                         child: const Text(
                           'Forgot Password?',
                           style: TextStyle(
-                            color: _primaryAccentColor,
+                            color: AppColors.accentColor,
                             fontSize: 13,
                             fontWeight: FontWeight.w500,
                           ),
@@ -234,20 +258,22 @@ class _LoginPageState extends State<LoginPage> {
                   ElevatedButton(
                     onPressed: _isLoading ? null : _handleLogin,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: _primaryAccentColor,
-                      foregroundColor: _textColor,
+                      backgroundColor: AppColors.accentColor,
+                      foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
-                      elevation: 5,
+                      elevation: 2,
+                      disabledBackgroundColor: 
+                           AppColors.lightBorderColor,
                     ),
                     child: _isLoading
                         ? const SizedBox(
                             width: 20,
                             height: 20,
                             child: CircularProgressIndicator(
-                              color: _textColor,
+                              color: Colors.white,
                               strokeWidth: 2,
                             ),
                           )
@@ -261,28 +287,45 @@ class _LoginPageState extends State<LoginPage> {
                   ),
                   const SizedBox(height: 20),
 
-                  // Or divider (Optional, but adds to modern look)
+                  // Or divider
                   Row(
-                    children: const [
-                      Expanded(child: Divider(color: _hintColor)),
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Text("OR", style: TextStyle(color: _hintColor, fontSize: 12)),
+                    children: [
+                      Expanded(
+                        child: Divider(
+                          color:  AppColors.lightBorderColor,
+                        ),
                       ),
-                      Expanded(child: Divider(color: _hintColor)),
+                      Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 10),
+                        child: Text(
+                          "OR",
+                          style: TextStyle(
+                            color:  AppColors.lightHintColor,
+                            fontSize: 12,
+                          ),
+                        ),
+                      ),
+                      Expanded(
+                        child: Divider(
+                          color:  AppColors.lightBorderColor,
+                        ),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 20),
 
-                  // Register Button (using _buildRegisterButton helper)
+                  // Register Button
                   _buildRegisterButton(),
                   const SizedBox(height: 40),
 
                   // Footer Text
-                  const Text(
+                  Text(
                     'Campus Closet © 2025',
                     textAlign: TextAlign.center,
-                    style: TextStyle(color: Colors.white54, fontSize: 12),
+                    style: TextStyle(
+                      color:  AppColors.lightHintColor,
+                      fontSize: 12,
+                    ),
                   ),
                 ],
               ),
@@ -294,26 +337,28 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Widget _buildRegisterButton() {
+    
+    
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
+        Text(
           "Don't have an account? ",
           style: TextStyle(
-            color: _hintColor,
+            color: AppColors.lightHintColor,
             fontSize: 14,
           ),
         ),
         GestureDetector(
           onTap: _navigateToRegister,
           child: const Text(
-            'Sign Up', // Changed "Register" to "Sign Up" for consistency
+            'Sign Up',
             style: TextStyle(
-              color: _primaryAccentColor, // Use vibrant accent color
+              color: AppColors.accentColor,
               fontSize: 14,
               fontWeight: FontWeight.bold,
               decoration: TextDecoration.underline,
-              decorationColor: _primaryAccentColor,
+              decorationColor: AppColors.accentColor,
             ),
           ),
         ),

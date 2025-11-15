@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:profile_managemenr/constants/app_colors.dart'; // ✅ Import your AppColors
 
 class EditProfileScreen extends StatefulWidget {
   const EditProfileScreen({super.key});
@@ -9,37 +10,25 @@ class EditProfileScreen extends StatefulWidget {
 
 class _EditProfileScreenState extends State<EditProfileScreen> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Initialize with placeholder data if available, or empty strings
-  String _name = "John Doe"; 
-  String _phone = "012-3456789"; 
 
-  // Define consistent theme colors
-  static const Color _accentColor = Color(0xFF3B82F6); 
-  static const Color _cardColor = Color(0xFF374151); 
-  static const Color _darkBackground = Color(0xFF1F2937);
-  static const Color _textColor = Colors.white;
+  // Initialize with placeholder data
+  String _name = "John Doe";
+  String _phone = "012-3456789";
 
   void _saveChanges() {
     if (_formKey.currentState!.validate()) {
       _formKey.currentState!.save();
-      
-      // 1. Placeholder for your saving logic (e.g., update Firebase)
-      // print("Saving Name: $_name, Phone: $_phone"); 
 
-      // 2. Show success message
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("✅ Profile updated successfully!"), 
-          backgroundColor: _accentColor,
+        SnackBar(
+          content: const Text("✅ Profile updated successfully!"),
+          backgroundColor: AppColors.accentColor,
+          duration: const Duration(seconds: 2),
         ),
       );
-      
-      // 3. Navigate back to the ProfileScreen
+
       Future.delayed(const Duration(milliseconds: 1500), () {
-        if (mounted) {
-          Navigator.pop(context);
-        }
+        if (mounted) Navigator.pop(context);
       });
     }
   }
@@ -47,15 +36,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _darkBackground,
+      backgroundColor: AppColors.lightBackground, // ✅ Light gray background
       appBar: AppBar(
         title: const Text(
           "Edit Profile",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: _darkBackground,
-        foregroundColor: _textColor,
+        backgroundColor: AppColors.lightBackground,
+        foregroundColor: AppColors.lightTextColor, // ✅ Dark text for AppBar
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(24),
@@ -70,7 +60,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                   children: [
                     CircleAvatar(
                       radius: 60,
-                      backgroundColor: _cardColor,
+                      backgroundColor: AppColors.lightCardBackground, // ✅ white background
                       backgroundImage: const AssetImage('assets/images/profile_placeholder.png'),
                     ),
                     Positioned(
@@ -79,61 +69,76 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       child: Container(
                         padding: const EdgeInsets.all(4),
                         decoration: BoxDecoration(
-                          color: _accentColor,
+                          color: AppColors.accentColor, // ✅ your teal/blue
                           shape: BoxShape.circle,
-                          border: Border.all(color: _darkBackground, width: 2),
+                          border: Border.all(
+                            color: AppColors.lightBackground, // ✅ light bg as border
+                            width: 2,
+                          ),
                         ),
-                        child: const Icon(Icons.camera_alt, color: _textColor, size: 20),
+                        child: const Icon(Icons.camera_alt, color: Colors.white, size: 20),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 30),
-              
+
               // --- Name Field ---
               TextFormField(
                 initialValue: _name,
-                style: const TextStyle(color: _textColor),
+                style: TextStyle(color: AppColors.lightTextColor),
                 decoration: InputDecoration(
                   labelText: "Name",
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.person_outline, color: _accentColor),
+                  labelStyle: TextStyle(color: AppColors.lightHintColor),
+                  prefixIcon: Icon(Icons.person_outline, color: AppColors.accentColor),
                   filled: true,
-                  fillColor: _cardColor,
+                  fillColor: AppColors.lightInputFillColor,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF4B5563)),
+                    borderSide: BorderSide(color: AppColors.lightBorderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: AppColors.accentColor, width: 2),
                   ),
                 ),
-                validator: (value) => value!.isEmpty ? 'Name cannot be empty' : null,
+                validator: (value) => (value == null || value.isEmpty)
+                    ? 'Name cannot be empty'
+                    : null,
                 onSaved: (value) => _name = value!,
               ),
               const SizedBox(height: 20),
-              
+
               // --- Phone Field ---
               TextFormField(
                 initialValue: _phone,
                 keyboardType: TextInputType.phone,
-                style: const TextStyle(color: _textColor),
+                style: TextStyle(color: AppColors.lightTextColor),
                 decoration: InputDecoration(
                   labelText: "Phone Number",
-                  labelStyle: const TextStyle(color: Colors.white70),
-                  prefixIcon: const Icon(Icons.phone_outlined, color: _accentColor),
+                  labelStyle: TextStyle(color: AppColors.lightHintColor),
+                  prefixIcon: Icon(Icons.phone_outlined, color: AppColors.accentColor),
                   filled: true,
-                  fillColor: _cardColor,
+                  fillColor: AppColors.lightInputFillColor,
                   border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
                   enabledBorder: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(10),
-                    borderSide: const BorderSide(color: Color(0xFF4B5563)),
+                    borderSide: BorderSide(color: AppColors.lightBorderColor),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                    borderSide: BorderSide(color: AppColors.accentColor, width: 2),
                   ),
                 ),
-                validator: (value) => value!.isEmpty ? 'Phone number cannot be empty' : null,
+                validator: (value) => (value == null || value.isEmpty)
+                    ? 'Phone number cannot be empty'
+                    : null,
                 onSaved: (value) => _phone = value!,
               ),
               const SizedBox(height: 40),
-              
+
               // --- Save Button ---
               ElevatedButton.icon(
                 icon: const Icon(Icons.save),
@@ -143,13 +148,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                 ),
                 onPressed: _saveChanges,
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: _accentColor,
-                  foregroundColor: _textColor,
+                  backgroundColor: AppColors.accentColor,
+                  foregroundColor: Colors.white,
                   minimumSize: const Size(double.infinity, 50),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  elevation: 5,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  elevation: 2,
                 ),
               ),
             ],

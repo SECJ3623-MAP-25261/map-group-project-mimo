@@ -8,30 +8,34 @@ import 'notification.dart';
 import 'view_activity.dart';
 import 'delete_account.dart';
 
-
-
+// ✅ Import AppColors to match your AppTheme's usage
+import 'package:profile_managemenr/constants/app_colors.dart';
 
 class ProfileScreen extends StatelessWidget {
-
-  // Assuming dummyUsers[0] is the current user
-  final user = dummyUsers[0]; 
-  final renter = renter1; // Assuming renter1 is correctly defined and available
+  final user = dummyUsers[0];
+  final renter = renter1;
 
   @override
   Widget build(BuildContext context) {
-    // Define a vibrant, professional accent color
-    const Color primaryColor = Color(0xFF3B82F6); // Professional Blue
-    const Color darkBackground = Color(0xFF1F2937); // Slightly lighter dark background
-    const Color cardBackground = Color(0xFF374151); // Inner card background
+    // 🔸 Match EXACTLY what your AppTheme.darkTheme uses:
+    // - scaffold is WHITE (from Color.fromARGB(255, 255, 255, 255))
+    // - text uses LIGHT theme colors (AppColors.lightTextColor = dark gray)
+    // - inputs use light palette
+
+    const Color scaffoldBg = Color.fromARGB(255, 255, 255, 255); // ← your current darkTheme bg (white!)
+    const Color cardBg = AppColors.lightCardBackground; // white
+    const Color primaryColor = AppColors.accentColor; // teal
+    const Color textColor = AppColors.lightTextColor; // dark gray (#111827)
+    const Color textSecondary = AppColors.lightHintColor; // gray-500
 
     return Scaffold(
-      // 1. Updated Scaffold background to a slightly less harsh dark tone
-      backgroundColor: darkBackground, 
+      backgroundColor: scaffoldBg, // ← white, as in your darkTheme
       appBar: AppBar(
-        title: const Text('Account Settings', style: TextStyle(color: Colors.white)),
-        backgroundColor: darkBackground,
+        title: Text('Account Settings', style: TextStyle(color: textColor)),
+        backgroundColor: scaffoldBg,
         elevation: 0,
         centerTitle: true,
+        foregroundColor: textColor,
       ),
       body: Center(
         child: SingleChildScrollView(
@@ -39,15 +43,14 @@ class ProfileScreen extends StatelessWidget {
           child: Container(
             constraints: const BoxConstraints(maxWidth: 400),
             padding: const EdgeInsets.all(24),
-            // 2. Updated Card/Container background for contrast
             decoration: BoxDecoration(
-              color: cardBackground, 
+              color: cardBg, // white
               borderRadius: BorderRadius.circular(20),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.3),
-                  blurRadius: 15,
-                  offset: const Offset(0, 8),
+                  color: Colors.black.withOpacity(0.08),
+                  blurRadius: 10,
+                  offset: const Offset(0, 4),
                 ),
               ],
             ),
@@ -55,109 +58,91 @@ class ProfileScreen extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // === Profile Picture ===
+                // Profile Picture
                 CircleAvatar(
                   radius: 50,
-                  backgroundColor: primaryColor.withOpacity(0.2), // Accent color ring
+                  backgroundColor: primaryColor.withOpacity(0.2),
                   child: CircleAvatar(
                     radius: 47,
-                    backgroundColor: Colors.black87,
-                    backgroundImage: AssetImage(
-                      'assets/images/profile_placeholder.png', // Placeholder image
-                    ),
+                    backgroundColor: Colors.grey[200],
+                    backgroundImage: const AssetImage('assets/images/profile_placeholder.png'),
                   ),
                 ),
-
                 const SizedBox(height: 20),
 
-
-                // === User Info ===
-                const Text(
+                Text(
                   "MY PROFILE",
                   textAlign: TextAlign.center,
                   style: TextStyle(
-                    color: Colors.white, // Changed color for visibility
+                    color: textSecondary,
                     fontSize: 16,
                     fontWeight: FontWeight.w300,
                     letterSpacing: 2.0,
-
                   ),
                 ),
-
                 const SizedBox(height: 8),
 
                 Text(
                   user.name,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(
-                    color: Colors.white, // Changed color for visibility
+                  style: TextStyle(
+                    color: textColor,
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-
                 Text(
                   user.email,
                   textAlign: TextAlign.center,
-                  style: const TextStyle(color: Colors.white70, fontSize: 16),
+                  style: TextStyle(color: textSecondary, fontSize: 16),
                 ),
-
                 const SizedBox(height: 25),
 
-                // === Edit Profile Button ===
+                // Edit Profile Button
                 ElevatedButton.icon(
                   icon: const Icon(Icons.edit, size: 20),
                   label: const Text("Edit Profile", style: TextStyle(fontSize: 16)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor, // Use vibrant primary color
+                    backgroundColor: primaryColor,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 5,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context)=> EditProfileScreen()));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => EditProfileScreen()));
                   },
                 ),
-
                 const SizedBox(height: 12),
 
-                // === Delete Account Button ===
+                // Delete Account Button
                 ElevatedButton.icon(
                   icon: const Icon(Icons.delete_forever, size: 20),
                   label: const Text("Delete Account", style: TextStyle(fontSize: 16)),
                   style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFFEF4444), // Vibrant red for caution
+                    backgroundColor: AppColors.errorColor,
                     foregroundColor: Colors.white,
                     minimumSize: const Size(double.infinity, 48),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    elevation: 5,
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                   ),
                   onPressed: () {
-                    Navigator.push(context, MaterialPageRoute(builder: (context)=>DeleteConfirmationDialog() ));
+                    Navigator.push(context, MaterialPageRoute(builder: (context) => DeleteConfirmationDialog()));
                   },
                 ),
 
-                const Divider(height: 40, thickness: 1, color: Colors.white10),
+                const Divider(height: 40, thickness: 1, color: Colors.grey),
 
-                // === List of Options ===
-                _buildProfileOption("Change Password", Icons.lock_outline, context, primaryColor),
-                _buildProfileOption("Update Email / Phone", Icons.contact_mail_outlined, context, primaryColor),
-                _buildProfileOption("Manage Notifications", Icons.notifications_active_outlined, context, primaryColor),
-                _buildProfileOption("View Activity", Icons.insights, context, primaryColor),
-                _buildProfileOption("Personalization Settings",Icons.color_lens_outlined,context, primaryColor),
+                // Menu Items — all using light-theme text colors
+                _buildProfileOption("Change Password", Icons.lock_outline, context, primaryColor, textColor, textSecondary),
+                _buildProfileOption("Update Email / Phone", Icons.contact_mail_outlined, context, primaryColor, textColor, textSecondary),
+                _buildProfileOption("Manage Notifications", Icons.notifications_active_outlined, context, primaryColor, textColor, textSecondary),
+                _buildProfileOption("View Activity", Icons.insights, context, primaryColor, textColor, textSecondary),
+                _buildProfileOption("Personalization Settings", Icons.color_lens_outlined, context, primaryColor, textColor, textSecondary),
 
                 const SizedBox(height: 40),
-
-                // === Footer ===
-                const Text(
+                Text(
                   "Campus Closet © 2025",
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.white54, fontSize: 12),
+                  style: TextStyle(color: textSecondary.withOpacity(0.7), fontSize: 12),
                 ),
               ],
             ),
@@ -167,10 +152,16 @@ class ProfileScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildProfileOption(String text, IconData icon, BuildContext context, Color accentColor) {
-    return InkWell( // Use InkWell for a ripple effect (more professional)
+  Widget _buildProfileOption(
+    String text,
+    IconData icon,
+    BuildContext context,
+    Color accentColor,
+    Color textColor,
+    Color textSecondary,
+  ) {
+    return InkWell(
       onTap: () {
-        // Navigation logic remains the same
         if (text == "Personalization Settings") {
           Navigator.push(
             context,
@@ -178,33 +169,29 @@ class ProfileScreen extends StatelessWidget {
               builder: (context) => CampusClosetApp(renter: renter1, user: dummyUsers[0]),
             ),
           );
-        }
-        else if(text == "Change Password"){
-          Navigator.push(context,MaterialPageRoute(builder: (context)=> ChangePasswordPage()));
-        }
-        else if(text == "Update Email / Phone"){
-          Navigator.push(context, MaterialPageRoute(builder: (context)=> UpdateContactPage()));
-        }
-        else if(text == "Manage Notifications"){
-          Navigator.push(context,MaterialPageRoute(builder: (context)=>NotificationsPage()));
-        }
-        else if(text=="View Activity"){
-          Navigator.push(context, MaterialPageRoute(builder: (context)=>ViewActivityPage()));
+        } else if (text == "Change Password") {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => ChangePasswordPage()));
+        } else if (text == "Update Email / Phone") {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => UpdateContactPage()));
+        } else if (text == "Manage Notifications") {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => NotificationsPage()));
+        } else if (text == "View Activity") {
+          Navigator.push(context, MaterialPageRoute(builder: (context) => ViewActivityPage()));
         }
       },
       child: Padding(
-        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8), // Adjusted padding
+        padding: const EdgeInsets.symmetric(vertical: 12.0, horizontal: 8),
         child: Row(
           children: [
-            Icon(icon, color: accentColor, size: 24), // Use accent color for icons
+            Icon(icon, color: accentColor, size: 24),
             const SizedBox(width: 15),
             Expanded(
               child: Text(
                 text,
-                style: const TextStyle(color: Colors.white, fontSize: 16),
+                style: TextStyle(color: textColor, fontSize: 16),
               ),
             ),
-            const Icon(Icons.chevron_right, color: Colors.white38),
+            Icon(Icons.chevron_right, color: textSecondary),
           ],
         ),
       ),

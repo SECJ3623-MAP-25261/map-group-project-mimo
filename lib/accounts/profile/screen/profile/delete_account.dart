@@ -1,75 +1,73 @@
 import 'package:flutter/material.dart';
-
-// Define consistent theme colors
-const Color _accentColor = Color(0xFF3B82F6); 
-const Color _cardBackground = Color(0xFF374151);
-const Color _deleteButtonColor = Color(0xFFEF4444); // Vibrant Red
+import 'package:profile_managemenr/constants/app_colors.dart'; // ✅ Import your AppColors
 
 class DeleteConfirmationDialog extends StatelessWidget {
   const DeleteConfirmationDialog({super.key});
 
-  // Placeholder function for the actual backend deletion logic
   void _deleteAccount(BuildContext context) {
-    // 1. In a real app, integrate your backend logic here:
-    //    e.g., Call an API, delete local tokens, etc.
-    
-    // 2. Show a final confirmation/success message
     ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text("✅ Account permanently deleted."),
-        backgroundColor: _deleteButtonColor,
-        duration: Duration(seconds: 3),
+      SnackBar(
+        content: const Text("✅ Account permanently deleted."),
+        backgroundColor: AppColors.errorColor, // ✅ Your coral red
+        duration: const Duration(seconds: 3),
       ),
     );
 
-    // 3. Close the dialog and navigate to the login screen
-    Navigator.of(context).pop(); // Close the dialog
+    Navigator.of(context).pop(); // Close dialog
 
-    // Example of navigating to login (uncomment and replace LoginPage() with your actual login widget)
+    // Uncomment below to navigate to login after deletion:
     // Navigator.of(context).pushAndRemoveUntil(
-    //     MaterialPageRoute(builder: (context) => const LoginPage()),
-    //     (Route<dynamic> route) => false,
+    //   MaterialPageRoute(builder: (context) => const LoginPage()),
+    //   (Route<dynamic> route) => false,
     // );
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      // Apply dark theme styling to the dialog
-      backgroundColor: _cardBackground, 
+      // ✅ Light-themed background
+      backgroundColor: AppColors.lightCardBackground, // white
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
       
       title: Row(
-        children: const [
-          Icon(Icons.warning_amber, color: _deleteButtonColor, size: 28),
-          SizedBox(width: 10),
+        children: [
+          Icon(Icons.warning_amber, color: AppColors.errorColor, size: 28),
+          const SizedBox(width: 10),
           Text(
             "Confirm Account Deletion",
-            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+            style: TextStyle(
+              color: AppColors.lightTextColor, // dark gray text
+              fontWeight: FontWeight.bold,
+            ),
           ),
         ],
       ),
       
-      content: const Text(
+      content: Text(
         "Are you absolutely sure you want to permanently delete your account? This action cannot be undone, and all associated data will be lost.",
-        style: TextStyle(color: Colors.white70),
+        style: TextStyle(
+          color: AppColors.lightHintColor, // gray-500 for body text
+        ),
       ),
       
       actions: [
         // Cancel Button
         TextButton(
           onPressed: () => Navigator.of(context).pop(),
-          child: const Text(
+          child: Text(
             "Cancel",
-            style: TextStyle(color: _accentColor, fontSize: 16),
+            style: TextStyle(
+              color: AppColors.accentColor, // your teal/blue
+              fontSize: 16,
+            ),
           ),
         ),
         
-        // Confirm Delete Button (Red and high contrast)
+        // Confirm Delete Button
         ElevatedButton(
-          onPressed: () => _deleteAccount(context), // Call the delete function
+          onPressed: () => _deleteAccount(context),
           style: ElevatedButton.styleFrom(
-            backgroundColor: _deleteButtonColor, 
+            backgroundColor: AppColors.errorColor, // ✅ coral red from your palette
             foregroundColor: Colors.white,
             shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
           ),

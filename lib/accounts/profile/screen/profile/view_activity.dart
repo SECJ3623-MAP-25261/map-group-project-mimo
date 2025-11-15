@@ -1,15 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:profile_managemenr/constants/app_colors.dart'; // ✅ Import your AppColors
 
 class ViewActivityPage extends StatelessWidget {
   const ViewActivityPage({super.key});
 
-  // Define consistent theme colors
-  static const Color _accentColor = Color(0xFF3B82F6);
-  static const Color _cardColor = Color(0xFF374151);
-  static const Color _darkBackground = Color(0xFF1F2937);
-  static const Color _textColor = Colors.white;
-
-  // Simple list of strings, as requested
+  // Activity list (unchanged)
   final List<String> _activities = const [
     "18:30 - You listed 'Blue Hoodie' for rent",
     "15:45 - You updated your profile picture",
@@ -22,49 +17,51 @@ class ViewActivityPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _darkBackground,
+      backgroundColor: AppColors.lightBackground, // ✅ Light gray background
       appBar: AppBar(
         title: const Text(
           "Activity Log",
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
-        backgroundColor: _darkBackground,
-        foregroundColor: _textColor,
+        backgroundColor: AppColors.lightBackground,
+        foregroundColor: AppColors.lightTextColor, // ✅ Dark text
         elevation: 0,
+        surfaceTintColor: Colors.transparent,
       ),
       body: ListView.separated(
         padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
         itemCount: _activities.length,
-        separatorBuilder: (_, __) => const SizedBox(height: 5), // Spacer between cards
+        separatorBuilder: (_, __) => const SizedBox(height: 5),
         itemBuilder: (context, index) {
-          // Determine the icon and color based on content (simple string parsing)
+          String activity = _activities[index];
+
+          // Icon & color logic (same as before — just update colors)
           IconData icon;
           Color color;
-          String activity = _activities[index];
 
           if (activity.contains("listed") || activity.contains("request confirmed")) {
             icon = Icons.shopping_bag_outlined;
-            color = Colors.green;
+            color = Colors.green; // Can keep semantic colors like green/amber
           } else if (activity.contains("password") || activity.contains("updated")) {
             icon = Icons.security;
-            color = _accentColor;
+            color = AppColors.accentColor; // ✅ Use your accent
           } else if (activity.contains("message")) {
             icon = Icons.chat_bubble_outline;
-            color = Colors.amber;
+            color = Colors.amber; // or replace with AppColors if preferred
           } else {
             icon = Icons.history;
-            color = Colors.white70;
+            color = AppColors.lightHintColor; // ✅ subdued gray
           }
-          
+
           return Container(
             decoration: BoxDecoration(
-              color: _cardColor,
+              color: AppColors.lightCardBackground, // ✅ white card
               borderRadius: BorderRadius.circular(10),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.black.withOpacity(0.1),
-                  blurRadius: 5,
-                  offset: const Offset(0, 2),
+                  color: Colors.black.withOpacity(0.05),
+                  blurRadius: 4,
+                  offset: const Offset(0, 1),
                 ),
               ],
             ),
@@ -73,11 +70,17 @@ class ViewActivityPage extends StatelessWidget {
               leading: Icon(icon, color: color, size: 28),
               title: Text(
                 activity,
-                style: const TextStyle(color: _textColor, fontWeight: FontWeight.w500),
+                style: TextStyle(
+                  color: AppColors.lightTextColor, // ✅ dark gray text
+                  fontWeight: FontWeight.w500,
+                ),
               ),
-              trailing: const Icon(Icons.chevron_right, color: Colors.white30),
+              trailing: Icon(
+                Icons.chevron_right,
+                color: AppColors.lightHintColor.withOpacity(0.6), // ✅ subtle arrow
+              ),
               onTap: () {
-                // Handle tap action
+                // Handle tap if needed
               },
             ),
           );
