@@ -65,7 +65,7 @@ class ProfileScreen extends StatelessWidget {
                   child: CircleAvatar(
                     radius: 47,
                     backgroundColor: Colors.grey[200],
-                    backgroundImage: const AssetImage('assets/images/profile_placeholder.png'),
+                    backgroundImage: const AssetImage('lib/widgets/Mail gemini.png'),
                   ),
                 ),
                 const SizedBox(height: 20),

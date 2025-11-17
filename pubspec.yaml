@@ -20,3 +20,4 @@ flutter:
 
   assets:
     - lib/widgets/CampusClosetLogo.png
+    - lib/widgets/Mail gemini.png
