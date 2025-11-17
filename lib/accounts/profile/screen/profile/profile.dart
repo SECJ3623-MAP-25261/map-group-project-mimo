@@ -17,19 +17,16 @@ class ProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🔸 Match EXACTLY what your AppTheme.darkTheme uses:
-    // - scaffold is WHITE (from Color.fromARGB(255, 255, 255, 255))
-    // - text uses LIGHT theme colors (AppColors.lightTextColor = dark gray)
-    // - inputs use light palette
 
-    const Color scaffoldBg = Color.fromARGB(255, 255, 255, 255); // ← your current darkTheme bg (white!)
+
+    const Color scaffoldBg = Color.fromARGB(255, 255, 255, 255); 
     const Color cardBg = AppColors.lightCardBackground; // white
     const Color primaryColor = AppColors.accentColor; // teal
     const Color textColor = AppColors.lightTextColor; // dark gray (#111827)
     const Color textSecondary = AppColors.lightHintColor; // gray-500
 
     return Scaffold(
-      backgroundColor: scaffoldBg, // ← white, as in your darkTheme
+      backgroundColor: scaffoldBg, 
       appBar: AppBar(
         title: Text('Account Settings', style: TextStyle(color: textColor)),
         backgroundColor: scaffoldBg,

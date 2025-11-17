@@ -199,7 +199,7 @@ class RenterDashboard extends StatelessWidget {
     required String label,
     required Widget page,
   }) {
-    final isDark = Theme.of(context).brightness == Brightness.dark;
+    //final isDark = Theme.of(context).brightness == Brightness.dark;
     
     return Expanded(
       child: GestureDetector(
