@@ -9,6 +9,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  firebase_core: ^2.24.0        # Required for all Firebase services
+  firebase_auth: ^4.17.0        # For authentication
+  cloud_firestore: ^4.15.0      # If you store user data (e.g., name, phone)
+
 
 dev_dependencies:
   flutter_test:

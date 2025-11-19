@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "594908184850",
+    "project_id": "campuscloset-8c8f5",
+    "storage_bucket": "campuscloset-8c8f5.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:594908184850:android:4cd13c9a7271b6cb29b3cb",
+        "android_client_info": {
+          "package_name": "com.example.profile_managemenr"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBPQHeyw6mAnv1qWdSoSt_P_5sQsEQHOCg"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

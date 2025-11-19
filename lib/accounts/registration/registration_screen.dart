@@ -2,14 +2,13 @@ import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/main.dart';
-import 'package:profile_managemenr/dbase/data.dart';
-import 'package:profile_managemenr/models/user.dart';
 
 import '../../constants/app_colors.dart';
 import 'validators.dart';
 import 'password_strength.dart';
 import 'registration_widget.dart';
 import 'form_fields.dart';
+import '/services/auth_service.dart';
 
 class RegistrationScreen extends StatefulWidget {
   const RegistrationScreen({super.key});
@@ -19,6 +18,7 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
+  final _authService = AuthService(); // Instance variable
   final _formKey = GlobalKey<FormState>();
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -26,7 +26,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   final _passwordController = TextEditingController();
   final _confirmPasswordController = TextEditingController();
 
-  //final String _userType = 'rentee';
   bool _isGuestMode = false;
   bool _passwordVisible = false;
   bool _termsAccepted = false;
@@ -37,13 +36,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   String _successMessage = '';
   bool _isSubmitting = false;
   Timer? _emailCheckTimer;
-
-  final List<String> _existingEmails = const [
-    'john@example.com',
-    'jane@example.com',
-    'admin@test.com',
-    'user@demo.com'
-  ];
 
   @override
   void initState() {
@@ -91,14 +83,22 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     });
   }
 
-  void _checkEmailAvailability(String email) {
-    setState(() {
-      if (_existingEmails.contains(email.toLowerCase())) {
-        _emailStatus = 'taken';
-      } else {
-        _emailStatus = 'available';
+  // Updated to use Firebase
+  Future<void> _checkEmailAvailability(String email) async {
+    try {
+      final exists = await _authService.checkEmailExists(email);
+      if (mounted) {
+        setState(() {
+          _emailStatus = exists ? 'taken' : 'available';
+        });
       }
-    });
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _emailStatus = '';
+        });
+      }
+    }
   }
 
   void _navigateToLogin() {
@@ -108,7 +108,9 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  void _submitForm() async {
+  // Updated to use Firebase
+  Future<void> _submitForm() async {
+    // Guest mode handling
     if (_isGuestMode) {
       Navigator.pushReplacement(
         context,
@@ -117,35 +119,61 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    if (_formKey.currentState!.validate() && _termsAccepted) {
-      setState(() {
-        _isSubmitting = true;
-      });
+    // Validate form
+    if (!_formKey.currentState!.validate()) {
+      return;
+    }
 
-      await Future.delayed(const Duration(milliseconds: 1500));
-
-      setState(() {
-        final newUser = User(
-          id: DateTime.now().millisecondsSinceEpoch.toString(),
-          name: _nameController.text.trim(),
-          email: _emailController.text.trim(),
-          phone: _phoneController.text.trim(),
-          profileImages: '',
-        );
-
-        dummyUsers.add(newUser);
-
-        _successMessage =
-            'Registration successful! Welcome ${newUser.name}. You can now login.';
-        _isSubmitting = false;
-      });
-    } else if (!_termsAccepted) {
+    if (!_termsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('You must accept the Terms & Conditions to register.'),
           backgroundColor: AppColors.errorColor,
         ),
       );
+      return;
+    }
+
+    // Start registration
+    setState(() {
+      _isSubmitting = true;
+    });
+
+    try {
+      // Register user with Firebase
+      final user = await _authService.registerUser(
+        email: _emailController.text.trim(),
+        password: _passwordController.text,
+        fullName: _nameController.text.trim(),
+        phone: _phoneController.text.trim(), // Add phone to auth service
+      );
+
+      if (user != null && mounted) {
+        setState(() {
+          _successMessage = 'Registration successful! Welcome ${_nameController.text}. You can now login.';
+          _isSubmitting = false;
+        });
+
+        // Optional: Auto-navigate to login after 2 seconds
+        Future.delayed(const Duration(seconds: 2), () {
+          if (mounted) {
+            _navigateToLogin();
+          }
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _isSubmitting = false;
+        });
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Registration failed: $e'),
+            backgroundColor: AppColors.errorColor,
+          ),
+        );
+      }
     }
   }
 
@@ -290,7 +318,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: (_isSubmitting || (_isGuestMode == false && _termsAccepted == false))
+        onPressed: (_isSubmitting || (!_isGuestMode && !_termsAccepted))
             ? null
             : _submitForm,
         style: ElevatedButton.styleFrom(
