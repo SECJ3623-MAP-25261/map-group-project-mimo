@@ -41,10 +41,20 @@ android {
         }
     }
     dependencies {
-    implementation platform('com.google.firebase:firebase-bom:32.8.0')
-    implementation 'com.google.firebase:firebase-analytics'
+    implementation("org.jetbrains.kotlin:kotlin-stdlib:1.9.0") // or your version
+    implementation("com.android.support:appcompat-v7:28.0.0") // if needed
+
+    // Firebase
+    implementation(platform("com.google.firebase:firebase-bom:32.8.0"))
+    implementation("com.google.firebase:firebase-analytics")
+    implementation("com.google.firebase:firebase-auth")
+    implementation("com.google.firebase:firebase-firestore")
+    implementation("com.google.firebase:firebase-storage")
+
+    // Add other deps...
 }
 }
+
 
 flutter {
     source = "../.."

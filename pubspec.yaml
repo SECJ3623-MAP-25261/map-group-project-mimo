@@ -9,9 +9,12 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^2.24.0        # Required for all Firebase services
-  firebase_auth: ^4.17.0        # For authentication
-  cloud_firestore: ^4.15.0      # If you store user data (e.g., name, phone)
+  firebase_core: ^3.6.0          # Updated from ^2.24.0
+  cloud_firestore: ^5.4.4        # Updated from ^4.14.0
+  firebase_auth: ^5.3.1           # Updated from ^4.16.0
+  firebase_storage: ^12.3.4       # Updated from ^11.6.0
+  image_picker: ^1.0.4        
+  permission_handler: ^11.3.1
 
 
 dev_dependencies:
@@ -24,4 +27,3 @@ flutter:
 
   assets:
     - lib/widgets/CampusClosetLogo.png
-    - lib/widgets/Mail gemini.png

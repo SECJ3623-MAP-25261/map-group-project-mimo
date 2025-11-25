@@ -46,22 +46,41 @@ class _LoginPageState extends State<LoginPage> {
     setState(() => _isLoading = true);
 
     try {
+      // Simple login without checking email existence first
       await FirebaseAuth.instance.signInWithEmailAndPassword(
         email: _emailController.text.trim(),
-        password: _passwordController.text,
+        password: _passwordController.text.trim(),
       );
 
-      // Navigate to main app (replace with your actual screen)
+      // Navigate to main app
       if (!mounted) return;
-      Navigator.pushReplacementNamed(context, '/home'); // Or your home screen
+      Navigator.pushReplacementNamed(context, '/home');
+      
     } on FirebaseAuthException catch (e) {
       String message = 'Login failed. Please try again.';
-      if (e.code == 'user-not-found') {
-        message = 'No account found with this email.';
-      } else if (e.code == 'wrong-password') {
-        message = 'Incorrect password.';
-      } else if (e.code == 'invalid-email') {
-        message = 'Please enter a valid email.';
+      
+      // Handle specific Firebase errors
+      switch (e.code) {
+        case 'user-not-found':
+          message = 'No account found with this email.';
+          break;
+        case 'wrong-password':
+          message = 'Incorrect password.';
+          break;
+        case 'invalid-email':
+          message = 'Please enter a valid email.';
+          break;
+        case 'user-disabled':
+          message = 'This account has been disabled.';
+          break;
+        case 'invalid-credential':
+          message = 'Invalid email or password.';
+          break;
+        case 'too-many-requests':
+          message = 'Too many failed attempts. Please try again later.';
+          break;
+        default:
+          message = 'Login failed: ${e.message}';
       }
 
       if (mounted) {

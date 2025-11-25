@@ -1,32 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
+import 'package:profile_managemenr/accounts/registration/registration_app.dart';
+import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
+import 'firebase_options.dart';
+//import '../constants/app_colors.dart';
+import '../constants/app_theme.dart';
+import 'package:profile_managemenr/welcome_page.dart';
 
-void main() => runApp(const MyApp());
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  runApp(const MyApp());
+}
 
 class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+  const MyApp({Key? key}) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Campus Closet',
+      theme: AppTheme.lightTheme,
+      darkTheme: AppTheme.darkTheme,
+      themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
-      theme: ThemeData.dark().copyWith(
-        scaffoldBackgroundColor: const Color(0xFF0F172A),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Color(0xFF1E3A8A),
-          foregroundColor: Colors.white,
-        ),
-      ),
-      home: const LoginPage(),
+      home: const AuthWrapper(), // Check auth state first
+      routes: {
+        '/home': (context) => const CampusClosetScreen(),
+        '/login': (context) => const LoginPage(),
+        '/register': (context) => const RegistrationApp(),
+        '/profile': (context) => ProfileScreen(),
+      },
+    );
+  }
+}
+
+// AUTH WRAPPER - Checks if user is logged in
+class AuthWrapper extends StatelessWidget {
+  const AuthWrapper({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return StreamBuilder<User?>(
+      stream: FirebaseAuth.instance.authStateChanges(),
+      builder: (context, snapshot) {
+        // Show loading while checking auth state
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        }
+        
+        // If user is logged in, go to home
+        if (snapshot.hasData && snapshot.data != null) {
+          return const CampusClosetScreen();
+        }
+        
+        // If no user, show welcome screen
+        return const WelcomeScreen();
+      },
     );
   }
 }
 
 
+// Your CampusClosetScreen (HOME PAGE)
 class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});
+  
 
   @override
   State<CampusClosetScreen> createState() => _CampusClosetScreenState();
@@ -64,22 +112,22 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
     );
   }
 
+  
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Campus Closet'),
+        backgroundColor: const Color(0xFF1E3A8A),
         actions: [
-  IconButton(
-    icon: const Icon(Icons.person),
-    onPressed: () {
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) =>  ProfileScreen()),
-      );
-    },
-  ),
-],
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () {
+              Navigator.pushNamed(context, '/profile');
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(30),
           child: Padding(
@@ -104,7 +152,9 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               itemCount: _filters.length,
               itemBuilder: (context, index) {
-                final label = _filters[index] == 'all' ? 'All' : _filters[index].substring(0, 1).toUpperCase() + _filters[index].substring(1);
+                final label = _filters[index] == 'all' 
+                    ? 'All' 
+                    : _filters[index].substring(0, 1).toUpperCase() + _filters[index].substring(1);
                 final isActive = _activeFilter == _filters[index];
 
                 return Padding(
@@ -146,10 +196,8 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
           ),
         ],
       ),
-
     );
   }
 }
 
-
-
+// Keep your WelcomeScreen code from document 3 here...
