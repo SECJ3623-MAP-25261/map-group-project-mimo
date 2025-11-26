@@ -31,3 +31,19 @@ class Renter {
     this.earnings = 0.0,
   });
 }
+
+class Attire {
+  final String id;
+  final String name;
+  final String description;
+  final String size;
+  final double rentalRate;
+
+  Attire({
+    required this.id,
+    required this.name,
+    required this.description,
+    required this.size,
+    required this.rentalRate,
+  });
+}
