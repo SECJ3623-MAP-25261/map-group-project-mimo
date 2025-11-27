@@ -1,11 +1,14 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
+import 'package:profile_managemenr/sprint2/Booking%20Rentee/booking.dart';
+
 import 'firebase_options.dart';
-//import '../constants/app_colors.dart';
+import '../constants/app_colors.dart';
 import '../constants/app_theme.dart';
 import 'package:profile_managemenr/welcome_page.dart';
 
@@ -27,20 +30,21 @@ class MyApp extends StatelessWidget {
       title: 'Campus Closet',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
+      themeMode: ThemeMode.light, 
       debugShowCheckedModeBanner: false,
-      home: const AuthWrapper(), // Check auth state first
+      home: const AuthWrapper(),
       routes: {
         '/home': (context) => const CampusClosetScreen(),
         '/login': (context) => const LoginPage(),
         '/register': (context) => const RegistrationApp(),
         '/profile': (context) => ProfileScreen(),
+        '/booking': (context) => const BookingScreen(),
       },
     );
   }
 }
 
-// AUTH WRAPPER - Checks if user is logged in
+
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({Key? key}) : super(key: key);
 
@@ -49,21 +53,16 @@ class AuthWrapper extends StatelessWidget {
     return StreamBuilder<User?>(
       stream: FirebaseAuth.instance.authStateChanges(),
       builder: (context, snapshot) {
-        // Show loading while checking auth state
         if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
-            body: Center(
-              child: CircularProgressIndicator(),
-            ),
+            body: Center(child: CircularProgressIndicator()),
           );
         }
-        
-        // If user is logged in, go to home
-        if (snapshot.hasData && snapshot.data != null) {
+
+        if (snapshot.hasData) {
           return const CampusClosetScreen();
         }
-        
-        // If no user, show welcome screen
+
         return const WelcomeScreen();
       },
     );
@@ -71,10 +70,12 @@ class AuthWrapper extends StatelessWidget {
 }
 
 
-// Your CampusClosetScreen (HOME PAGE)
+// ------------------------------
+// HOME PAGE
+// ------------------------------
+
 class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});
-  
 
   @override
   State<CampusClosetScreen> createState() => _CampusClosetScreenState();
@@ -82,122 +83,216 @@ class CampusClosetScreen extends StatefulWidget {
 
 class _CampusClosetScreenState extends State<CampusClosetScreen> {
   String _activeFilter = 'all';
-  final List<String> _filters = ['all', 'tops', 'bottoms', 'dresses', 'outerwear', 'shoes'];
 
-  void _showAddItemModal() {
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Container(
-        padding: const EdgeInsets.all(20),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1E293B),
-          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-        ),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            const Text('List an Item', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)),
-            const SizedBox(height: 20),
-            TextField(decoration: InputDecoration(labelText: 'Item Name')),
-            TextField(decoration: InputDecoration(labelText: 'Category')),
-            TextField(decoration: InputDecoration(labelText: 'Price')),
-            const SizedBox(height: 20),
-            ElevatedButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Submit'),
-            ),
-          ],
-        ),
-      ),
-    );
+  final List<String> _filters = [
+    'all', 'tops', 'bottoms', 'dresses', 'outerwear', 'shoes'
+  ];
+
+  // -------------------------------
+  // 🔹 HARDCODED ITEMS
+  // -------------------------------
+  final List<Map<String, dynamic>> items = [
+    {
+      'name': 'Casual T-Shirt',
+      'price': 15.00,
+      'category': 'tops',
+      'image': 'https.com/ODL8Zfw.png'
+    },
+    {
+      'name': 'Blue Jeans',
+      'price': 30.00,
+      'category': 'bottoms',
+      'image': 'https://i.imgur.com/JqKDZGb.png'
+    },
+    {
+      'name': 'Floral Dress',
+      'price': 45.00,
+      'category': 'dresses',
+      'image': 'https://i.imgur.com/eCzq41n.png'
+    },
+    {
+      'name': 'Black Hoodie',
+      'price': 28.00,
+      'category': 'outerwear',
+      'image': 'https://i.imgur.com/1J4fO8b.png'
+    },
+    {
+      'name': 'White Sneakers',
+      'price': 50.00,
+      'category': 'shoes',
+      'image': 'https://i.imgur.com/xZJrXTS.png'
+    },
+  ];
+
+  // Filtered list
+  List<Map<String, dynamic>> get filteredItems {
+    if (_activeFilter == 'all') return items;
+    return items.where((item) => item['category'] == _activeFilter).toList();
   }
 
-  
+  // Function to handle item tap
+  void _onItemTap(Map<String, dynamic> item) {
+    Navigator.pushNamed(
+      context,
+      '/booking',
+      arguments: item, // Pass the item data to BookingScreen
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
+      backgroundColor: AppColors.lightBackground,
+
       appBar: AppBar(
-        title: const Text('Campus Closet'),
-        backgroundColor: const Color(0xFF1E3A8A),
+        backgroundColor: AppColors.accentColor,
+        elevation: 0,
+        title: const Text(
+          'Campus Closet',
+          style: TextStyle(color: Colors.white),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              Navigator.pushNamed(context, '/profile');
-            },
+            icon: const Icon(Icons.person, color: Colors.white),
+            onPressed: () => Navigator.pushNamed(context, '/profile'),
           ),
         ],
-        bottom: PreferredSize(
-          preferredSize: const Size.fromHeight(30),
-          child: Padding(
-            padding: EdgeInsets.only(left: 20, bottom: 8),
-            child: Row(
-              children: const [
-                Icon(Icons.location_on, size: 16, color: Colors.red),
-                SizedBox(width: 4),
-                Text('Near You', style: TextStyle(fontSize: 14)),
-              ],
-            ),
-          ),
-        ),
       ),
+
       body: Column(
         children: [
-          // Filter Tabs
+          // -------------------------------
+          // 🔹 FILTER BUTTONS
+          // -------------------------------
           SizedBox(
-            height: 50,
+            height: 55,
             child: ListView.builder(
               scrollDirection: Axis.horizontal,
               padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
               itemCount: _filters.length,
               itemBuilder: (context, index) {
-                final label = _filters[index] == 'all' 
-                    ? 'All' 
-                    : _filters[index].substring(0, 1).toUpperCase() + _filters[index].substring(1);
-                final isActive = _activeFilter == _filters[index];
+                final f = _filters[index];
+                final label = f[0].toUpperCase() + f.substring(1);
+                final isActive = _activeFilter == f;
 
                 return Padding(
-                  padding: const EdgeInsets.only(right: 8),
+                  padding: const EdgeInsets.only(right: 10),
                   child: ElevatedButton(
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: isActive ? const Color(0xFF1E3A8A) : const Color(0xFF334155),
-                      foregroundColor: isActive ? Colors.white : const Color(0xFFCBD5E1),
-                      padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-                      elevation: isActive ? 6 : 0,
+                      backgroundColor: isActive
+                          ? AppColors.accentColor
+                          : AppColors.lightCardBackground,
+                      foregroundColor:
+                          isActive ? Colors.white : AppColors.lightTextColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding:
+                          const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
                     ),
-                    onPressed: () => setState(() => _activeFilter = _filters[index]),
+                    onPressed: () => setState(() => _activeFilter = f),
                     child: Text(label),
                   ),
                 );
               },
             ),
           ),
-          const Divider(height: 1, thickness: 4, color: Color(0xFF1E293B)),
 
-          // Content
+          const Divider(thickness: 2, color: AppColors.lightCardBackground),
+
+          // -------------------------------
+          // 🔹 ITEMS LIST
+          // -------------------------------
           Expanded(
-            child: Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: const [
-                  Text('👕', style: TextStyle(fontSize: 64, color: Colors.grey)),
-                  Text('👕', style: TextStyle(fontSize: 64, color: Colors.grey)),
-                  SizedBox(height: 16),
-                  Text(
-                    'No items found. Try a different filter!',
-                    textAlign: TextAlign.center,
-                    style: TextStyle(fontSize: 16, color: Colors.grey),
+            child: filteredItems.isEmpty
+                ? const Center(
+                    child: Text(
+                      "No items found.",
+                      style: TextStyle(
+                        color: AppColors.lightHintColor,
+                        fontSize: 16,
+                      ),
+                    ),
+                  )
+                : GridView.builder(
+                    padding: const EdgeInsets.all(16),
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 4,
+                      childAspectRatio: 0.62,
+                      crossAxisSpacing: 16,
+                      mainAxisSpacing: 16,
+                    ),
+                    itemCount: filteredItems.length,
+                    itemBuilder: (context, index) {
+                      final item = filteredItems[index];
+
+                      return GestureDetector(
+                        onTap: () => _onItemTap(item),
+                        child: Container(
+                          decoration: BoxDecoration(
+                            color: AppColors.lightCardBackground,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: [
+                              BoxShadow(
+                                color: Colors.black12,
+                                blurRadius: 6,
+                                offset: Offset(0, 3),
+                              )
+                            ],
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Image
+                              Expanded(
+                                child: ClipRRect(
+                                  borderRadius: const BorderRadius.vertical(
+                                      top: Radius.circular(16)),
+                                  child: Image.network(
+                                    item['image'],
+                                    fit: BoxFit.cover,
+                                  ),
+                                ),
+                              ),
+
+                              // Name
+                              Padding(
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  item['name'],
+                                  style: const TextStyle(
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.bold,
+                                    color: AppColors.lightTextColor,
+                                  ),
+                                ),
+                              ),
+
+                              // Price
+                              Padding(
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                child: Text(
+                                  "RM${item['price'].toStringAsFixed(2)}",
+                                  style: const TextStyle(
+                                    fontSize: 13,
+                                    color: AppColors.accentColor,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+
+                              const SizedBox(height: 8),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                ],
-              ),
-            ),
           ),
         ],
       ),
     );
   }
 }
-
-// Keep your WelcomeScreen code from document 3 here...
