@@ -4,11 +4,11 @@ import 'package:profile_managemenr/accounts/personalization/personalization.dart
 import 'change_password.dart';
 //import 'update_contact.dart';
 import 'notification.dart';
-import 'view_activity.dart';
 import 'delete_account.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
 import 'dart:convert';
+import 'package:profile_managemenr/sprint2/HistoryRentee/historyRentee.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -271,8 +271,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         textSecondary,
                       ),
                       _buildProfileOption(
-                        "View Activity",
-                        Icons.insights,
+                        "View History",
+                        Icons.history,
                         context,
                         primaryColor,
                         textColor,
@@ -362,10 +362,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             context,
             MaterialPageRoute(builder: (context) => NotificationsPage()),
           );
-        } else if (text == "View Activity") {
+        } else if (text == "View History") {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => ViewActivityPage()),
+            MaterialPageRoute(builder: (context) => HistoryRenteeScreen()),
           );
         }
       },

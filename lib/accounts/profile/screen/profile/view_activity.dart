@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:profile_managemenr/constants/app_colors.dart'; // ✅ Import your AppColors
+import 'package:profile_managemenr/constants/app_colors.dart';
 
 class ViewActivityPage extends StatelessWidget {
   const ViewActivityPage({super.key});
