@@ -6,6 +6,7 @@ import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
 import 'package:profile_managemenr/sprint2/Booking%20Rentee/booking.dart';
+import 'package:profile_managemenr/sprint2/ReportCenter/report_center.dart';
 
 import 'firebase_options.dart';
 import '../constants/app_colors.dart';
@@ -39,6 +40,7 @@ class MyApp extends StatelessWidget {
         '/register': (context) => const RegistrationApp(),
         '/profile': (context) => ProfileScreen(),
         '/booking': (context) => const BookingScreen(),
+        '/report': (context) => const ReportCenterScreen(),
       },
     );
   }

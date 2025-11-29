@@ -1,14 +1,16 @@
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/edit_profile.dart';
 import 'package:profile_managemenr/accounts/personalization/personalization.dart';
+import 'package:profile_managemenr/sprint2/ReportCenter/my_reports.dart';
 import 'change_password.dart';
 //import 'update_contact.dart';
 import 'notification.dart';
 import 'delete_account.dart';
+import 'package:profile_managemenr/sprint2/ReportCenter/report_center.dart'; 
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
 import 'dart:convert';
-import 'package:profile_managemenr/sprint2/HistoryRentee/historyRentee.dart';
+import 'package:profile_managemenr/sprint2/HistoryRentee/history_rentee.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -136,26 +138,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     children: [
                       // Profile Picture with Base64 support
                       _buildProfileAvatar(userName),
-                      // Profile Picture
-                      /*CircleAvatar(
-                        radius: 50,
-                        backgroundColor: primaryColor.withOpacity(0.2),
-                        child: CircleAvatar(
-                          radius: 47,
-                          backgroundColor: Colors.grey[200],
-                          child: Text(
-                            userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-                            style: TextStyle(
-                              fontSize: 40,
-                              fontWeight: FontWeight.bold,
-                              color: primaryColor,
-                            ),
-                          ),
-                        ),
-                      ),
-                      const SizedBox(height: 20),*/
-                      // Profile Picture with Base64 support
-                        
+
+                      const SizedBox(height: 20),
 
                       Text(
                         "MY PROFILE",
@@ -286,6 +270,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         textColor,
                         textSecondary,
                       ),
+                      // ADD THIS: Report Center Option
+                      _buildProfileOption(
+                        "Report Center",
+                        Icons.flag_outlined,
+                        context,
+                        primaryColor,
+                        textColor,
+                        textSecondary,
+                      ),
 
                       const SizedBox(height: 30),
 
@@ -327,21 +320,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return InkWell(
       onTap: () async {
         if (text == "Personalization Settings") {
-  // Ensure _userData is available
-  if (_userData != null) {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => RenterDashboard(userData: _userData!),
-      ),
-    );
-  } else {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('User data not loaded.')),
-    );
-  }
-
-
+          // Ensure _userData is available
+          if (_userData != null) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => RenterDashboard(userData: _userData!),
+              ),
+            );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('User data not loaded.')),
+            );
+          }
         } else if (text == "Change Password") {
           Navigator.push(
             context,
@@ -366,6 +357,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => HistoryRenteeScreen()),
+          );
+        } else if (text == "Report Center") {
+          
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => MyReportsScreen()),
           );
         }
       },
