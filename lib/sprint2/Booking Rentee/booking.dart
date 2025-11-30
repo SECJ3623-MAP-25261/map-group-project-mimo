@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import 'package:profile_managemenr/services/booking_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
+import 'dart:convert';
 
 class BookingScreen extends StatefulWidget {
   final Map<String, dynamic>? itemData;
@@ -31,12 +32,24 @@ class _BookingScreenState extends State<BookingScreen> {
   ];
 
   static const Color _rateColor = Color(0xFF1E3A8A);
-  final double _ratePerDay = 6.00;
+
+  int _currentImageIndex = 0;
 
   String get _itemName => widget.itemData?['name'] ?? 'Selected Attire';
   String get _itemId => widget.itemData?['id'] ?? 'unknown';
-  String get _itemImage => widget.itemData?['image'] ?? '';
-  double get _itemPrice => widget.itemData?['price'] ?? 0.00;
+  List<dynamic> get _itemImages {
+    final images = widget.itemData?['images'];
+    if (images is List && images.isNotEmpty) {
+      return images;
+    }
+    // Fallback to single image if available
+    final singleImage = widget.itemData?['image'];
+    if (singleImage != null) {
+      return [singleImage];
+    }
+    return [];
+  }
+  double get _ratePerDay => widget.itemData?['price'] ?? 6.00;
 
   int get _rentalDays {
     if (_startDate == null || _endDate == null) return 0;
@@ -45,6 +58,39 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   double get _estimatedTotal => _rentalDays * _ratePerDay;
+
+  void _showFullScreenImage(String imageData) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                panEnabled: true,
+                minScale: 1.0,
+                maxScale: 4.0,
+                child: imageData.startsWith('http')
+                    ? Image.network(imageData, fit: BoxFit.contain)
+                    : Image.memory(base64Decode(imageData), fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 20,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
     final DateTime? picked = await showDatePicker(
@@ -123,8 +169,8 @@ class _BookingScreenState extends State<BookingScreen> {
         userName: userName,
         itemId: _itemId,
         itemName: _itemName,
-        itemImage: _itemImage,
-        itemPrice: _itemPrice,
+        itemImage: _itemImages.isNotEmpty ? _itemImages[0].toString() : '',
+        itemPrice: _ratePerDay,
         startDate: _startDate!,
         endDate: _endDate!,
         rentalDays: _rentalDays,
@@ -284,6 +330,14 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Debug: Print received data
+    print('=== BOOKING SCREEN DEBUG ===');
+    print('Item Data: ${widget.itemData}');
+    print('Item Name: $_itemName');
+    print('Rate Per Day: $_ratePerDay');
+    print('Images Count: ${_itemImages.length}');
+    print('===========================');
+
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
@@ -334,39 +388,230 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ),
               ),
-              if (widget.itemData?['image'] != null) ...[
-                const SizedBox(height: 16),
-                const Text(
-                  'Item Image',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: AppColors.lightTextColor,
-                  ),
+              
+              // Item Images - Simple 16:9 with tap to fullscreen
+              const SizedBox(height: 16),
+              const Text(
+                'Item Images',
+                style: TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: AppColors.lightTextColor,
                 ),
-                const SizedBox(height: 8),
-                Container(
-                  height: 150,
-                  width: double.infinity,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(8),
-                    border: Border.all(color: AppColors.lightBorderColor),
-                  ),
-                  child: ClipRRect(
-                    borderRadius: BorderRadius.circular(8),
-                    child: Image.network(
-                      widget.itemData!['image'],
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return Container(
+              ),
+              const SizedBox(height: 8),
+              
+              _itemImages.isEmpty
+                  ? AspectRatio(
+                      aspectRatio: 16 / 9,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppColors.lightBorderColor),
                           color: AppColors.lightInputFillColor,
-                          child: const Icon(Icons.image,
-                              size: 50, color: AppColors.lightHintColor),
-                        );
-                      },
+                        ),
+                        child: const Center(
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.image_not_supported,
+                                  size: 50, color: AppColors.lightHintColor),
+                              SizedBox(height: 8),
+                              Text('No images available',
+                                  style: TextStyle(
+                                      color: AppColors.lightHintColor,
+                                      fontSize: 14)),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  : Column(
+                      children: [
+                        AspectRatio(
+                          aspectRatio: 16 / 9,
+                          child: GestureDetector(
+                            onTap: () => _showFullScreenImage(
+                                _itemImages[_currentImageIndex].toString()),
+                            child: Container(
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                    color: AppColors.lightBorderColor, width: 2),
+                                boxShadow: [
+                                  BoxShadow(
+                                    color: Colors.black.withOpacity(0.1),
+                                    blurRadius: 8,
+                                    offset: const Offset(0, 4),
+                                  ),
+                                ],
+                              ),
+                              child: Stack(
+                                children: [
+                                  ClipRRect(
+                                    borderRadius: BorderRadius.circular(10),
+                                    child: _itemImages[_currentImageIndex]
+                                                is String &&
+                                            _itemImages[_currentImageIndex]
+                                                .toString()
+                                                .startsWith('http')
+                                        ? Image.network(
+                                            _itemImages[_currentImageIndex]
+                                                .toString(),
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return Container(
+                                                color:
+                                                    AppColors.lightInputFillColor,
+                                                child: const Center(
+                                                  child: Icon(Icons.broken_image,
+                                                      size: 50,
+                                                      color: AppColors
+                                                          .lightHintColor),
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : Image.memory(
+                                            base64Decode(_itemImages[
+                                                    _currentImageIndex]
+                                                .toString()),
+                                            fit: BoxFit.cover,
+                                            width: double.infinity,
+                                            height: double.infinity,
+                                            errorBuilder:
+                                                (context, error, stackTrace) {
+                                              return Container(
+                                                color:
+                                                    AppColors.lightInputFillColor,
+                                                child: const Center(
+                                                  child: Icon(Icons.broken_image,
+                                                      size: 50,
+                                                      color: AppColors
+                                                          .lightHintColor),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                  ),
+                                  
+                                  // Tap to enlarge hint
+                                  Positioned(
+                                    bottom: 8,
+                                    right: 8,
+                                    child: Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 8,
+                                        vertical: 4,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: Colors.black.withOpacity(0.6),
+                                        borderRadius: BorderRadius.circular(12),
+                                      ),
+                                      child: const Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          Icon(Icons.fullscreen,
+                                              size: 14, color: Colors.white),
+                                          SizedBox(width: 4),
+                                          Text(
+                                            'Tap to enlarge',
+                                            style: TextStyle(
+                                              color: Colors.white,
+                                              fontSize: 10,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                  
+                                  // Image counter
+                                  if (_itemImages.length > 1)
+                                    Positioned(
+                                      top: 8,
+                                      right: 8,
+                                      child: Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: Colors.black.withOpacity(0.6),
+                                          borderRadius: BorderRadius.circular(12),
+                                        ),
+                                        child: Text(
+                                          '${_currentImageIndex + 1}/${_itemImages.length}',
+                                          style: const TextStyle(
+                                            color: Colors.white,
+                                            fontSize: 12,
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                        
+                        // Navigation arrows for multiple images
+                        if (_itemImages.length > 1) ...[
+                          const SizedBox(height: 12),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              IconButton(
+                                icon: const Icon(Icons.arrow_back_ios, size: 20),
+                                color: AppColors.accentColor,
+                                onPressed: _currentImageIndex > 0
+                                    ? () {
+                                        setState(() {
+                                          _currentImageIndex--;
+                                        });
+                                      }
+                                    : null,
+                              ),
+                              const SizedBox(width: 20),
+                              Row(
+                                children: List.generate(
+                                  _itemImages.length,
+                                  (index) => Container(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 4),
+                                    width: 8,
+                                    height: 8,
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _currentImageIndex == index
+                                          ? AppColors.accentColor
+                                          : Colors.grey[300],
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              const SizedBox(width: 20),
+                              IconButton(
+                                icon: const Icon(Icons.arrow_forward_ios,
+                                    size: 20),
+                                color: AppColors.accentColor,
+                                onPressed:
+                                    _currentImageIndex < _itemImages.length - 1
+                                        ? () {
+                                            setState(() {
+                                              _currentImageIndex++;
+                                            });
+                                          }
+                                        : null,
+                              ),
+                            ],
+                          ),
+                        ],
+                      ],
                     ),
-                  ),
-                ),
-              ],
               const SizedBox(height: 24),
               _buildDateField(
                 label: 'Rental Start Date (Pickup)',

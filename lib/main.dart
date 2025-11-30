@@ -8,7 +8,6 @@ import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
 import 'package:profile_managemenr/sprint2/Booking%20Rentee/booking.dart';
 import 'package:profile_managemenr/sprint2/ReportCenter/report_center.dart';
-import 'package:profile_managemenr/sprint2/chatMessaging/item_chat_list_view.dart'; 
 
 import 'firebase_options.dart';
 import '../constants/app_colors.dart';
@@ -97,12 +96,12 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
     'Other',
   ];
 
-  int _selectedIndex = 0;
-
   // Stream to fetch items from Firestore
   Stream<QuerySnapshot> _getItemsStream() {
     if (_activeFilter == 'all') {
-      return FirebaseFirestore.instance.collection('items').snapshots();
+      return FirebaseFirestore.instance
+          .collection('items')
+          .snapshots();
     } else {
       return FirebaseFirestore.instance
           .collection('items')
@@ -112,242 +111,13 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
   }
 
   void _onItemTap(Map<String, dynamic> item) {
-    Navigator.pushNamed(
+    print('Item tapped: $item'); // Debug
+    Navigator.push(
       context,
-      '/booking',
-      arguments: item,
+      MaterialPageRoute(
+        builder: (context) => BookingScreen(itemData: item),
+      ),
     );
-  }
-
-  // ------------------------------
-  // HOME BODY
-  // ------------------------------
-  Widget _buildHomeBody() {
-    return Column(
-      children: [
-        // Filter Buttons
-        SizedBox(
-          height: 55,
-          child: ListView.builder(
-            scrollDirection: Axis.horizontal,
-            padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-            itemCount: _filters.length,
-            itemBuilder: (context, index) {
-              final f = _filters[index];
-              final label = f == 'all' ? 'All' : f;
-              final isActive = _activeFilter == f;
-
-              return Padding(
-                padding: const EdgeInsets.only(right: 10),
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: isActive
-                        ? AppColors.accentColor
-                        : AppColors.lightCardBackground,
-                    foregroundColor:
-                        isActive ? Colors.white : AppColors.lightTextColor,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(30),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 20,
-                      vertical: 10,
-                    ),
-                  ),
-                  onPressed: () => setState(() => _activeFilter = f),
-                  child: Text(label),
-                ),
-              );
-            },
-          ),
-        ),
-        const Divider(thickness: 2, color: AppColors.lightCardBackground),
-
-        // Items Grid from Firestore
-        Expanded(
-          child: StreamBuilder<QuerySnapshot>(
-            stream: _getItemsStream(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState == ConnectionState.waiting) {
-                return const Center(child: CircularProgressIndicator());
-              }
-
-              if (snapshot.hasError) {
-                return Center(
-                  child: Text(
-                    'Error: ${snapshot.error}',
-                    style: const TextStyle(color: Colors.red),
-                  ),
-                );
-              }
-
-              if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                return const Center(
-                  child: Text(
-                    "No items found.",
-                    style: TextStyle(
-                      color: AppColors.lightHintColor,
-                      fontSize: 16,
-                    ),
-                  ),
-                );
-              }
-
-              final items = snapshot.data!.docs;
-
-              return GridView.builder(
-                padding: const EdgeInsets.all(16),
-                gridDelegate:
-                    const SliverGridDelegateWithFixedCrossAxisCount(
-                  crossAxisCount: 4,
-                  childAspectRatio: 0.62,
-                  crossAxisSpacing: 16,
-                  mainAxisSpacing: 16,
-                ),
-                itemCount: items.length,
-                itemBuilder: (context, index) {
-                  final doc = items[index];
-                  final data = doc.data() as Map<String, dynamic>;
-
-                  // Get first image (base64 or URL)
-                  final images = data['images'] as List<dynamic>?;
-                  final imageData =
-                      images != null && images.isNotEmpty ? images[0] : null;
-
-                  // Prepare item data for booking
-                  final itemData = {
-                    'id': doc.id,
-                    'name': data['name'] ?? 'Unnamed Item',
-                    'price': data['pricePerDay']?.toDouble() ?? 0.0,
-                    'category': data['category'] ?? 'Other',
-                    'image': imageData,
-                    'description': data['description'] ?? '',
-                    'size': data['size'] ?? '',
-                  };
-
-                  return GestureDetector(
-                    onTap: () => _onItemTap(itemData),
-                    child: Container(
-                      decoration: BoxDecoration(
-                        color: AppColors.lightCardBackground,
-                        borderRadius: BorderRadius.circular(16),
-                        boxShadow: const [
-                          BoxShadow(
-                            color: Colors.black12,
-                            blurRadius: 6,
-                            offset: Offset(0, 3),
-                          ),
-                        ],
-                      ),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // Image
-                          Expanded(
-                            child: ClipRRect(
-                              borderRadius: const BorderRadius.vertical(
-                                top: Radius.circular(16),
-                              ),
-                              child: imageData != null
-                                  ? (imageData is String &&
-                                          imageData.startsWith('http')
-                                      ? Image.network(
-                                          imageData,
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey[300],
-                                              child: const Icon(
-                                                Icons.image_not_supported,
-                                                size: 40,
-                                              ),
-                                            );
-                                          },
-                                        )
-                                      : Image.memory(
-                                          base64Decode(imageData),
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return Container(
-                                              color: Colors.grey[300],
-                                              child: const Icon(
-                                                Icons.image_not_supported,
-                                                size: 40,
-                                              ),
-                                            );
-                                          },
-                                        ))
-                                  : Container(
-                                      color: Colors.grey[300],
-                                      child: const Icon(
-                                        Icons.image,
-                                        size: 40,
-                                        color: Colors.grey,
-                                      ),
-                                    ),
-                            ),
-                          ),
-
-                          // Name
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              data['name'] ?? 'Unnamed Item',
-                              style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: AppColors.lightTextColor,
-                              ),
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                          ),
-
-                          // Price
-                          Padding(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 8.0,
-                            ),
-                            child: Text(
-                              "RM${(data['pricePerDay'] ?? 0).toStringAsFixed(2)}/day",
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: AppColors.accentColor,
-                                fontWeight: FontWeight.w600,
-                              ),
-                            ),
-                          ),
-
-                          const SizedBox(height: 8),
-                        ],
-                      ),
-                    ),
-                  );
-                },
-              );
-            },
-          ),
-        ),
-      ],
-    );
-  }
-
-  // ------------------------------
-  // TAB BODY (Home / Messages / Profile)
-  // ------------------------------
-  Widget _buildTabBody() {
-    switch (_selectedIndex) {
-      case 0:
-        return _buildHomeBody();          // Home (items from Firestore)
-      case 1:
-        return const ItemChatListView();  // Messages (chat list)
-      case 2:
-        return ProfileScreen();           // Profile
-      default:
-        return _buildHomeBody();
-    }
   }
 
   @override
@@ -368,28 +138,210 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
           ),
         ],
       ),
-      body: _buildTabBody(),
-      bottomNavigationBar: BottomNavigationBar(
-        currentIndex: _selectedIndex,
-        onTap: (index) {
-          setState(() {
-            _selectedIndex = index;
-          });
-        },
-        selectedItemColor: AppColors.accentColor,
-        unselectedItemColor: AppColors.lightHintColor,
-        items: const [
-          BottomNavigationBarItem(
-            icon: Icon(Icons.home),
-            label: 'Home',
+      body: Column(
+        children: [
+          // Filter Buttons
+          SizedBox(
+            height: 55,
+            child: ListView.builder(
+              scrollDirection: Axis.horizontal,
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+              itemCount: _filters.length,
+              itemBuilder: (context, index) {
+                final f = _filters[index];
+                final label = f == 'all' ? 'All' : f;
+                final isActive = _activeFilter == f;
+
+                return Padding(
+                  padding: const EdgeInsets.only(right: 10),
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: isActive
+                          ? AppColors.accentColor
+                          : AppColors.lightCardBackground,
+                      foregroundColor: isActive
+                          ? Colors.white
+                          : AppColors.lightTextColor,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(30),
+                      ),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
+                    ),
+                    onPressed: () => setState(() => _activeFilter = f),
+                    child: Text(label),
+                  ),
+                );
+              },
+            ),
           ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.chat_bubble_outline),
-            label: 'Messages',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.person),
-            label: 'Profile',
+          const Divider(thickness: 2, color: AppColors.lightCardBackground),
+
+          // Items Grid from Firestore
+          Expanded(
+            child: StreamBuilder<QuerySnapshot>(
+              stream: _getItemsStream(),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
+
+                if (snapshot.hasError) {
+                  return Center(
+                    child: Text(
+                      'Error: ${snapshot.error}',
+                      style: const TextStyle(color: Colors.red),
+                    ),
+                  );
+                }
+
+                if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                  return const Center(
+                    child: Text(
+                      "No items found.",
+                      style: TextStyle(
+                        color: AppColors.lightHintColor,
+                        fontSize: 16,
+                      ),
+                    ),
+                  );
+                }
+
+                final items = snapshot.data!.docs;
+
+                return GridView.builder(
+                  padding: const EdgeInsets.all(16),
+                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                    crossAxisCount: 4,
+                    childAspectRatio: 0.62,
+                    crossAxisSpacing: 16,
+                    mainAxisSpacing: 16,
+                  ),
+                  itemCount: items.length,
+                  itemBuilder: (context, index) {
+                    final doc = items[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    
+                    // Get first image (base64 or URL)
+                    final images = data['images'] as List<dynamic>?;
+                    final imageData = images != null && images.isNotEmpty
+                        ? images[0]
+                        : null;
+
+                    // Prepare item data for booking
+                    final itemData = {
+                      'id': doc.id,
+                      'name': data['name'] ?? 'Unnamed Item',
+                      'price': data['pricePerDay']?.toDouble() ?? 0.0,
+                      'category': data['category'] ?? 'Other',
+                      'image': imageData,
+                      'description': data['description'] ?? '',
+                      'size': data['size'] ?? '',
+                    };
+
+                    return GestureDetector(
+                      onTap: () => _onItemTap(itemData),
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.lightCardBackground,
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Colors.black12,
+                              blurRadius: 6,
+                              offset: Offset(0, 3),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // Image
+                            Expanded(
+                              child: ClipRRect(
+                                borderRadius: const BorderRadius.vertical(
+                                  top: Radius.circular(16),
+                                ),
+                                child: imageData != null
+                                    ? (imageData is String && imageData.startsWith('http')
+                                        ? Image.network(
+                                            imageData,
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey[300],
+                                                child: const Icon(
+                                                  Icons.image_not_supported,
+                                                  size: 40,
+                                                ),
+                                              );
+                                            },
+                                          )
+                                        : Image.memory(
+                                            base64Decode(imageData),
+                                            fit: BoxFit.cover,
+                                            errorBuilder: (context, error, stackTrace) {
+                                              return Container(
+                                                color: Colors.grey[300],
+                                                child: const Icon(
+                                                  Icons.image_not_supported,
+                                                  size: 40,
+                                                ),
+                                              );
+                                            },
+                                          ))
+                                    : Container(
+                                        color: Colors.grey[300],
+                                        child: const Icon(
+                                          Icons.image,
+                                          size: 40,
+                                          color: Colors.grey,
+                                        ),
+                                      ),
+                              ),
+                            ),
+
+                            // Name
+                            Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Text(
+                                data['name'] ?? 'Unnamed Item',
+                                style: const TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.lightTextColor,
+                                ),
+                                maxLines: 2,
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+
+                            // Price
+                            Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8.0,
+                              ),
+                              child: Text(
+                                "RM${(data['pricePerDay'] ?? 0).toStringAsFixed(2)}/day",
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppColors.accentColor,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ),
+
+                            const SizedBox(height: 8),
+                          ],
+                        ),
+                      ),
+                    );
+                  },
+                );
+              },
+            ),
           ),
         ],
       ),

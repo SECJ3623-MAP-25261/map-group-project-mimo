@@ -5,31 +5,45 @@ import '../../../../sprint2/renter_dashboard/add_items.dart';
 import '../../../../sprint2/renter_dashboard/items_listed.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:profile_managemenr/sprint2/renter_dashboard/booking_request.dart';
 
-// Remove required Renter and User — use userData instead
 class RenterDashboard extends StatelessWidget {
-  final Map<String, dynamic> userData; // ✅ Real Firebase data
+  final Map<String, dynamic> userData;
 
   const RenterDashboard({super.key, required this.userData});
 
-  Future<int> getItemCount(String renterId) async {
-    final query = await FirebaseFirestore.instance
-        .collection('items')
+  // Stream to count pending requests for the current renter
+  Stream<int> getPendingRequestsCount(String renterId) {
+    return FirebaseFirestore.instance
+        .collection('bookings')
         .where('renterId', isEqualTo: renterId)
-        .get();
-
-    return query.docs.length;
+        .where('status', isEqualTo: 'pending')
+        .snapshots()
+        .map((snapshot) {
+          // 🔍 DEBUG: Log to verify data
+          print('🔍 [Pending Requests] Found ${snapshot.docs.length} docs for renterId: $renterId');
+          for (var doc in snapshot.docs) {
+            print('   - Doc ID: ${doc.id}, Data: ${doc.data()}');
+          }
+          return snapshot.docs.length;
+        });
   }
 
   @override
   Widget build(BuildContext context) {
-    // Extract values safely
     String name = userData['fullName'] ?? 'User';
     int itemListed = userData['itemListed'] ?? 0;
     double earnings = (userData['earnings'] as num?)?.toDouble() ?? 0.0;
-    int pendingRequests = userData['pendingRequests'] ?? 0;
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Safely get current user ID
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      // Handle unauthenticated state (shouldn't happen if guarded)
+      return Scaffold(body: const Center(child: Text('Not signed in')));
+    }
+    final String currentUserId = user.uid;
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
@@ -69,17 +83,15 @@ class RenterDashboard extends StatelessWidget {
                 ),
                 const SizedBox(height: 20),
 
+                // Stats Row - All clickable
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                   children: [
-                    /// 🔥 REAL-TIME COUNT STREAM
+                    // Items Listed
                     StreamBuilder<QuerySnapshot>(
                       stream: FirebaseFirestore.instance
                           .collection('items')
-                          .where(
-                            'renterId',
-                            isEqualTo: FirebaseAuth.instance.currentUser!.uid,
-                          )
+                          .where('renterId', isEqualTo: currentUserId)
                           .snapshots(),
                       builder: (context, snapshot) {
                         if (!snapshot.hasData) {
@@ -87,42 +99,83 @@ class RenterDashboard extends StatelessWidget {
                             context,
                             value: '...',
                             label: 'Items Listed',
-                            page: YourItemsPage(
-                              renterId: FirebaseAuth.instance.currentUser!.uid,
-                            ),
+                            page: YourItemsPage(renterId: currentUserId),
                           );
                         }
-
-                        int count = snapshot.data!.docs.length;
-
+                        int itemCount = snapshot.data!.docs.length;
                         return buildClickableStat(
                           context,
-                          value: '$count',
+                          value: '$itemCount',
                           label: 'Items Listed',
-                          page: YourItemsPage(
-                            renterId: FirebaseAuth.instance.currentUser!.uid,
-                          ),
+                          page: YourItemsPage(renterId: currentUserId),
                         );
                       },
                     ),
 
+                    // Earnings
                     buildClickableStat(
                       context,
                       value: 'RM${earnings.toStringAsFixed(2)}',
                       label: 'Earnings',
                       page: PlaceholderPage(title: 'Earnings'),
                     ),
-                    buildClickableStat(
-                      context,
-                      value: '$pendingRequests',
-                      label: 'Requests',
-                      page: PlaceholderPage(title: 'Requests'),
+
+                    // Pending Requests with counter
+                    StreamBuilder<int>(
+                      stream: getPendingRequestsCount(currentUserId),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          // Show placeholder while loading
+                          return buildClickableStat(
+                            context,
+                            value: '...',
+                            label: 'Requests',
+                            page: BookingRequestsScreen(renterId: currentUserId),
+                          );
+                        }
+
+                        int pendingCount = snapshot.data!;
+                        Widget statWidget = buildClickableStat(
+                          context,
+                          value: '$pendingCount',
+                          label: 'Requests',
+                          page: BookingRequestsScreen(renterId: currentUserId),
+                        );
+
+                        if (pendingCount > 0) {
+                          return Stack(
+                            children: [
+                              statWidget,
+                              Positioned(
+                                top: -5,
+                                right: -5,
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: Text(
+                                    '$pendingCount',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          );
+                        }
+                        return statWidget;
+                      },
                     ),
                   ],
                 ),
                 const SizedBox(height: 30),
 
-                // Action buttons (same as before)
+                // Action buttons
                 menuButton(context, 'Add New Item', Icons.add),
                 menuButton(context, 'View Rental Requests', Icons.inventory),
                 menuButton(context, 'Transaction History', Icons.receipt_long),
@@ -172,9 +225,9 @@ class RenterDashboard extends StatelessWidget {
   }
 }
 
-// Menu button widget
+// Updated menu button widget to handle booking requests navigation
 Widget menuButton(BuildContext context, String title, IconData icon) {
-  final isDark = Theme.of(context).brightness == Brightness.dark;
+  final currentUserId = FirebaseAuth.instance.currentUser!.uid;
 
   return Container(
     margin: const EdgeInsets.symmetric(vertical: 6),
@@ -185,6 +238,13 @@ Widget menuButton(BuildContext context, String title, IconData icon) {
             context,
             MaterialPageRoute(builder: (_) => AddItemPage()),
           );
+        } else if (title == 'View Rental Requests') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => BookingRequestsScreen(renterId: currentUserId),
+            ),
+          );
         } else {
           Navigator.push(
             context,
@@ -192,7 +252,6 @@ Widget menuButton(BuildContext context, String title, IconData icon) {
           );
         }
       },
-
       icon: Icon(icon, color: AppColors.lightTextColor),
       label: Text(title, style: TextStyle(color: AppColors.lightTextColor)),
       style: ElevatedButton.styleFrom(
@@ -200,7 +259,6 @@ Widget menuButton(BuildContext context, String title, IconData icon) {
         minimumSize: const Size(double.infinity, 50),
         alignment: Alignment.centerLeft,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        elevation: isDark ? 0 : 1,
       ),
     ),
   );
@@ -255,7 +313,7 @@ Widget buildClickableStat(
   );
 }
 
-// Placeholder page for navigation
+// Placeholder page
 class PlaceholderPage extends StatelessWidget {
   final String title;
   const PlaceholderPage({super.key, required this.title});

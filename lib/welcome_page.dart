@@ -340,7 +340,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 backgroundColor: Colors.white,
                 textColor: AppColors.accentColor,
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => const LoginPage()),
                   );
@@ -352,7 +352,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 backgroundColor: Colors.white,
                 textColor: AppColors.accentColor,
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => const RegistrationApp()),
                   );
@@ -365,7 +365,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 textColor: Colors.white,
                 hasBorder: true,
                 onPressed: () {
-                  Navigator.push(
+                  Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => const CampusClosetScreen()),
                   );
