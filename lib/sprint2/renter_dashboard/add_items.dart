@@ -1,11 +1,13 @@
+// lib/sprint2/ManageItems/add_items.dart
+
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
+import 'dart:convert';
 
-import '../../../../constants/app_colors.dart';
+import '../../constants/app_colors.dart';
 
 class AddItemPage extends StatefulWidget {
   const AddItemPage({super.key});
@@ -22,7 +24,8 @@ class _AddItemPageState extends State<AddItemPage> {
   final TextEditingController priceCtrl = TextEditingController();
 
   final ImagePicker picker = ImagePicker();
-  List<XFile> images = [];
+  List<File> images = [];
+  bool _isSubmitting = false;
 
   final List<String> categories = [
     'Shirt',
@@ -42,32 +45,33 @@ class _AddItemPageState extends State<AddItemPage> {
   String? selectedSize;
 
   Future<void> pickImages() async {
-    final picked = await picker.pickMultiImage();
+    final picked = await picker.pickMultiImage(
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 70,
+    );
+    
     if (picked.isNotEmpty) {
       setState(() {
-        images.addAll(picked);
+        images.addAll(picked.map((xfile) => File(xfile.path)));
       });
     }
   }
 
-  Future<List<String>> uploadImages(String itemId) async {
-    List<String> urls = [];
+  Future<List<String>> convertImagesToBase64() async {
+    List<String> base64Images = [];
 
-    for (int i = 0; i < images.length; i++) {
-      final file = File(images[i].path);
-
-      final ref = FirebaseStorage.instance.ref().child(
-        "items/$itemId/image_$i.jpg",
-      );
-
-      UploadTask uploadTask = ref.putFile(file);
-      await uploadTask.whenComplete(() {});
-
-      final url = await ref.getDownloadURL();
-      urls.add(url);
+    for (File imageFile in images) {
+      try {
+        final bytes = await imageFile.readAsBytes();
+        final base64String = base64Encode(bytes);
+        base64Images.add(base64String);
+      } catch (e) {
+        print('Error converting image to base64: $e');
+      }
     }
 
-    return urls;
+    return base64Images;
   }
 
   Future<void> saveItem() async {
@@ -80,34 +84,84 @@ class _AddItemPageState extends State<AddItemPage> {
       return;
     }
 
+    if (images.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please add at least one image")),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
     try {
       final renterId = FirebaseAuth.instance.currentUser!.uid;
-      final docRef = FirebaseFirestore.instance.collection("items").doc();
+      final userEmail = FirebaseAuth.instance.currentUser!.email ?? 'unknown@email.com';
 
-      // 🟢 IMAGE OPTIONAL: only upload if images exist
-      List<String> imageUrls = [];
-      if (images.isNotEmpty) {
-        imageUrls = await uploadImages(docRef.id);
+      // Get user name from Firestore
+      String renterName = 'Unknown User';
+      try {
+        final userData = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(renterId)
+            .get();
+        renterName = userData.data()?['fullName'] ?? userEmail.split('@')[0];
+      } catch (e) {
+        renterName = userEmail.split('@')[0];
       }
 
-      await docRef.set({
+      print('Converting images to base64...');
+      // Convert images to base64
+      List<String> base64Images = await convertImagesToBase64();
+      
+      print('Saving item to Firestore...');
+      // Save to Firestore
+      await FirebaseFirestore.instance.collection("items").add({
         "name": nameCtrl.text.trim(),
         "category": selectedCategory,
         "size": selectedSize,
         "pricePerDay": double.parse(priceCtrl.text),
         "description": descriptionCtrl.text.trim(),
         "renterId": renterId,
-        "images": imageUrls, // empty [] if no images
-        "createdAt": DateTime.now(),
+        "renterEmail": userEmail,
+        "renterName": renterName,
+        "images": base64Images, // Store as base64 strings
+        "createdAt": FieldValue.serverTimestamp(),
+        "updatedAt": FieldValue.serverTimestamp(),
       });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item added successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
       Navigator.pop(context);
     } catch (e) {
       print("UPLOAD ERROR: $e");
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Upload Failed: $e")));
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Upload Failed: $e")),
+      );
+      setState(() => _isSubmitting = false);
     }
+  }
+
+  void _removeImage(int index) {
+    setState(() {
+      images.removeAt(index);
+    });
+  }
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    descriptionCtrl.dispose();
+    priceCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -115,12 +169,11 @@ class _AddItemPageState extends State<AddItemPage> {
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.lightCardBackground,
-        foregroundColor: AppColors.lightTextColor,
+        backgroundColor: AppColors.accentColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text("Add Item"),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -152,10 +205,8 @@ class _AddItemPageState extends State<AddItemPage> {
                       ),
                       value: selectedCategory,
                       items: categories
-                          .map(
-                            (cat) =>
-                                DropdownMenuItem(value: cat, child: Text(cat)),
-                          )
+                          .map((cat) =>
+                              DropdownMenuItem(value: cat, child: Text(cat)))
                           .toList(),
                       onChanged: (value) => setState(() {
                         selectedCategory = value;
@@ -171,9 +222,7 @@ class _AddItemPageState extends State<AddItemPage> {
                       ),
                       value: selectedSize,
                       items: sizes
-                          .map(
-                            (s) => DropdownMenuItem(value: s, child: Text(s)),
-                          )
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (value) => setState(() {
                         selectedSize = value;
@@ -211,7 +260,7 @@ class _AddItemPageState extends State<AddItemPage> {
             const Align(
               alignment: Alignment.centerLeft,
               child: Text(
-                "Item Photos (Optional)",
+                "Item Photos (Required)",
                 style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
               ),
             ),
@@ -221,17 +270,32 @@ class _AddItemPageState extends State<AddItemPage> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                ...images.map(
-                  (img) => ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(img.path),
-                      width: 90,
-                      height: 90,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+                ...images.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final img = entry.value;
+                  
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          img,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: -5,
+                        right: -5,
+                        child: IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.red),
+                          onPressed: () => _removeImage(index),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
                 GestureDetector(
                   onTap: pickImages,
                   child: Container(
@@ -252,7 +316,7 @@ class _AddItemPageState extends State<AddItemPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: saveItem,
+                onPressed: _isSubmitting ? null : saveItem,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentColor,
                   foregroundColor: Colors.white,
@@ -262,10 +326,19 @@ class _AddItemPageState extends State<AddItemPage> {
                   ),
                   elevation: 0,
                 ),
-                child: const Text(
-                  "Add Item",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        "Add Item",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
               ),
             ),
           ],

@@ -1,13 +1,13 @@
+// lib/sprint2/ManageItems/edit_items.dart
+
 import 'dart:io';
+import 'dart:convert';
 
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-
 import 'package:image_picker/image_picker.dart';
 
-import '../../../../constants/app_colors.dart';
+import '../../constants/app_colors.dart';
 
 class EditItemPage extends StatefulWidget {
   final String itemId;
@@ -27,8 +27,9 @@ class _EditItemPageState extends State<EditItemPage> {
   late TextEditingController priceCtrl;
 
   final ImagePicker picker = ImagePicker();
-  List<XFile> newImages = []; // new images user selects
-  List<String> existingImages = []; // existing URLs remain
+  List<File> newImages = []; // New images to add
+  List<String> existingBase64Images = []; // Existing base64 images
+  bool _isSubmitting = false;
 
   final List<String> categories = [
     'Shirt',
@@ -63,67 +64,115 @@ class _EditItemPageState extends State<EditItemPage> {
     selectedCategory = widget.itemData["category"];
     selectedSize = widget.itemData["size"];
 
-    existingImages = List<String>.from(widget.itemData["images"] ?? []);
+    // Load existing base64 images
+    existingBase64Images = List<String>.from(widget.itemData["images"] ?? []);
   }
 
   Future<void> pickImages() async {
-    final picked = await picker.pickMultiImage();
+    final picked = await picker.pickMultiImage(
+      maxWidth: 800,
+      maxHeight: 800,
+      imageQuality: 70,
+    );
+    
     if (picked.isNotEmpty) {
-      setState(() => newImages.addAll(picked));
+      setState(() {
+        newImages.addAll(picked.map((xfile) => File(xfile.path)));
+      });
     }
   }
 
-  Future<List<String>> uploadNewImages() async {
-    List<String> urls = [];
+  Future<List<String>> convertNewImagesToBase64() async {
+    List<String> base64Images = [];
 
-    for (int i = 0; i < newImages.length; i++) {
-      final file = File(newImages[i].path);
-
-      final ref = FirebaseStorage.instance.ref().child(
-        "items/${widget.itemId}/new_$i.jpg",
-      );
-
-      UploadTask task = ref.putFile(file);
-      await task.whenComplete(() {});
-
-      final url = await ref.getDownloadURL();
-      urls.add(url);
+    for (File imageFile in newImages) {
+      try {
+        final bytes = await imageFile.readAsBytes();
+        final base64String = base64Encode(bytes);
+        base64Images.add(base64String);
+      } catch (e) {
+        print('Error converting image to base64: $e');
+      }
     }
 
-    return urls;
+    return base64Images;
+  }
+
+  void _removeExistingImage(int index) {
+    setState(() {
+      existingBase64Images.removeAt(index);
+    });
+  }
+
+  void _removeNewImage(int index) {
+    setState(() {
+      newImages.removeAt(index);
+    });
   }
 
   Future<void> saveChanges() async {
     if (!_formKey.currentState!.validate()) return;
 
+    if (existingBase64Images.isEmpty && newImages.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Please add at least one image")),
+      );
+      return;
+    }
+
+    setState(() => _isSubmitting = true);
+
     try {
-      // Upload new images if any
-      List<String> newUploadedUrls = [];
+      // Convert new images to base64
+      List<String> newBase64Images = [];
       if (newImages.isNotEmpty) {
-        newUploadedUrls = await uploadNewImages();
+        newBase64Images = await convertNewImagesToBase64();
       }
 
       // Merge existing + new images
-      final finalImages = [...existingImages, ...newUploadedUrls];
+      final finalImages = [...existingBase64Images, ...newBase64Images];
 
+      print('Updating item in Firestore...');
       await FirebaseFirestore.instance
           .collection("items")
           .doc(widget.itemId)
           .update({
-            "name": nameCtrl.text.trim(),
-            "category": selectedCategory,
-            "size": selectedSize,
-            "pricePerDay": double.parse(priceCtrl.text),
-            "description": descriptionCtrl.text.trim(),
-            "images": finalImages,
-          });
+        "name": nameCtrl.text.trim(),
+        "category": selectedCategory,
+        "size": selectedSize,
+        "pricePerDay": double.parse(priceCtrl.text),
+        "description": descriptionCtrl.text.trim(),
+        "images": finalImages,
+        "updatedAt": FieldValue.serverTimestamp(),
+      });
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Item updated successfully!'),
+          backgroundColor: Colors.green,
+        ),
+      );
 
       Navigator.pop(context);
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text("Update Failed: $e")));
+      print("UPDATE ERROR: $e");
+      if (!mounted) return;
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Update Failed: $e")),
+      );
+      setState(() => _isSubmitting = false);
     }
+  }
+
+  @override
+  void dispose() {
+    nameCtrl.dispose();
+    descriptionCtrl.dispose();
+    priceCtrl.dispose();
+    super.dispose();
   }
 
   @override
@@ -131,12 +180,11 @@ class _EditItemPageState extends State<EditItemPage> {
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.lightCardBackground,
-        foregroundColor: AppColors.lightTextColor,
+        backgroundColor: AppColors.accentColor,
+        foregroundColor: Colors.white,
         elevation: 0,
         title: const Text("Edit Item"),
       ),
-
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Column(
@@ -168,9 +216,7 @@ class _EditItemPageState extends State<EditItemPage> {
                       ),
                       value: selectedCategory,
                       items: categories
-                          .map(
-                            (c) => DropdownMenuItem(value: c, child: Text(c)),
-                          )
+                          .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                           .toList(),
                       onChanged: (v) => setState(() => selectedCategory = v),
                     ),
@@ -183,9 +229,7 @@ class _EditItemPageState extends State<EditItemPage> {
                       ),
                       value: selectedSize,
                       items: sizes
-                          .map(
-                            (s) => DropdownMenuItem(value: s, child: Text(s)),
-                          )
+                          .map((s) => DropdownMenuItem(value: s, child: Text(s)))
                           .toList(),
                       onChanged: (v) => setState(() => selectedSize = v),
                     ),
@@ -217,7 +261,7 @@ class _EditItemPageState extends State<EditItemPage> {
 
             const SizedBox(height: 25),
 
-            Align(
+            const Align(
               alignment: Alignment.centerLeft,
               child: Text(
                 "Item Photos",
@@ -230,28 +274,71 @@ class _EditItemPageState extends State<EditItemPage> {
               spacing: 10,
               runSpacing: 10,
               children: [
-                ...existingImages.map(
-                  (url) => ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.network(
-                      url,
-                      width: 90,
-                      height: 90,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
-                ...newImages.map(
-                  (img) => ClipRRect(
-                    borderRadius: BorderRadius.circular(12),
-                    child: Image.file(
-                      File(img.path),
-                      width: 90,
-                      height: 90,
-                      fit: BoxFit.cover,
-                    ),
-                  ),
-                ),
+                // Existing base64 images
+                ...existingBase64Images.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final base64 = entry.value;
+                  
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.memory(
+                          base64Decode(base64),
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                          errorBuilder: (context, error, stackTrace) {
+                            return Container(
+                              width: 90,
+                              height: 90,
+                              color: Colors.grey[300],
+                              child: const Icon(Icons.broken_image),
+                            );
+                          },
+                        ),
+                      ),
+                      Positioned(
+                        top: -5,
+                        right: -5,
+                        child: IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.red),
+                          onPressed: () => _removeExistingImage(index),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+                
+                // New images (from gallery)
+                ...newImages.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final img = entry.value;
+                  
+                  return Stack(
+                    children: [
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(12),
+                        child: Image.file(
+                          img,
+                          width: 90,
+                          height: 90,
+                          fit: BoxFit.cover,
+                        ),
+                      ),
+                      Positioned(
+                        top: -5,
+                        right: -5,
+                        child: IconButton(
+                          icon: const Icon(Icons.cancel, color: Colors.red),
+                          onPressed: () => _removeNewImage(index),
+                        ),
+                      ),
+                    ],
+                  );
+                }),
+                
+                // Add photo button
                 GestureDetector(
                   onTap: pickImages,
                   child: Container(
@@ -272,7 +359,7 @@ class _EditItemPageState extends State<EditItemPage> {
             SizedBox(
               width: double.infinity,
               child: ElevatedButton(
-                onPressed: saveChanges,
+                onPressed: _isSubmitting ? null : saveChanges,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.accentColor,
                   foregroundColor: Colors.white,
@@ -281,10 +368,19 @@ class _EditItemPageState extends State<EditItemPage> {
                     borderRadius: BorderRadius.circular(30),
                   ),
                 ),
-                child: const Text(
-                  "Save Changes",
-                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
-                ),
+                child: _isSubmitting
+                    ? const SizedBox(
+                        height: 20,
+                        width: 20,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                        ),
+                      )
+                    : const Text(
+                        "Save Changes",
+                        style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                      ),
               ),
             ),
           ],
