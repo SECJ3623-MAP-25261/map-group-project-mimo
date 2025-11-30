@@ -13,12 +13,9 @@ import '../constants/app_colors.dart';
 import '../constants/app_theme.dart';
 import 'package:profile_managemenr/welcome_page.dart';
 
-
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
 
@@ -31,7 +28,7 @@ class MyApp extends StatelessWidget {
       title: 'Campus Closet',
       theme: AppTheme.lightTheme,
       darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light, 
+      themeMode: ThemeMode.light,
       debugShowCheckedModeBanner: false,
       home: const AuthWrapper(),
       routes: {
@@ -45,7 +42,6 @@ class MyApp extends StatelessWidget {
     );
   }
 }
-
 
 class AuthWrapper extends StatelessWidget {
   const AuthWrapper({Key? key}) : super(key: key);
@@ -71,7 +67,6 @@ class AuthWrapper extends StatelessWidget {
   }
 }
 
-
 // ------------------------------
 // HOME PAGE
 // ------------------------------
@@ -87,7 +82,12 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
   String _activeFilter = 'all';
 
   final List<String> _filters = [
-    'all', 'tops', 'bottoms', 'dresses', 'outerwear', 'shoes'
+    'all',
+    'tops',
+    'bottoms',
+    'dresses',
+    'outerwear',
+    'shoes',
   ];
 
   // -------------------------------
@@ -98,31 +98,31 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
       'name': 'Casual T-Shirt',
       'price': 15.00,
       'category': 'tops',
-      'image': 'https.com/ODL8Zfw.png'
+      'image': 'https.com/ODL8Zfw.png',
     },
     {
       'name': 'Blue Jeans',
       'price': 30.00,
       'category': 'bottoms',
-      'image': 'https://i.imgur.com/JqKDZGb.png'
+      'image': 'https://i.imgur.com/JqKDZGb.png',
     },
     {
       'name': 'Floral Dress',
       'price': 45.00,
       'category': 'dresses',
-      'image': 'https://i.imgur.com/eCzq41n.png'
+      'image': 'https://i.imgur.com/eCzq41n.png',
     },
     {
       'name': 'Black Hoodie',
       'price': 28.00,
       'category': 'outerwear',
-      'image': 'https://i.imgur.com/1J4fO8b.png'
+      'image': 'https://i.imgur.com/1J4fO8b.png',
     },
     {
       'name': 'White Sneakers',
       'price': 50.00,
       'category': 'shoes',
-      'image': 'https://i.imgur.com/xZJrXTS.png'
+      'image': 'https://i.imgur.com/xZJrXTS.png',
     },
   ];
 
@@ -184,13 +184,16 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                       backgroundColor: isActive
                           ? AppColors.accentColor
                           : AppColors.lightCardBackground,
-                      foregroundColor:
-                          isActive ? Colors.white : AppColors.lightTextColor,
+                      foregroundColor: isActive
+                          ? Colors.white
+                          : AppColors.lightTextColor,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(30),
                       ),
-                      padding:
-                          const EdgeInsets.symmetric(horizontal: 20, vertical: 10),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 20,
+                        vertical: 10,
+                      ),
                     ),
                     onPressed: () => setState(() => _activeFilter = f),
                     child: Text(label),
@@ -220,11 +223,11 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                     padding: const EdgeInsets.all(16),
                     gridDelegate:
                         const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 4,
-                      childAspectRatio: 0.62,
-                      crossAxisSpacing: 16,
-                      mainAxisSpacing: 16,
-                    ),
+                          crossAxisCount: 4,
+                          childAspectRatio: 0.62,
+                          crossAxisSpacing: 16,
+                          mainAxisSpacing: 16,
+                        ),
                     itemCount: filteredItems.length,
                     itemBuilder: (context, index) {
                       final item = filteredItems[index];
@@ -240,7 +243,7 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                                 color: Colors.black12,
                                 blurRadius: 6,
                                 offset: Offset(0, 3),
-                              )
+                              ),
                             ],
                           ),
                           child: Column(
@@ -250,7 +253,8 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                               Expanded(
                                 child: ClipRRect(
                                   borderRadius: const BorderRadius.vertical(
-                                      top: Radius.circular(16)),
+                                    top: Radius.circular(16),
+                                  ),
                                   child: Image.network(
                                     item['image'],
                                     fit: BoxFit.cover,
@@ -273,8 +277,9 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
 
                               // Price
                               Padding(
-                                padding:
-                                    const EdgeInsets.symmetric(horizontal: 8.0),
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8.0,
+                                ),
                                 child: Text(
                                   "RM${item['price'].toStringAsFixed(2)}",
                                   style: const TextStyle(
