@@ -3,16 +3,14 @@ import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/main.dart';
 import '../constants/app_colors.dart';
-//import '../constants/app_theme.dart';
 import 'firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform,);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   runApp(const MyApp());
 }
-
 
 class WelcomeScreen extends StatefulWidget {
   const WelcomeScreen({Key? key}) : super(key: key);
@@ -39,7 +37,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   
   bool _showWelcome = true;
 
-  // Configuration
   final String logoUrl = "lib/widgets/CampusClosetLogo.png";
   final String appName = "Campus Closet";
   final String welcomeMessage = "Welcome Back!";
@@ -49,7 +46,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void initState() {
     super.initState();
     
-    // Logo animation controller
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 3000),
       vsync: this,
@@ -76,7 +72,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
     );
     
-    // Text animation controller
     _textController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -91,7 +86,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
     
-    // Main screen animation controller
     _mainController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
@@ -106,7 +100,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _mainController, curve: Curves.easeOut));
     
-    // Shimmer animation
     _shimmerController = AnimationController(
       duration: const Duration(milliseconds: 3000),
       vsync: this,
@@ -117,24 +110,37 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       TweenSequenceItem(tween: Tween<double>(begin: 0.4, end: 0.2), weight: 50),
     ]).animate(_shimmerController);
     
-    // Start animations
     _startAnimations();
   }
 
-  void _startAnimations() async {
+  // 🔥 CRITICAL FIX: Add mounted checks before setState and async operations
+  Future<void> _startAnimations() async {
+    if (!mounted) return;
+    
     _logoController.forward();
     _shimmerController.repeat();
     
     await Future.delayed(const Duration(milliseconds: 1000));
+    if (!mounted) return;
     _textController.forward();
     
     await Future.delayed(const Duration(milliseconds: 2000));
-    setState(() => _showWelcome = false);
+    if (!mounted) return;
+    
+    // 🔥 Only call setState if widget is still mounted
+    setState(() {
+      _showWelcome = false;
+    });
+    
+    if (!mounted) return;
     _mainController.forward();
   }
 
   @override
   void dispose() {
+    // 🔥 Stop repeating animations before dispose
+    _shimmerController.stop();
+    
     _logoController.dispose();
     _textController.dispose();
     _mainController.dispose();
@@ -152,13 +158,12 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             end: Alignment.bottomRight,
             colors: [
               AppColors.accentColor,
-              Color(0xFF1e8079), // Darker shade of accent
+              Color(0xFF1e8079),
             ],
           ),
         ),
         child: Stack(
           children: [
-            // Main authentication screen
             Center(
               child: SlideTransition(
                 position: _mainSlide,
@@ -169,7 +174,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
               ),
             ),
             
-            // Welcome screen overlay
             if (_showWelcome)
               AnimatedOpacity(
                 opacity: _showWelcome ? 1.0 : 0.0,
@@ -189,7 +193,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
     return Column(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        // Logo with animations
         AnimatedBuilder(
           animation: Listenable.merge([_logoController, _shimmerController]),
           builder: (context, child) {
@@ -220,7 +223,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                     child: Stack(
                       alignment: Alignment.center,
                       children: [
-                        // Shimmer effect
                         Positioned(
                           top: 24,
                           left: 24,
@@ -233,7 +235,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             ),
                           ),
                         ),
-                        // Logo icon
                         logoUrl.isEmpty
                             ? const Icon(Icons.shopping_bag, size: 56, color: AppColors.accentColor)
                             : ClipRRect(
@@ -257,7 +258,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         ),
         const SizedBox(height: 32),
         
-        // App name
         SlideTransition(
           position: _textSlide,
           child: FadeTransition(
@@ -274,7 +274,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
         ),
         const SizedBox(height: 8),
         
-        // Tagline
         SlideTransition(
           position: _textSlide,
           child: FadeTransition(
@@ -299,7 +298,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          // Welcome text
           Column(
             children: [
               const Text(
@@ -332,7 +330,6 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ),
           const SizedBox(height: 48),
           
-          // Auth buttons
           Column(
             children: [
               _buildAuthButton(
@@ -340,6 +337,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 backgroundColor: Colors.white,
                 textColor: AppColors.accentColor,
                 onPressed: () {
+                  // 🔥 Use pushReplacement to remove WelcomeScreen from stack
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => const LoginPage()),

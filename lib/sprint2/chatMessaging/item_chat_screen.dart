@@ -6,6 +6,7 @@ import 'package:provider/provider.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
 import 'package:profile_managemenr/services/message_service.dart';
+import 'dart:convert';
 
 class ItemChatScreen extends StatefulWidget {
   final String chatId;
@@ -15,6 +16,7 @@ class ItemChatScreen extends StatefulWidget {
   final String renterName;
   final String renteeId;
   final String renteeName;
+  final List<dynamic>? itemImages; // 👈 Added item images
 
   const ItemChatScreen({
     super.key,
@@ -25,6 +27,7 @@ class ItemChatScreen extends StatefulWidget {
     required this.renterName,
     required this.renteeId,
     required this.renteeName,
+    this.itemImages, // 👈 Optional images
   });
 
   static String buildChatId(String itemId, String userId1, String userId2) {
@@ -45,8 +48,8 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
   bool _isSending = false;
   bool _isLoading = true;
   String? _errorMessage;
+  int _currentImageIndex = 0;
   
-  // Debounce timer to prevent duplicate sends
   DateTime? _lastSendTime;
   static const _sendDebounceMs = 500;
 
@@ -98,18 +101,11 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
     print('👨‍💼 Renter: ${widget.renterId} (${widget.renterName})');
     print('👩‍💼 Rentee: ${widget.renteeId} (${widget.renteeName})');
     
-    // Validate chatId format
     final chatIdParts = widget.chatId.split('|');
     if (chatIdParts.length != 3) {
       print('⚠️ WARNING: Chat ID format may be malformed!');
-      print('   Expected "itemId|userId1|userId2", got: ${widget.chatId}');
-      print('   Chat ID has ${chatIdParts.length} parts instead of 3');
-      print('   Will attempt to use it anyway (backwards compatibility)');
-    } else {
-      print('✅ Chat ID format valid: itemId=${chatIdParts[0]}, user1=${chatIdParts[1]}, user2=${chatIdParts[2]}');
     }
 
-    // Validate user is a participant
     final participants = [widget.renterId, widget.renteeId];
     print('👥 Participants list: $participants');
     if (!participants.contains(_currentUserId)) {
@@ -157,7 +153,6 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
   }
 
   Future<void> _sendMessage() async {
-    // Debounce check
     final now = DateTime.now();
     if (_lastSendTime != null && 
         now.difference(_lastSendTime!).inMilliseconds < _sendDebounceMs) {
@@ -205,7 +200,6 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
 
   String _formatMessageTime(Timestamp? timestamp) {
     if (timestamp == null) return '...';
-    
     final dt = timestamp.toDate();
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
@@ -288,6 +282,136 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
     );
   }
 
+  // 👇 NEW: Build item details section at top
+  Widget _buildItemDetails() {
+    final hasImages = widget.itemImages != null && widget.itemImages!.isNotEmpty;
+    final firstImage = hasImages ? widget.itemImages![0] : null;
+
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: AppColors.lightCardBackground,
+        borderRadius: BorderRadius.circular(12),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 4,
+            offset: const Offset(0, 2),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Item Name
+          Text(
+            widget.itemName,
+            style: const TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: AppColors.lightTextColor,
+            ),
+          ),
+          
+          const SizedBox(height: 12),
+          
+          // Item Image
+          if (hasImages) ...[
+            GestureDetector(
+              onTap: () => _showFullScreenImage(firstImage.toString()),
+              child: Container(
+                height: 120,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(8),
+                  color: Colors.grey[200],
+                ),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(8),
+                  child: firstImage is String && firstImage.startsWith('http')
+                      ? Image.network(
+                          firstImage,
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported),
+                        )
+                      : Image.memory(
+                          base64Decode(firstImage.toString()),
+                          fit: BoxFit.cover,
+                          width: double.infinity,
+                          height: double.infinity,
+                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported),
+                        ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 8),
+            // Image counter if multiple images
+            if (widget.itemImages!.length > 1)
+              Center(
+                child: Text(
+                  'View ${widget.itemImages!.length} photos',
+                  style: const TextStyle(
+                    color: AppColors.accentColor,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+            const SizedBox(height: 12),
+          ],
+          
+          // Participants Info
+          Row(
+            children: [
+              const Icon(Icons.person, size: 16, color: AppColors.lightHintColor),
+              const SizedBox(width: 8),
+              Text(
+                'With ${widget.renterName}',
+                style: const TextStyle(
+                  color: AppColors.lightTextColor,
+                  fontSize: 14,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFullScreenImage(String imageData) {
+    showDialog(
+      context: context,
+      barrierColor: Colors.black87,
+      builder: (context) => Dialog(
+        backgroundColor: Colors.transparent,
+        insetPadding: const EdgeInsets.all(10),
+        child: Stack(
+          children: [
+            Center(
+              child: InteractiveViewer(
+                panEnabled: true,
+                minScale: 1.0,
+                maxScale: 4.0,
+                child: imageData.startsWith('http')
+                    ? Image.network(imageData, fit: BoxFit.contain)
+                    : Image.memory(base64Decode(imageData), fit: BoxFit.contain),
+              ),
+            ),
+            Positioned(
+              top: 20,
+              right: 20,
+              child: IconButton(
+                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                onPressed: () => Navigator.pop(context),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _buildMessagesList() {
     if (_isLoading) {
       return const Center(
@@ -366,32 +490,12 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
           );
         }
 
-        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Icon(Icons.chat_bubble_outline, size: 64, color: AppColors.lightHintColor),
-                SizedBox(height: 16),
-                Text(
-                  'No messages yet.\nStart the conversation!',
-                  style: TextStyle(color: AppColors.lightHintColor),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          );
-        }
+        final docs = snapshot.data?.docs ?? [];
 
-        final docs = snapshot.data!.docs;
-
-        // Scroll to bottom only on first load or when user is near bottom
         WidgetsBinding.instance.addPostFrameCallback((_) {
           if (!_scrollController.hasClients) return;
-          
-          final position = _scrollController.position;
-          final isNearBottom = position.maxScrollExtent - position.pixels < 100;
-          
+          final isNearBottom = _scrollController.position.maxScrollExtent - 
+                               _scrollController.position.pixels < 100;
           if (isNearBottom || docs.length == 1) {
             _scrollToBottom();
           }
@@ -399,7 +503,7 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
 
         return ListView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.symmetric(vertical: 8),
+          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final doc = docs[index];
@@ -423,31 +527,25 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
       appBar: AppBar(
         backgroundColor: AppColors.accentColor,
         elevation: 0,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'Chat with $otherName',
-              style: const TextStyle(color: Colors.white, fontSize: 16),
-            ),
-            Text(
-              widget.itemName,
-              style: const TextStyle(
-                color: Colors.white70,
-                fontSize: 12,
-              ),
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+        title: Text(
+          'Chat with $otherName',
+          style: const TextStyle(color: Colors.white, fontSize: 16),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: AppColors.lightBackground,
       body: Column(
         children: [
+          // 👇 ITEM DETAILS AT TOP
+          _buildItemDetails(),
+          const SizedBox(height: 16),
+          
+          // Messages
           Expanded(
             child: _buildMessagesList(),
           ),
+          
+          // Input field
           if (_errorMessage == null)
             SafeArea(
               child: Container(

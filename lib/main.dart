@@ -371,6 +371,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             renterName: renterName,
                             renteeId: user.uid,
                             renteeName: 'You',
+                            itemImages: widget.item['images'],
                           ),
                         ),
                       );
