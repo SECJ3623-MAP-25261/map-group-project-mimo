@@ -33,7 +33,21 @@ class _BookingScreenState extends State<BookingScreen> {
 
   static const Color _rateColor = Color(0xFF1E3A8A);
 
-  int _currentImageIndex = 0;
+  // >>> ADDED FOR SWIPEABLE IMAGES <<<
+  late PageController _imagePageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _imagePageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _imagePageController.dispose();
+    super.dispose();
+  }
 
   String get _itemName => widget.itemData?['name'] ?? 'Selected Attire';
   String get _itemId => widget.itemData?['id'] ?? 'unknown';
@@ -42,7 +56,6 @@ class _BookingScreenState extends State<BookingScreen> {
     if (images is List && images.isNotEmpty) {
       return images;
     }
-    // Fallback to single image if available
     final singleImage = widget.itemData?['image'];
     if (singleImage != null) {
       return [singleImage];
@@ -148,7 +161,6 @@ class _BookingScreenState extends State<BookingScreen> {
         return;
       }
 
-      // Get user name
       String userName = 'Unknown User';
       try {
         final userData = await _authService.getUserData(userId);
@@ -162,7 +174,6 @@ class _BookingScreenState extends State<BookingScreen> {
       print('Days: $_rentalDays');
       print('Total: RM ${_estimatedTotal.toStringAsFixed(2)}');
 
-      // Create booking in Firestore
       final bookingId = await _bookingService.createBooking(
         userId: userId,
         userEmail: userEmail,
@@ -186,7 +197,6 @@ class _BookingScreenState extends State<BookingScreen> {
           Colors.green,
         );
 
-        // Show success dialog
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) {
             showDialog(
@@ -212,8 +222,8 @@ class _BookingScreenState extends State<BookingScreen> {
                 actions: [
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      Navigator.pop(context); // Go back to previous screen
+                      Navigator.pop(context);
+                      Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentColor,
@@ -330,7 +340,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    // Debug: Print received data
     print('=== BOOKING SCREEN DEBUG ===');
     print('Item Data: ${widget.itemData}');
     print('Item Name: $_itemName');
@@ -372,8 +381,7 @@ class _BookingScreenState extends State<BookingScreen> {
               ),
               const SizedBox(height: 8),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
                 width: double.infinity,
                 decoration: BoxDecoration(
                   color: AppColors.lightInputFillColor,
@@ -388,8 +396,8 @@ class _BookingScreenState extends State<BookingScreen> {
                   ),
                 ),
               ),
-              
-              // Item Images - Simple 16:9 with tap to fullscreen
+
+              // >>> SWIPEABLE IMAGE CAROUSEL <<<
               const SizedBox(height: 16),
               const Text(
                 'Item Images',
@@ -399,219 +407,138 @@ class _BookingScreenState extends State<BookingScreen> {
                 ),
               ),
               const SizedBox(height: 8),
-              
-              _itemImages.isEmpty
-                  ? AspectRatio(
-                      aspectRatio: 16 / 9,
-                      child: Container(
-                        decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(color: AppColors.lightBorderColor),
-                          color: AppColors.lightInputFillColor,
-                        ),
-                        child: const Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.image_not_supported,
-                                  size: 50, color: AppColors.lightHintColor),
-                              SizedBox(height: 8),
-                              Text('No images available',
-                                  style: TextStyle(
-                                      color: AppColors.lightHintColor,
-                                      fontSize: 14)),
-                            ],
-                          ),
-                        ),
+
+              if (_itemImages.isEmpty)
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: Container(
+                    decoration: BoxDecoration(
+                      borderRadius: BorderRadius.circular(12),
+                      border: Border.all(color: AppColors.lightBorderColor),
+                      color: AppColors.lightInputFillColor,
+                    ),
+                    child: const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(Icons.image_not_supported,
+                              size: 50, color: AppColors.lightHintColor),
+                          SizedBox(height: 8),
+                          Text('No images available',
+                              style: TextStyle(
+                                  color: AppColors.lightHintColor,
+                                  fontSize: 14)),
+                        ],
                       ),
-                    )
-                  : Column(
-                      children: [
-                        AspectRatio(
-                          aspectRatio: 16 / 9,
-                          child: GestureDetector(
-                            onTap: () => _showFullScreenImage(
-                                _itemImages[_currentImageIndex].toString()),
-                            child: Container(
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                    color: AppColors.lightBorderColor, width: 2),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.1),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 4),
+                    ),
+                  ),
+                )
+              else
+                Column(
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(12),
+                      child: AspectRatio(
+                        aspectRatio: 16 / 9,
+                        child: PageView.builder(
+                          controller: _imagePageController,
+                          itemCount: _itemImages.length,
+                          onPageChanged: (index) {
+                            setState(() => _currentPage = index);
+                          },
+                          itemBuilder: (context, index) {
+                            final imageData = _itemImages[index].toString();
+                            return GestureDetector(
+                              onTap: () => _showFullScreenImage(imageData),
+                              child: Container(
+                                decoration: BoxDecoration(
+                                  border: Border.all(
+                                    color: AppColors.lightBorderColor,
+                                    width: 2,
                                   ),
-                                ],
-                              ),
-                              child: Stack(
-                                children: [
-                                  ClipRRect(
-                                    borderRadius: BorderRadius.circular(10),
-                                    child: _itemImages[_currentImageIndex]
-                                                is String &&
-                                            _itemImages[_currentImageIndex]
-                                                .toString()
-                                                .startsWith('http')
-                                        ? Image.network(
-                                            _itemImages[_currentImageIndex]
-                                                .toString(),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
-                                              return Container(
-                                                color:
-                                                    AppColors.lightInputFillColor,
-                                                child: const Center(
-                                                  child: Icon(Icons.broken_image,
-                                                      size: 50,
-                                                      color: AppColors
-                                                          .lightHintColor),
-                                                ),
-                                              );
-                                            },
-                                          )
-                                        : Image.memory(
-                                            base64Decode(_itemImages[
-                                                    _currentImageIndex]
-                                                .toString()),
-                                            fit: BoxFit.cover,
-                                            width: double.infinity,
-                                            height: double.infinity,
-                                            errorBuilder:
-                                                (context, error, stackTrace) {
-                                              return Container(
-                                                color:
-                                                    AppColors.lightInputFillColor,
-                                                child: const Center(
-                                                  child: Icon(Icons.broken_image,
-                                                      size: 50,
-                                                      color: AppColors
-                                                          .lightHintColor),
-                                                ),
-                                              );
-                                            },
-                                          ),
-                                  ),
-                                  
-                                  // Tap to enlarge hint
-                                  Positioned(
-                                    bottom: 8,
-                                    right: 8,
-                                    child: Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: Colors.black.withOpacity(0.6),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: const Row(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          Icon(Icons.fullscreen,
-                                              size: 14, color: Colors.white),
-                                          SizedBox(width: 4),
-                                          Text(
-                                            'Tap to enlarge',
-                                            style: TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 10,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.1),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 4),
+                                    ),
+                                  ],
+                                ),
+                                child: ClipRRect(
+                                  borderRadius: BorderRadius.circular(10),
+                                  child: imageData.startsWith('http')
+                                      ? Image.network(
+                                          imageData,
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              Container(
+                                            color: AppColors.lightInputFillColor,
+                                            child: const Center(
+                                              child: Icon(Icons.broken_image,
+                                                  size: 50, color: AppColors.lightHintColor),
                                             ),
                                           ),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                  
-                                  // Image counter
-                                  if (_itemImages.length > 1)
-                                    Positioned(
-                                      top: 8,
-                                      right: 8,
-                                      child: Container(
-                                        padding: const EdgeInsets.symmetric(
-                                          horizontal: 10,
-                                          vertical: 4,
-                                        ),
-                                        decoration: BoxDecoration(
-                                          color: Colors.black.withOpacity(0.6),
-                                          borderRadius: BorderRadius.circular(12),
-                                        ),
-                                        child: Text(
-                                          '${_currentImageIndex + 1}/${_itemImages.length}',
-                                          style: const TextStyle(
-                                            color: Colors.white,
-                                            fontSize: 12,
-                                            fontWeight: FontWeight.bold,
+                                        )
+                                      : Image.memory(
+                                          base64Decode(imageData),
+                                          fit: BoxFit.cover,
+                                          width: double.infinity,
+                                          height: double.infinity,
+                                          errorBuilder: (context, error, stackTrace) =>
+                                              Container(
+                                            color: AppColors.lightInputFillColor,
+                                            child: const Center(
+                                              child: Icon(Icons.broken_image,
+                                                  size: 50, color: AppColors.lightHintColor),
+                                            ),
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                ],
+                                ),
                               ),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+
+                    // Dots indicator
+                    if (_itemImages.length > 1) ...[
+                      const SizedBox(height: 12),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: List.generate(
+                          _itemImages.length,
+                          (index) => Container(
+                            margin: const EdgeInsets.symmetric(horizontal: 4),
+                            width: 8,
+                            height: 8,
+                            decoration: BoxDecoration(
+                              shape: BoxShape.circle,
+                              color: _currentPage == index
+                                  ? AppColors.accentColor
+                                  : Colors.grey[300],
                             ),
                           ),
                         ),
-                        
-                        // Navigation arrows for multiple images
-                        if (_itemImages.length > 1) ...[
-                          const SizedBox(height: 12),
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              IconButton(
-                                icon: const Icon(Icons.arrow_back_ios, size: 20),
-                                color: AppColors.accentColor,
-                                onPressed: _currentImageIndex > 0
-                                    ? () {
-                                        setState(() {
-                                          _currentImageIndex--;
-                                        });
-                                      }
-                                    : null,
-                              ),
-                              const SizedBox(width: 20),
-                              Row(
-                                children: List.generate(
-                                  _itemImages.length,
-                                  (index) => Container(
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 4),
-                                    width: 8,
-                                    height: 8,
-                                    decoration: BoxDecoration(
-                                      shape: BoxShape.circle,
-                                      color: _currentImageIndex == index
-                                          ? AppColors.accentColor
-                                          : Colors.grey[300],
-                                    ),
-                                  ),
-                                ),
-                              ),
-                              const SizedBox(width: 20),
-                              IconButton(
-                                icon: const Icon(Icons.arrow_forward_ios,
-                                    size: 20),
-                                color: AppColors.accentColor,
-                                onPressed:
-                                    _currentImageIndex < _itemImages.length - 1
-                                        ? () {
-                                            setState(() {
-                                              _currentImageIndex++;
-                                            });
-                                          }
-                                        : null,
-                              ),
-                            ],
-                          ),
-                        ],
-                      ],
+                      ),
+                    ],
+
+                    const SizedBox(height: 8),
+                    Center(
+                      child: Text(
+                        'Swipe to view more • Tap to enlarge',
+                        style: TextStyle(
+                          fontSize: 12,
+                          color: AppColors.lightHintColor,
+                        ),
+                      ),
                     ),
+                  ],
+                ),
+              // <<< END SWIPEABLE IMAGE CAROUSEL <<<
+
               const SizedBox(height: 24),
               _buildDateField(
                 label: 'Rental Start Date (Pickup)',
@@ -703,8 +630,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     const SizedBox(width: 16),
                     Expanded(
                       child: ElevatedButton(
-                        onPressed:
-                            _rentalDays > 0 && !_isSubmitting ? _submitBooking : null,
+                        onPressed: _rentalDays > 0 && !_isSubmitting ? _submitBooking : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentColor,
                           foregroundColor: Colors.white,
@@ -719,8 +645,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                 width: 20,
                                 child: CircularProgressIndicator(
                                   strokeWidth: 2,
-                                  valueColor: AlwaysStoppedAnimation<Color>(
-                                      Colors.white),
+                                  valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                 ),
                               )
                             : const Text('BOOKING & PAY',

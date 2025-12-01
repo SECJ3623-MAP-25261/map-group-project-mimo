@@ -2,12 +2,16 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:provider/provider.dart'; // Added Provider
 
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
 import 'package:profile_managemenr/sprint2/Booking%20Rentee/booking.dart';
 import 'package:profile_managemenr/sprint2/ReportCenter/report_center.dart';
+import 'package:profile_managemenr/sprint2/chatMessaging/item_chat_list_view.dart';
+import 'package:profile_managemenr/sprint2/chatMessaging/item_chat_screen.dart';
+import 'package:profile_managemenr/services/auth_service.dart'; // Added AuthService import
 
 import 'firebase_options.dart';
 import '../constants/app_colors.dart';
@@ -26,21 +30,28 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Campus Closet',
-      theme: AppTheme.lightTheme,
-      darkTheme: AppTheme.darkTheme,
-      themeMode: ThemeMode.light,
-      debugShowCheckedModeBanner: false,
-      home: const AuthWrapper(),
-      routes: {
-        '/home': (context) => const CampusClosetScreen(),
-        '/login': (context) => const LoginPage(),
-        '/register': (context) => const RegistrationApp(),
-        '/profile': (context) => ProfileScreen(),
-        '/booking': (context) => const BookingScreen(),
-        '/report': (context) => const ReportCenterScreen(),
-      },
+    return MultiProvider(
+      // Wrap with MultiProvider
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthService()),
+      ],
+      child: MaterialApp(
+        title: 'Campus Closet',
+        theme: AppTheme.lightTheme,
+        darkTheme: AppTheme.darkTheme,
+        themeMode: ThemeMode.light,
+        debugShowCheckedModeBanner: false,
+        home: const AuthWrapper(),
+        routes: {
+          '/home': (context) => const CampusClosetScreen(),
+          '/login': (context) => const LoginPage(),
+          '/register': (context) => const RegistrationApp(),
+          '/profile': (context) => const ProfileScreen(),
+          '/booking': (context) => const BookingScreen(),
+          '/report': (context) => const ReportCenterScreen(),
+          '/messages': (context) => const ItemChatListView(),
+        },
+      ),
     );
   }
 }
@@ -65,6 +76,361 @@ class AuthWrapper extends StatelessWidget {
 
         return const WelcomeScreen();
       },
+    );
+  }
+}
+
+// ------------------------------
+// ITEM DETAIL SCREEN (with Image Carousel)
+// ------------------------------
+
+class ItemDetailScreen extends StatefulWidget {
+  final Map<String, dynamic> item;
+
+  const ItemDetailScreen({super.key, required this.item});
+
+  @override
+  State<ItemDetailScreen> createState() => _ItemDetailScreenState();
+}
+
+class _ItemDetailScreenState extends State<ItemDetailScreen> {
+  late PageController _pageController;
+  int _currentPage = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _pageController = PageController();
+  }
+
+  @override
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
+  }
+
+  List<dynamic> get _images {
+    final images = widget.item['images'] as List<dynamic>?;
+    return images ?? [];
+  }
+
+  Widget _buildImageItem(dynamic imageData) {
+    if (imageData == null) {
+      return Container(
+        color: Colors.grey[200],
+        child: const Icon(Icons.image, size: 60, color: Colors.grey),
+      );
+    }
+
+    if (imageData is String) {
+      if (imageData.startsWith('http')) {
+        return Image.network(
+          imageData,
+          fit: BoxFit.cover,
+          loadingBuilder: (context, child, loadingProgress) {
+            if (loadingProgress == null) return child;
+            return const Center(child: CircularProgressIndicator());
+          },
+          errorBuilder: (context, error, stackTrace) {
+            return Container(
+              color: Colors.grey[200],
+              child: const Icon(Icons.image_not_supported, size: 60),
+            );
+          },
+        );
+      } else {
+        // Base64
+        try {
+          return Image.memory(
+            base64Decode(imageData),
+            fit: BoxFit.cover,
+            errorBuilder: (context, error, stackTrace) {
+              return Container(
+                color: Colors.grey[200],
+                child: const Icon(Icons.image_not_supported, size: 60),
+              );
+            },
+          );
+        } catch (e) {
+          return Container(
+            color: Colors.grey[200],
+            child: const Icon(Icons.broken_image, size: 60),
+          );
+        }
+      }
+    }
+
+    return Container(
+      color: Colors.grey[200],
+      child: const Icon(Icons.image, size: 60, color: Colors.grey),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final user = FirebaseAuth.instance.currentUser;
+    final renterId = widget.item['renterId'] as String?;
+    final renterName = widget.item['renterName'] as String? ?? 'Renter';
+    final images = _images;
+
+    return Scaffold(
+      backgroundColor: AppColors.lightBackground,
+      appBar: AppBar(
+        backgroundColor: AppColors.accentColor,
+        title: Text(widget.item['name'] ?? 'Item'),
+        foregroundColor: Colors.white,
+      ),
+      body: SingleChildScrollView(
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: [
+              // IMAGE CAROUSEL
+              if (images.isNotEmpty) ...[
+                AspectRatio(
+                  aspectRatio: 16 / 9,
+                  child: NotificationListener<ScrollNotification>(
+                    onNotification: (ScrollNotification notification) {
+                      // Prevent vertical drag from scrolling the outer SingleChildScrollView
+                      return notification is UserScrollNotification;
+                    },
+                    child: GestureDetector(
+                      onHorizontalDragStart: (_) {},
+                      onHorizontalDragUpdate: (_) {},
+                      onHorizontalDragEnd: (_) {},
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: PageView.builder(
+                              controller: _pageController,
+                              itemCount: images.length,
+                              onPageChanged: (index) {
+                                setState(() => _currentPage = index);
+                              },
+                              itemBuilder: (context, index) {
+                                return _buildImageItem(images[index]);
+                              },
+                            ),
+                          ),
+                          // Indicator dots
+                          Positioned(
+                            bottom: 12,
+                            left: 0,
+                            right: 0,
+                            child: Center(
+                              child: Row(
+                                mainAxisSize: MainAxisSize.min,
+                                children: List.generate(images.length, (index) {
+                                  return Container(
+                                    width: 6,
+                                    height: 6,
+                                    margin: const EdgeInsets.symmetric(horizontal: 4),
+                                    decoration: BoxDecoration(
+                                      shape: BoxShape.circle,
+                                      color: _currentPage == index
+                                          ? Colors.white
+                                          : Colors.white.withOpacity(0.5),
+                                    ),
+                                  );
+                                }),
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 16),
+              ],
+
+              // Name & Price
+              Text(
+                widget.item['name'] ?? 'Unnamed Item',
+                style: const TextStyle(
+                  fontSize: 24,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.lightTextColor,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                "RM${(widget.item['pricePerDay'] ?? 0).toStringAsFixed(2)}/day",
+                style: const TextStyle(
+                  color: AppColors.accentColor,
+                  fontSize: 20,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Details
+              if (widget.item['category'] != null || widget.item['size'] != null)
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: AppColors.lightCardBackground,
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      if (widget.item['category'] != null) ...[
+                        const Icon(Icons.category, size: 16, color: AppColors.lightHintColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.item['category'],
+                          style: const TextStyle(color: AppColors.lightTextColor),
+                        ),
+                      ],
+                      if (widget.item['category'] != null && widget.item['size'] != null)
+                        const SizedBox(width: 16),
+                      if (widget.item['size'] != null) ...[
+                        const Icon(Icons.straighten, size: 16, color: AppColors.lightHintColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          widget.item['size'],
+                          style: const TextStyle(color: AppColors.lightTextColor),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
+
+              const SizedBox(height: 16),
+
+              // Description
+              if (widget.item['description'] != null &&
+                  widget.item['description'].toString().isNotEmpty)
+                Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Description',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.lightTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      widget.item['description'],
+                      style: const TextStyle(
+                        color: AppColors.lightTextColor,
+                        height: 1.5,
+                      ),
+                    ),
+                  ],
+                ),
+
+              const SizedBox(height: 24),
+
+              // Action Buttons
+              if (user != null && renterId != null && renterId != user.uid) ...[
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => BookingScreen(itemData: widget.item),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.calendar_today),
+                    label: const Text('Book Now'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentColor,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: OutlinedButton.icon(
+                    onPressed: () {
+                      final sorted = [user.uid, renterId]..sort();
+                      final chatId = '${widget.item['id']}|${sorted[0]}|${sorted[1]}';
+
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => ItemChatScreen(
+                            chatId: chatId,
+                            itemId: widget.item['id'],
+                            itemName: widget.item['name'] ?? 'Item',
+                            renterId: renterId,
+                            renterName: renterName,
+                            renteeId: user.uid,
+                            renteeName: 'You',
+                          ),
+                        ),
+                      );
+                    },
+                    icon: const Icon(Icons.chat),
+                    label: const Text('Message Renter'),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: AppColors.accentColor,
+                      side: const BorderSide(color: AppColors.accentColor),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+              ] else if (renterId == user?.uid)
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: AppColors.accentColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.info_outline, color: AppColors.accentColor),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'This is your item',
+                          style: TextStyle(color: AppColors.accentColor),
+                        ),
+                      ),
+                    ],
+                  ),
+                )
+              else
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: const Row(
+                    children: [
+                      Icon(Icons.login, color: Colors.orange),
+                      SizedBox(width: 12),
+                      Expanded(
+                        child: Text(
+                          'Please log in to book or message',
+                          style: TextStyle(color: Colors.orange),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
@@ -96,12 +462,9 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
     'Other',
   ];
 
-  // Stream to fetch items from Firestore
   Stream<QuerySnapshot> _getItemsStream() {
     if (_activeFilter == 'all') {
-      return FirebaseFirestore.instance
-          .collection('items')
-          .snapshots();
+      return FirebaseFirestore.instance.collection('items').snapshots();
     } else {
       return FirebaseFirestore.instance
           .collection('items')
@@ -111,11 +474,17 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
   }
 
   void _onItemTap(Map<String, dynamic> item) {
-    print('Item tapped: $item'); // Debug
+    if (item['renterId'] == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Item missing renter info.')),
+      );
+      return;
+    }
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => BookingScreen(itemData: item),
+        builder: (context) => ItemDetailScreen(item: item),
       ),
     );
   }
@@ -133,8 +502,16 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.message, color: Colors.white),
+            onPressed: () {
+              Navigator.pushNamed(context, '/messages');
+            },
+            tooltip: 'Messages',
+          ),
+          IconButton(
             icon: const Icon(Icons.person, color: Colors.white),
             onPressed: () => Navigator.pushNamed(context, '/profile'),
+            tooltip: 'Profile',
           ),
         ],
       ),
@@ -179,7 +556,7 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
           ),
           const Divider(thickness: 2, color: AppColors.lightCardBackground),
 
-          // Items Grid from Firestore
+          // Items Grid
           Expanded(
             child: StreamBuilder<QuerySnapshot>(
               stream: _getItemsStream(),
@@ -223,22 +600,25 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                   itemBuilder: (context, index) {
                     final doc = items[index];
                     final data = doc.data() as Map<String, dynamic>;
-                    
-                    // Get first image (base64 or URL)
+
                     final images = data['images'] as List<dynamic>?;
                     final imageData = images != null && images.isNotEmpty
                         ? images[0]
                         : null;
 
-                    // Prepare item data for booking
+                    // Build full item data including renter info
                     final itemData = {
                       'id': doc.id,
                       'name': data['name'] ?? 'Unnamed Item',
-                      'price': data['pricePerDay']?.toDouble() ?? 0.0,
+                      'pricePerDay': data['pricePerDay'] ?? 0.0,
+                      'price': data['pricePerDay'] ?? 0.0,
                       'category': data['category'] ?? 'Other',
                       'image': imageData,
+                      'images': images ?? [],
                       'description': data['description'] ?? '',
                       'size': data['size'] ?? '',
+                      'renterId': data['renterId'],
+                      'renterName': data['renterName'],
                     };
 
                     return GestureDetector(
@@ -258,7 +638,6 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.stretch,
                           children: [
-                            // Image
                             Expanded(
                               child: ClipRRect(
                                 borderRadius: const BorderRadius.vertical(
@@ -269,41 +648,27 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                                         ? Image.network(
                                             imageData,
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Container(
-                                                color: Colors.grey[300],
-                                                child: const Icon(
-                                                  Icons.image_not_supported,
-                                                  size: 40,
-                                                ),
-                                              );
-                                            },
+                                            errorBuilder: (context, error, stackTrace) =>
+                                                Container(
+                                              color: Colors.grey[300],
+                                              child: const Icon(Icons.image_not_supported, size: 40),
+                                            ),
                                           )
                                         : Image.memory(
                                             base64Decode(imageData),
                                             fit: BoxFit.cover,
-                                            errorBuilder: (context, error, stackTrace) {
-                                              return Container(
-                                                color: Colors.grey[300],
-                                                child: const Icon(
-                                                  Icons.image_not_supported,
-                                                  size: 40,
-                                                ),
-                                              );
-                                            },
+                                            errorBuilder: (context, error, stackTrace) =>
+                                                Container(
+                                              color: Colors.grey[300],
+                                              child: const Icon(Icons.image_not_supported, size: 40),
+                                            ),
                                           ))
                                     : Container(
                                         color: Colors.grey[300],
-                                        child: const Icon(
-                                          Icons.image,
-                                          size: 40,
-                                          color: Colors.grey,
-                                        ),
+                                        child: const Icon(Icons.image, size: 40, color: Colors.grey),
                                       ),
                               ),
                             ),
-
-                            // Name
                             Padding(
                               padding: const EdgeInsets.all(8.0),
                               child: Text(
@@ -317,12 +682,8 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                                 overflow: TextOverflow.ellipsis,
                               ),
                             ),
-
-                            // Price
                             Padding(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8.0,
-                              ),
+                              padding: const EdgeInsets.symmetric(horizontal: 8.0),
                               child: Text(
                                 "RM${(data['pricePerDay'] ?? 0).toStringAsFixed(2)}/day",
                                 style: const TextStyle(
@@ -332,7 +693,6 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
                                 ),
                               ),
                             ),
-
                             const SizedBox(height: 8),
                           ],
                         ),

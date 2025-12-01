@@ -15,6 +15,7 @@ dependencies:
   firebase_storage: ^12.3.4       # Updated from ^11.6.0
   image_picker: ^1.0.4        
   permission_handler: ^11.3.1
+  provider: ^6.1.1
 
 
 dev_dependencies:

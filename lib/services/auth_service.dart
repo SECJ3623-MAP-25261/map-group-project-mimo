@@ -1,11 +1,15 @@
+// lib/services/auth_service.dart
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-class AuthService {
+class AuthService with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Track user changes
+  String? _previousUserId;
+  
   // Get current user
   User? get currentUser => _auth.currentUser;
 
@@ -14,6 +18,18 @@ class AuthService {
 
   // Get user ID
   String? get userId => _auth.currentUser?.uid;
+
+  // Check if user changed
+  bool get hasUserChanged => _previousUserId != null && _previousUserId != userId;
+
+  // Listen to auth state changes
+  AuthService() {
+    _auth.authStateChanges().listen((User? user) {
+      print('🔄 Auth state changed: ${user?.uid ?? "null"}');
+      _previousUserId = userId;
+      notifyListeners();
+    });
+  }
 
   // Check if email exists
   Future<bool> checkEmailExists(String email) async {
@@ -43,12 +59,32 @@ class AuthService {
         'email': email,
         'fullName': fullName,
         'phone': phone,
-        'createdAt': DateTime.now(),
+        'createdAt': FieldValue.serverTimestamp(),
       });
 
+      print('✅ User registered: ${credential.user!.uid}');
+      notifyListeners();
+      
       return credential.user;
     } catch (e) {
       throw Exception('Registration failed: $e');
+    }
+  }
+
+  // Sign in user
+  Future<User?> signIn(String email, String password) async {
+    try {
+      UserCredential credential = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      
+      print('✅ User signed in: ${credential.user!.uid}');
+      notifyListeners();
+      
+      return credential.user;
+    } catch (e) {
+      throw Exception('Sign in failed: $e');
     }
   }
 
@@ -63,6 +99,12 @@ class AuthService {
     } catch (e) {
       throw Exception('Failed to get user data: $e');
     }
+  }
+
+  // Manual user change notification (for external auth changes)
+  void notifyUserChange() {
+    print('🔄 Manual user change notification');
+    notifyListeners();
   }
 
   // Logout with confirmation dialog
@@ -84,12 +126,15 @@ class AuthService {
                 Navigator.pop(context); // Close dialog
                 
                 try {
+                  _previousUserId = userId;
                   await _auth.signOut();
+                  print('✅ User logged out');
+                  notifyListeners();
                   
                   // Navigate to login screen and clear all routes
                   if (context.mounted) {
                     Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/login',  // FIXED: Changed from 'LoginPage/'
+                      '/login',
                       (route) => false,
                     );
                   }
@@ -118,11 +163,14 @@ class AuthService {
   // Direct logout without confirmation (if needed)
   Future<void> logoutDirect(BuildContext context) async {
     try {
+      _previousUserId = userId;
       await _auth.signOut();
+      print('✅ User logged out directly');
+      notifyListeners();
       
       if (context.mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',  // FIXED: Changed from 'LoginPage()/'
+          '/login',
           (route) => false,
         );
       }
