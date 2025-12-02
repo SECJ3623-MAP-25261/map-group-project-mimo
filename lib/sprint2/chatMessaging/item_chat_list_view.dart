@@ -486,8 +486,17 @@ Widget _buildChatListItem(
   final renteeName = data['renteeName'] ?? 'Rentee';
   final updatedAt = data['updatedAt'] as Timestamp?;
 
+  final lastSenderId = data['lastSender'] ?? '';
   // Determine the other person's name based on view
   final otherName = isRenterView ? renteeName : renterName;
+    // Determine if the current user is the last sender
+  final isLastSenderMe = lastSenderId == currentUserId;
+  // Determine the name of the last sender
+  final lastSenderName = isLastSenderMe 
+      ? 'You' 
+      : lastSenderId == renterId 
+          ? renterName
+          : renteeName;
 
   return Card(
     margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -524,7 +533,7 @@ Widget _buildChatListItem(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            lastMessage.isEmpty ? 'No messages yet' : '$otherName: $lastMessage',
+            lastMessage.isEmpty ? 'No messages yet' : '$lastSenderName: $lastMessage',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
             style: const TextStyle(

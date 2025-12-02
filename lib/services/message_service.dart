@@ -65,6 +65,7 @@ class MessageService {
       // Update chat metadata - use merge to avoid errors if doc doesn't exist
       batch.set(chatDoc, {
         'lastMessage': trimmedText,
+        'lastSender':senderId,
         'updatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
 
@@ -145,6 +146,7 @@ class MessageService {
             'renteeName': renteeName,
             'participants': participants,
             'lastMessage': '',
+            'lastSender': '',
             'updatedAt': now,
             'createdAt': now,
           });

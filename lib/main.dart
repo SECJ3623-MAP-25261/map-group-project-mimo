@@ -12,6 +12,7 @@ import 'package:profile_managemenr/sprint2/ReportCenter/report_center.dart';
 import 'package:profile_managemenr/sprint2/chatMessaging/item_chat_list_view.dart';
 import 'package:profile_managemenr/sprint2/chatMessaging/item_chat_screen.dart';
 import 'package:profile_managemenr/services/auth_service.dart'; // Added AuthService import
+import 'package:profile_managemenr/services/user_service.dart';
 
 import 'firebase_options.dart';
 import '../constants/app_colors.dart';
@@ -515,9 +516,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed: () {
+                    onPressed: () async {
                       final sorted = [user.uid, renterId]..sort();
                       final chatId = '${widget.item['id']}|${sorted[0]}|${sorted[1]}';
+                      final renteeName = await getCurrentUserFullName();
 
                       Navigator.push(
                         context,
@@ -529,7 +531,7 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                             renterId: renterId,
                             renterName: renterName,
                             renteeId: user.uid,
-                            renteeName: 'You',
+                            renteeName: renteeName,
                             itemImages: widget.item['images'],
                           ),
                         ),
