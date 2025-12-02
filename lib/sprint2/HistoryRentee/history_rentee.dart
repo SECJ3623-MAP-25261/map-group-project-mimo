@@ -1,5 +1,4 @@
-
-
+// lib/accounts/profile/screen/history_rentee.dart
 import 'package:flutter/material.dart';
 import '../../constants/app_colors.dart';
 import 'package:profile_managemenr/services/booking_service.dart';
@@ -7,7 +6,12 @@ import 'package:profile_managemenr/services/auth_service.dart';
 import 'package:profile_managemenr/sprint2/ReviewRentee/review_rentee.dart';
 
 class HistoryRenteeScreen extends StatefulWidget {
-  const HistoryRenteeScreen({super.key});
+  final bool isRenter; // 👈 NEW: toggle between rentee/renter mode
+
+  const HistoryRenteeScreen({
+    super.key,
+    this.isRenter = false,
+  });
 
   @override
   State<HistoryRenteeScreen> createState() => _HistoryRenteeScreenState();
@@ -31,7 +35,10 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
     try {
       final userId = _authService.userId;
       if (userId != null) {
-        final bookings = await _bookingService.getUserBookings(userId);
+        // 👇 Use correct method based on mode
+        final bookings = widget.isRenter
+            ? await _bookingService.getRenterBookings(userId)
+            : await _bookingService.getUserBookings(userId);
         setState(() {
           _bookings = bookings;
           _isLoading = false;
@@ -47,7 +54,6 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
 
   String _formatDate(dynamic timestamp) {
     if (timestamp == null) return 'N/A';
-
     try {
       final DateTime date = timestamp.toDate();
       return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
@@ -58,18 +64,12 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
 
   Color _getStatusColor(String status) {
     switch (status.toLowerCase()) {
-      case 'pending':
-        return Colors.orange;
-      case 'confirmed':
-        return Colors.blue;
-      case 'ongoing':
-        return Colors.purple;
-      case 'completed':
-        return Colors.green;
-      case 'cancelled':
-        return Colors.red;
-      default:
-        return Colors.grey;
+      case 'pending': return Colors.orange;
+      case 'confirmed': return Colors.blue;
+      case 'ongoing': return Colors.purple;
+      case 'completed': return Colors.green;
+      case 'cancelled': return Colors.red;
+      default: return Colors.grey;
     }
   }
 
@@ -79,9 +79,9 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         backgroundColor: AppColors.accentColor,
-        title: const Text(
-          'Your Rental History',
-          style: TextStyle(color: Colors.white),
+        title: Text(
+          widget.isRenter ? 'Your Earnings History' : 'Your Rental History',
+          style: const TextStyle(color: Colors.white),
         ),
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Colors.white),
@@ -117,7 +117,9 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
                       ),
                       const SizedBox(height: 8),
                       Text(
-                        'Your rental history will appear here',
+                        widget.isRenter
+                            ? 'Your earnings history will appear here'
+                            : 'Your rental history will appear here',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.grey[500],
@@ -134,7 +136,6 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
                       padding: const EdgeInsets.all(16.0),
                       child: Column(
                         children: [
-                          // Table Header
                           Container(
                             decoration: BoxDecoration(
                               color: AppColors.accentColor.withOpacity(0.1),
@@ -241,7 +242,6 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
                             ),
                           ),
 
-                          // Booking Rows
                           ..._bookings.map((booking) {
                             final status = booking['status'] ?? 'pending';
                             final hasReview = booking['hasReview'] ?? false;
@@ -275,7 +275,6 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
                                           ),
                                         ),
                                       );
-
                                       if (result == true) {
                                         _loadBookings();
                                       }
@@ -317,6 +316,7 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
 }
 
 class _RentalHistoryRow extends StatelessWidget {
+  // ... (same as your original code, no changes needed)
   final String item;
   final String bookingId;
   final String startDate;

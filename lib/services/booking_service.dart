@@ -53,7 +53,7 @@ class BookingService {
     }
   }
 
-  /// Get user's bookings
+  /// Get user's bookings (as RENTEE / borrower)
   Future<List<Map<String, dynamic>>> getUserBookings(String userId) async {
     try {
       final querySnapshot = await _firestore
@@ -73,7 +73,27 @@ class BookingService {
     }
   }
 
-  /// Get bookings by status
+  /// ✅ NEW: Get bookings where user is the RENTER (lender)
+  Future<List<Map<String, dynamic>>> getRenterBookings(String renterId) async {
+    try {
+      final querySnapshot = await _firestore
+          .collection(_bookingsCollection)
+          .where('renterId', isEqualTo: renterId)
+          .orderBy('createdAt', descending: true)
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    } catch (e) {
+      print('Error fetching renter bookings: $e');
+      return [];
+    }
+  }
+
+  /// Get bookings by status (for rentee)
   Future<List<Map<String, dynamic>>> getBookingsByStatus(
       String userId, String status) async {
     try {
@@ -204,11 +224,27 @@ class BookingService {
     }
   }
 
-  /// Stream of user bookings for real-time updates
+  /// Stream of user bookings for real-time updates (rentee)
   Stream<List<Map<String, dynamic>>> getUserBookingsStream(String userId) {
     return _firestore
         .collection(_bookingsCollection)
         .where('userId', isEqualTo: userId)
+        .orderBy('createdAt', descending: true)
+        .snapshots()
+        .map((snapshot) {
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        data['id'] = doc.id;
+        return data;
+      }).toList();
+    });
+  }
+
+  /// ✅ NEW: Stream for renter bookings (optional but useful)
+  Stream<List<Map<String, dynamic>>> getRenterBookingsStream(String renterId) {
+    return _firestore
+        .collection(_bookingsCollection)
+        .where('renterId', isEqualTo: renterId)
         .orderBy('createdAt', descending: true)
         .snapshots()
         .map((snapshot) {

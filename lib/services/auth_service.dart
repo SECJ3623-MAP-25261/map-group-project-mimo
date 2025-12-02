@@ -9,7 +9,7 @@ class AuthService with ChangeNotifier {
 
   // Track user changes
   String? _previousUserId;
-  
+
   // Get current user
   User? get currentUser => _auth.currentUser;
 
@@ -29,6 +29,21 @@ class AuthService with ChangeNotifier {
       _previousUserId = userId;
       notifyListeners();
     });
+  }
+
+  // ✅ NEW: Check if current user is an admin
+  Future<bool> isAdmin() async {
+    final uid = userId;
+    if (uid == null) return false;
+
+    try {
+      final userData = await getUserData(uid);
+      final role = userData?['role'] as String?;
+      return role?.toLowerCase() == 'admin';
+    } catch (e) {
+      print('⚠️ Error checking admin status: $e');
+      return false;
+    }
   }
 
   // Check if email exists
@@ -64,7 +79,7 @@ class AuthService with ChangeNotifier {
 
       print('✅ User registered: ${credential.user!.uid}');
       notifyListeners();
-      
+
       return credential.user;
     } catch (e) {
       throw Exception('Registration failed: $e');
@@ -78,10 +93,10 @@ class AuthService with ChangeNotifier {
         email: email,
         password: password,
       );
-      
+
       print('✅ User signed in: ${credential.user!.uid}');
       notifyListeners();
-      
+
       return credential.user;
     } catch (e) {
       throw Exception('Sign in failed: $e');
@@ -124,13 +139,13 @@ class AuthService with ChangeNotifier {
             TextButton(
               onPressed: () async {
                 Navigator.pop(context); // Close dialog
-                
+
                 try {
                   _previousUserId = userId;
                   await _auth.signOut();
                   print('✅ User logged out');
                   notifyListeners();
-                  
+
                   // Navigate to login screen and clear all routes
                   if (context.mounted) {
                     Navigator.of(context).pushNamedAndRemoveUntil(
@@ -167,7 +182,7 @@ class AuthService with ChangeNotifier {
       await _auth.signOut();
       print('✅ User logged out directly');
       notifyListeners();
-      
+
       if (context.mounted) {
         Navigator.of(context).pushNamedAndRemoveUntil(
           '/login',
