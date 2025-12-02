@@ -19,19 +19,17 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
   final BookingService _bookingService = BookingService();
   String _filterStatus = 'all'; // all, pending, confirmed, ongoing, completed
 
-  Stream<QuerySnapshot> _getBookingsStream() {
-    // Get bookings for items owned by this renter
-    if (_filterStatus == 'all') {
-      return FirebaseFirestore.instance
-          .collection('bookings')
-          .snapshots();
-    } else {
-      return FirebaseFirestore.instance
-          .collection('bookings')
-          .where('status', isEqualTo: _filterStatus)
-          .snapshots();
-    }
+Stream<QuerySnapshot> _getBookingsStream() {
+  var query = FirebaseFirestore.instance
+      .collection('bookings')
+      .where('renterId', isEqualTo: widget.renterId); // 👈 critical!
+
+  if (_filterStatus != 'all') {
+    query = query.where('status', isEqualTo: _filterStatus);
   }
+
+  return query.snapshots();
+}
 
   String _formatDate(dynamic timestamp) {
     if (timestamp == null) return 'N/A';

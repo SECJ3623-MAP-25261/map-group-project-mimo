@@ -49,8 +49,10 @@ class _BookingScreenState extends State<BookingScreen> {
     super.dispose();
   }
 
+  // ✅ GETTERS INCLUDING renterId
   String get _itemName => widget.itemData?['name'] ?? 'Selected Attire';
   String get _itemId => widget.itemData?['id'] ?? 'unknown';
+  String get _renterId => widget.itemData?['renterId'] ?? ''; // ✅ CRITICAL FIX
   List<dynamic> get _itemImages {
     final images = widget.itemData?['images'];
     if (images is List && images.isNotEmpty) {
@@ -148,6 +150,12 @@ class _BookingScreenState extends State<BookingScreen> {
       return;
     }
 
+    // ✅ CRITICAL: Check renterId is available
+    if (_renterId.isEmpty) {
+      _showSnackBar('Item owner information missing. Cannot book.', Colors.red);
+      return;
+    }
+
     setState(() => _isSubmitting = true);
 
     try {
@@ -171,6 +179,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
       print('Creating booking...');
       print('Item: $_itemName');
+      print('Renter ID: $_renterId'); // ✅ Debug log
       print('Days: $_rentalDays');
       print('Total: RM ${_estimatedTotal.toStringAsFixed(2)}');
 
@@ -178,6 +187,7 @@ class _BookingScreenState extends State<BookingScreen> {
         userId: userId,
         userEmail: userEmail,
         userName: userName,
+        renterId: _renterId, // ✅ NOW CORRECTLY PASSED
         itemId: _itemId,
         itemName: _itemName,
         itemImage: _itemImages.isNotEmpty ? _itemImages[0].toString() : '',
@@ -193,7 +203,7 @@ class _BookingScreenState extends State<BookingScreen> {
 
       if (bookingId != null) {
         _showSnackBar(
-          'Booking successful! Booking ID: ${bookingId.substring(0, 8)}',
+          'Booking successful! ID: ${bookingId.substring(0, 8)}',
           Colors.green,
         );
 
@@ -222,8 +232,8 @@ class _BookingScreenState extends State<BookingScreen> {
                 actions: [
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context);
-                      Navigator.pop(context);
+                      Navigator.pop(context); // Close dialog
+                      Navigator.pop(context); // Go back to previous screen
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentColor,
@@ -343,6 +353,7 @@ class _BookingScreenState extends State<BookingScreen> {
     print('=== BOOKING SCREEN DEBUG ===');
     print('Item Data: ${widget.itemData}');
     print('Item Name: $_itemName');
+    print('Renter ID: $_renterId'); // ✅ Debug
     print('Rate Per Day: $_ratePerDay');
     print('Images Count: ${_itemImages.length}');
     print('===========================');
@@ -629,8 +640,11 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
+                      // ✅ Disable if renterId missing
                       child: ElevatedButton(
-                        onPressed: _rentalDays > 0 && !_isSubmitting ? _submitBooking : null,
+                        onPressed: (_rentalDays > 0 && _renterId.isNotEmpty && !_isSubmitting)
+                            ? _submitBooking
+                            : null,
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.accentColor,
                           foregroundColor: Colors.white,

@@ -18,6 +18,7 @@ import '../constants/app_colors.dart';
 import '../constants/app_theme.dart';
 import 'package:profile_managemenr/welcome_page.dart';
 import 'dart:convert';
+import 'package:profile_managemenr/sprint2/renter_dashboard/review_view_renter.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -166,6 +167,161 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     );
   }
 
+  Future<Map<String, dynamic>> _getReviewStats() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('reviews')
+          .where('itemId', isEqualTo: widget.item['id'])
+          .get();
+
+      if (snapshot.docs.isEmpty) {
+        return {'count': 0, 'average': 0.0};
+      }
+
+      int total = snapshot.docs.length;
+      double sum = 0;
+
+      for (var doc in snapshot.docs) {
+        sum += (doc['rating'] as int);
+      }
+
+      return {
+        'count': total,
+        'average': sum / total,
+      };
+    } catch (e) {
+      return {'count': 0, 'average': 0.0};
+    }
+  }
+
+  Widget _buildReviewsSummary() {
+    return FutureBuilder<Map<String, dynamic>>(
+      future: _getReviewStats(),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const SizedBox.shrink();
+        }
+
+        final stats = snapshot.data!;
+        final count = stats['count'] as int;
+        final average = stats['average'] as double;
+
+        if (count == 0) {
+          return Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.lightCardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.lightBorderColor),
+            ),
+            child: Row(
+              children: [
+                const Icon(Icons.rate_review_outlined,
+                    color: AppColors.lightHintColor),
+                const SizedBox(width: 12),
+                const Expanded(
+                  child: Text(
+                    'No reviews yet',
+                    style: TextStyle(
+                      color: AppColors.lightHintColor,
+                      fontSize: 14,
+                    ),
+                  ),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => ReviewViewRenterScreen(
+                          itemId: widget.item['id'],
+                          itemName: widget.item['name'] ?? 'Item',
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('View'),
+                ),
+              ],
+            ),
+          );
+        }
+
+        return GestureDetector(
+          onTap: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => ReviewViewRenterScreen(
+                  itemId: widget.item['id'],
+                  itemName: widget.item['name'] ?? 'Item',
+                ),
+              ),
+            );
+          },
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: AppColors.lightCardBackground,
+              borderRadius: BorderRadius.circular(12),
+              border: Border.all(color: AppColors.lightBorderColor),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.amber.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.star, color: Colors.amber, size: 24),
+                      const SizedBox(width: 4),
+                      Text(
+                        average.toStringAsFixed(1),
+                        style: const TextStyle(
+                          fontSize: 20,
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.lightTextColor,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        '$count review${count != 1 ? 's' : ''}',
+                        style: const TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: AppColors.lightTextColor,
+                          fontSize: 16,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      const Text(
+                        'Tap to see all reviews',
+                        style: TextStyle(
+                          color: AppColors.lightHintColor,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(Icons.chevron_right, color: AppColors.lightHintColor),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
@@ -192,7 +348,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   aspectRatio: 16 / 9,
                   child: NotificationListener<ScrollNotification>(
                     onNotification: (ScrollNotification notification) {
-                      // Prevent vertical drag from scrolling the outer SingleChildScrollView
                       return notification is UserScrollNotification;
                     },
                     child: GestureDetector(
@@ -264,6 +419,10 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
                   fontWeight: FontWeight.w600,
                 ),
               ),
+              const SizedBox(height: 16),
+
+              // Reviews Summary
+              _buildReviewsSummary(),
               const SizedBox(height: 16),
 
               // Details

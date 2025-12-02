@@ -6,6 +6,7 @@ import '../../../../sprint2/renter_dashboard/items_listed.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/sprint2/renter_dashboard/booking_request.dart';
+import 'package:profile_managemenr/sprint2/renter_dashboard/renter_all_review_screen.dart';
 
 class RenterDashboard extends StatelessWidget {
   final Map<String, dynamic> userData;
@@ -180,6 +181,7 @@ class RenterDashboard extends StatelessWidget {
                 menuButton(context, 'View Rental Requests', Icons.inventory),
                 menuButton(context, 'Transaction History', Icons.receipt_long),
                 menuButton(context, 'Help & Support', Icons.help_outline),
+                menuButton(context, 'View Item Reviews', Icons.star_rate),
 
                 const SizedBox(height: 20),
 
@@ -243,6 +245,13 @@ Widget menuButton(BuildContext context, String title, IconData icon) {
             context,
             MaterialPageRoute(
               builder: (_) => BookingRequestsScreen(renterId: currentUserId),
+            ),
+          );
+        } else if (title == 'View Item Reviews') {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => RenterAllReviewsScreen(renterId: currentUserId),
             ),
           );
         } else {
