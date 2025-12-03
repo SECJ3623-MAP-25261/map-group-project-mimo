@@ -3,6 +3,7 @@
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/services/report_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
+import 'package:profile_managemenr/constants/app_colors.dart';
 import 'dart:convert';
 import 'edit_report.dart';
 import 'report_center.dart';
@@ -29,43 +30,42 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     });
   }
 
- Future<void> _loadReports() async {
-  if (!mounted) return;
+  Future<void> _loadReports() async {
+    if (!mounted) return;
 
-  setState(() {
-    _isLoading = true;
-    _errorMessage = null;
-  });
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
 
-  try {
-    final email = _authService.userEmail;
-    if (email == null || email.isEmpty) {
+    try {
+      final userId = _authService.userId;
+      if (userId == null || userId.isEmpty) {
+        setState(() {
+          _isLoading = false;
+          _errorMessage = 'Please log in to view your reports';
+        });
+        return;
+      }
+
+      print('Fetching reports for email: $userId');
+
+      final reports = await _reportService.getUserReportsByUserId(userId);
+
+      print('Loaded ${reports.length} reports from service');
+
+      setState(() {
+        _reports = reports;
+        _isLoading = false;
+      });
+    } catch (e) {
+      print('Error loading reports: $e');
       setState(() {
         _isLoading = false;
-        _errorMessage = 'Please log in to view your reports';
+        _errorMessage = 'Failed to load reports. Please try again.';
       });
-      return;
     }
-
-    print('Fetching reports for email: $email');
-
-    final reports = await _reportService.getUserReportsByEmail(email);
-
-    print('Loaded ${reports.length} reports from service');
-
-    setState(() {
-      _reports = reports;
-      _isLoading = false;
-    });
-  } catch (e) {
-    print('Error loading reports: $e');
-    setState(() {
-      _isLoading = false;
-      _errorMessage = 'Failed to load reports. Please try again.';
-    });
   }
-}
-
 
   Future<void> _deleteReport(String reportId, int index) async {
     final confirm = await showDialog<bool>(
@@ -77,12 +77,15 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel', style: TextStyle(color: Color(0xFF64748B))),
+            child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () => Navigator.pop(context, true),
-            style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text('Delete'),
+            style: TextButton.styleFrom(foregroundColor: AppColors.errorColor),
+            child: Text(
+              'Delete',
+              style: TextStyle(color: AppColors.errorColor),
+            ),
           ),
         ],
       ),
@@ -97,7 +100,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Report deleted successfully'),
-              backgroundColor: Colors.green,
+              backgroundColor: AppColors.successColor,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -110,7 +113,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: const Text('Failed to delete report'),
-              backgroundColor: Colors.red,
+              backgroundColor: AppColors.errorColor,
               behavior: SnackBarBehavior.floating,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(12),
@@ -130,7 +133,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
       case 'in-progress':
         return Colors.blue;
       case 'resolved':
-        return Colors.green;
+        return AppColors.successColor;
       case 'closed':
         return Colors.grey;
       default:
@@ -165,6 +168,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   }
 
   Widget _buildErrorState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.darkTextColor : AppColors.lightTextColor;
+    final hintColor = isDark ? AppColors.darkHintColor : AppColors.lightHintColor;
+    final cardBg = isDark ? AppColors.darkCardBackground : AppColors.lightCardBackground;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -172,14 +180,14 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           Icon(
             Icons.error_outline,
             size: 80,
-            color: Colors.grey[400],
+            color: hintColor.withOpacity(0.6),
           ),
           const SizedBox(height: 16),
           Text(
             _errorMessage ?? 'An error occurred',
             style: TextStyle(
               fontSize: 16,
-              color: Colors.grey[600],
+              color: hintColor,
               fontWeight: FontWeight.w500,
             ),
             textAlign: TextAlign.center,
@@ -188,7 +196,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           ElevatedButton(
             onPressed: _loadReports,
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00A19C),
+              backgroundColor: AppColors.accentColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25),
               ),
@@ -208,6 +216,10 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   }
 
   Widget _buildLoginRequiredState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.darkTextColor : AppColors.lightTextColor;
+    final hintColor = isDark ? AppColors.darkHintColor : AppColors.lightHintColor;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -215,34 +227,33 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           Icon(
             Icons.login,
             size: 80,
-            color: Colors.grey[400],
+            color: hintColor.withOpacity(0.6),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'Login Required',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey,
+              color: textColor,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Please log in to view your reports',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey,
+              color: hintColor,
             ),
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 24),
           ElevatedButton(
             onPressed: () {
-              // You might want to navigate to login screen here
-              _loadReports(); // Try reloading in case user logged in
+              _loadReports();
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00A19C),
+              backgroundColor: AppColors.accentColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25),
               ),
@@ -262,6 +273,10 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   }
 
   Widget _buildEmptyState() {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final textColor = isDark ? AppColors.darkTextColor : AppColors.lightTextColor;
+    final hintColor = isDark ? AppColors.darkHintColor : AppColors.lightHintColor;
+
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -269,23 +284,23 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
           Icon(
             Icons.inbox_outlined,
             size: 80,
-            color: Colors.grey[400],
+            color: hintColor.withOpacity(0.6),
           ),
           const SizedBox(height: 16),
-          const Text(
+          Text(
             'No reports yet',
             style: TextStyle(
               fontSize: 18,
-              color: Colors.grey,
+              color: textColor,
               fontWeight: FontWeight.w500,
             ),
           ),
           const SizedBox(height: 8),
-          const Text(
+          Text(
             'Your submitted reports will appear here',
             style: TextStyle(
               fontSize: 14,
-              color: Colors.grey,
+              color: hintColor,
             ),
           ),
           const SizedBox(height: 24),
@@ -303,7 +318,7 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
               });
             },
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF00A19C),
+              backgroundColor: AppColors.accentColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(25),
               ),
@@ -323,13 +338,19 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   }
 
   Widget _buildReportCard(Map<String, dynamic> report, int index) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.darkCardBackground : Colors.white;
+    final textColor = isDark ? AppColors.darkTextColor : AppColors.lightTextColor;
+    final hintColor = isDark ? AppColors.darkHintColor : AppColors.lightHintColor;
+    final borderColor = isDark ? AppColors.darkBorderColor : AppColors.lightBorderColor;
+
     final status = report['status'] ?? 'pending';
     final hasPhoto = report['photoBase64'] != null;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: cardBg,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
@@ -378,13 +399,13 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                               vertical: 4,
                             ),
                             decoration: BoxDecoration(
-                              color: const Color(0xFF00A19C).withOpacity(0.1),
+                              color: AppColors.accentColor.withOpacity(0.1),
                               borderRadius: BorderRadius.circular(6),
                             ),
                             child: Text(
                               report['userType'] ?? 'User',
-                              style: const TextStyle(
-                                color: Color(0xFF00A19C),
+                              style: TextStyle(
+                                color: AppColors.accentColor,
                                 fontSize: 10,
                                 fontWeight: FontWeight.bold,
                               ),
@@ -395,8 +416,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                       const SizedBox(height: 8),
                       Text(
                         report['category'] ?? 'Unknown Category',
-                        style: const TextStyle(
-                          color: Color(0xFF64748B),
+                        style: TextStyle(
+                          color: hintColor,
                           fontSize: 12,
                         ),
                       ),
@@ -405,8 +426,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                 ),
                 Text(
                   _formatDate(report['createdAt']),
-                  style: const TextStyle(
-                    color: Color(0xFF94A3B8),
+                  style: TextStyle(
+                    color: hintColor,
                     fontSize: 12,
                   ),
                 ),
@@ -422,10 +443,10 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
               children: [
                 Text(
                   report['subject'] ?? 'No subject',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: Color(0xFF1E293B),
+                    color: textColor,
                   ),
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
@@ -433,9 +454,9 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                 const SizedBox(height: 8),
                 Text(
                   report['details'] ?? 'No details provided',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 14,
-                    color: Color(0xFF64748B),
+                    color: hintColor,
                     height: 1.4,
                   ),
                   maxLines: 3,
@@ -459,16 +480,13 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                   errorBuilder: (context, error, stackTrace) {
                     return Container(
                       height: 150,
-                      color: Colors.grey[200],
+                      color: isDark ? AppColors.darkCardBackground : Colors.grey[300],
                       child: const Column(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Icon(Icons.error_outline, color: Colors.grey),
                           SizedBox(height: 8),
-                          Text(
-                            'Failed to load image',
-                            style: TextStyle(color: Colors.grey),
-                          ),
+                          Text('Failed to load image'),
                         ],
                       ),
                     );
@@ -488,12 +506,9 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                       final result = await Navigator.push(
                         context,
                         MaterialPageRoute(
-                          builder: (context) => EditReportScreen(
-                            report: report,
-                          ),
+                          builder: (context) => EditReportScreen(report: report),
                         ),
                       );
-                      
                       if (result == true) {
                         _loadReports();
                       }
@@ -501,10 +516,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                     icon: const Icon(Icons.edit, size: 18),
                     label: const Text('Edit'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF00A19C),
-                      side: const BorderSide(
-                        color: Color(0xFF00A19C),
-                      ),
+                      foregroundColor: AppColors.accentColor,
+                      side: BorderSide(color: AppColors.accentColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -514,15 +527,12 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                 const SizedBox(width: 12),
                 Expanded(
                   child: OutlinedButton.icon(
-                    onPressed: () => _deleteReport(
-                      report['id'],
-                      index,
-                    ),
+                    onPressed: () => _deleteReport(report['id'], index),
                     icon: const Icon(Icons.delete, size: 18),
                     label: const Text('Delete'),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
+                      foregroundColor: AppColors.errorColor,
+                      side: BorderSide(color: AppColors.errorColor),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -539,16 +549,22 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final scaffoldBg = isDark ? AppColors.darkBackground : AppColors.lightBackground;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: scaffoldBg,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF00A19C), Color(0xFF00D4AA)],
+              colors: [
+                AppColors.accentColor.withOpacity(0.9),
+                AppColors.accentColor,
+              ],
             ),
           ),
           child: AppBar(
@@ -577,9 +593,9 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         ),
       ),
       body: _isLoading
-          ? const Center(
+          ? Center(
               child: CircularProgressIndicator(
-                valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF00A19C)),
+                valueColor: AlwaysStoppedAnimation<Color>(AppColors.accentColor),
               ),
             )
           : _authService.userId == null
@@ -590,8 +606,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                       ? _buildEmptyState()
                       : RefreshIndicator(
                           onRefresh: _loadReports,
-                          backgroundColor: Colors.white,
-                          color: const Color(0xFF00A19C),
+                          backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
+                          color: AppColors.accentColor,
                           child: ListView.builder(
                             padding: const EdgeInsets.all(16),
                             itemCount: _reports.length,
@@ -609,12 +625,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
                     builder: (context) => const ReportCenterScreen(),
                   ),
                 );
-                
                 if (result == true && mounted) {
                   _loadReports();
                 }
               },
-              backgroundColor: const Color(0xFF00A19C),
+              backgroundColor: AppColors.accentColor,
               icon: const Icon(Icons.add, color: Colors.white),
               label: const Text(
                 'New Report',

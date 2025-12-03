@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
 import 'dart:convert';
 import 'dart:io';
+import 'package:profile_managemenr/constants/app_colors.dart';
 
 class EditReportScreen extends StatefulWidget {
   final Map<String, dynamic> report;
@@ -72,10 +73,10 @@ class _EditReportScreenState extends State<EditReportScreen> {
           _photoChanged = true;
         });
 
-        _showSnackBar('Photo updated', Colors.green);
+        _showSnackBar('Photo updated', AppColors.successColor);
       }
     } catch (e) {
-      _showSnackBar('Error picking image: $e', Colors.red);
+      _showSnackBar('Error picking image: $e', AppColors.errorColor);
     }
   }
 
@@ -93,7 +94,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
         _detailsController.text.trim().isEmpty ||
         _selectedCategory == null ||
         _userType == null) {
-      _showSnackBar('Please fill in all required fields.', Colors.red);
+      _showSnackBar('Please fill in all required fields.', AppColors.errorColor);
       return;
     }
 
@@ -108,7 +109,6 @@ class _EditReportScreenState extends State<EditReportScreen> {
         'updatedAt': FieldValue.serverTimestamp(),
       };
 
-      // Update photo if changed
       if (_photoChanged) {
         if (_imageBase64 != null) {
           updates['photoBase64'] = _imageBase64;
@@ -124,9 +124,8 @@ class _EditReportScreenState extends State<EditReportScreen> {
 
       if (!mounted) return;
 
-      _showSnackBar('Report updated successfully', Colors.green);
+      _showSnackBar('Report updated successfully', AppColors.successColor);
       
-      // Go back after 1 second
       Future.delayed(const Duration(seconds: 1), () {
         if (mounted) {
           Navigator.pop(context, true);
@@ -134,7 +133,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
       });
     } catch (e) {
       if (!mounted) return;
-      _showSnackBar('Error updating report: $e', Colors.red);
+      _showSnackBar('Error updating report: $e', AppColors.errorColor);
       setState(() => _isSubmitting = false);
     }
   }
@@ -155,22 +154,32 @@ class _EditReportScreenState extends State<EditReportScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    final cardBg = isDark ? AppColors.darkCardBackground : AppColors.lightCardBackground;
+    final textColor = isDark ? AppColors.darkTextColor : AppColors.lightTextColor;
+    final hintColor = isDark ? AppColors.darkHintColor : AppColors.lightHintColor;
+    final borderColor = isDark ? AppColors.darkBorderColor : AppColors.lightBorderColor;
+    final inputBg = isDark ? AppColors.darkInputFillColor : AppColors.lightInputFillColor;
+
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: isDark ? AppColors.darkBackground : AppColors.lightBackground,
       appBar: PreferredSize(
         preferredSize: const Size.fromHeight(kToolbarHeight),
         child: Container(
-          decoration: const BoxDecoration(
+          decoration: BoxDecoration(
             gradient: LinearGradient(
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
-              colors: [Color(0xFF00A19C), Color(0xFF00D4AA)],
+              colors: [
+                AppColors.accentColor.withOpacity(0.9),
+                AppColors.accentColor,
+              ],
             ),
           ),
           child: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: const Text(
+            title: Text(
               'Edit Report',
               style: TextStyle(
                 color: Colors.white,
@@ -192,11 +201,11 @@ class _EditReportScreenState extends State<EditReportScreen> {
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               // Category Dropdown
-              const Text(
+              Text(
                 'Category',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: textColor,
                   fontSize: 16,
                 ),
               ),
@@ -204,7 +213,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 12),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -215,9 +224,9 @@ class _EditReportScreenState extends State<EditReportScreen> {
                   ],
                 ),
                 child: DropdownButtonFormField<String>(
-                  decoration: const InputDecoration(
+                  decoration: InputDecoration(
                     border: InputBorder.none,
-                    contentPadding: EdgeInsets.symmetric(vertical: 14),
+                    contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   ),
                   value: _selectedCategory,
                   items: _categories.map((category) {
@@ -225,8 +234,8 @@ class _EditReportScreenState extends State<EditReportScreen> {
                       value: category,
                       child: Text(
                         category,
-                        style: const TextStyle(
-                          color: Color(0xFF1E293B),
+                        style: TextStyle(
+                          color: textColor,
                           fontSize: 15,
                         ),
                       ),
@@ -240,11 +249,11 @@ class _EditReportScreenState extends State<EditReportScreen> {
               const SizedBox(height: 20),
 
               // User Type Selection
-              const Text(
+              Text(
                 'Reporting as',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: textColor,
                   fontSize: 16,
                 ),
               ),
@@ -252,7 +261,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
               Container(
                 padding: const EdgeInsets.all(16),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -272,13 +281,13 @@ class _EditReportScreenState extends State<EditReportScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             color: _userType == 'Rentee'
-                                ? const Color(0xFF00A19C).withOpacity(0.1)
+                                ? AppColors.accentColor.withOpacity(0.1)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _userType == 'Rentee'
-                                  ? const Color(0xFF00A19C)
-                                  : const Color(0xFFE2E8F0),
+                                  ? AppColors.accentColor
+                                  : borderColor,
                               width: 2,
                             ),
                           ),
@@ -290,17 +299,17 @@ class _EditReportScreenState extends State<EditReportScreen> {
                                     ? Icons.radio_button_checked
                                     : Icons.radio_button_unchecked,
                                 color: _userType == 'Rentee'
-                                    ? const Color(0xFF00A19C)
-                                    : const Color(0xFF94A3B8),
+                                    ? AppColors.accentColor
+                                    : hintColor,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              const Text(
+                              Text(
                                 'Rentee',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1E293B),
+                                  color: textColor,
                                 ),
                               ),
                             ],
@@ -317,13 +326,13 @@ class _EditReportScreenState extends State<EditReportScreen> {
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           decoration: BoxDecoration(
                             color: _userType == 'Renter'
-                                ? const Color(0xFF00A19C).withOpacity(0.1)
+                                ? AppColors.accentColor.withOpacity(0.1)
                                 : Colors.transparent,
                             borderRadius: BorderRadius.circular(12),
                             border: Border.all(
                               color: _userType == 'Renter'
-                                  ? const Color(0xFF00A19C)
-                                  : const Color(0xFFE2E8F0),
+                                  ? AppColors.accentColor
+                                  : borderColor,
                               width: 2,
                             ),
                           ),
@@ -335,17 +344,17 @@ class _EditReportScreenState extends State<EditReportScreen> {
                                     ? Icons.radio_button_checked
                                     : Icons.radio_button_unchecked,
                                 color: _userType == 'Renter'
-                                    ? const Color(0xFF00A19C)
-                                    : const Color(0xFF94A3B8),
+                                    ? AppColors.accentColor
+                                    : hintColor,
                                 size: 20,
                               ),
                               const SizedBox(width: 8),
-                              const Text(
+                              Text(
                                 'Renter',
                                 style: TextStyle(
                                   fontSize: 15,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFF1E293B),
+                                  color: textColor,
                                 ),
                               ),
                             ],
@@ -360,18 +369,18 @@ class _EditReportScreenState extends State<EditReportScreen> {
               const SizedBox(height: 20),
 
               // Subject
-              const Text(
+              Text(
                 'Subject',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: textColor,
                   fontSize: 16,
                 ),
               ),
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(25),
                   boxShadow: [
                     BoxShadow(
@@ -383,11 +392,12 @@ class _EditReportScreenState extends State<EditReportScreen> {
                 ),
                 child: TextField(
                   controller: _subjectController,
+                  style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Subject',
-                    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                    hintStyle: TextStyle(color: hintColor),
                     filled: true,
-                    fillColor: Colors.transparent,
+                    fillColor: inputBg,
                     contentPadding: const EdgeInsets.symmetric(
                       vertical: 14,
                       horizontal: 16,
@@ -398,8 +408,8 @@ class _EditReportScreenState extends State<EditReportScreen> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(25),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF00A19C),
+                      borderSide: BorderSide(
+                        color: AppColors.accentColor,
                         width: 2,
                       ),
                     ),
@@ -410,18 +420,18 @@ class _EditReportScreenState extends State<EditReportScreen> {
               const SizedBox(height: 20),
 
               // Details
-              const Text(
+              Text(
                 'Details',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: textColor,
                   fontSize: 16,
                 ),
               ),
               const SizedBox(height: 10),
               Container(
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: cardBg,
                   borderRadius: BorderRadius.circular(16),
                   boxShadow: [
                     BoxShadow(
@@ -434,18 +444,21 @@ class _EditReportScreenState extends State<EditReportScreen> {
                 child: TextField(
                   controller: _detailsController,
                   maxLines: 6,
+                  style: TextStyle(color: textColor),
                   decoration: InputDecoration(
                     hintText: 'Details',
-                    hintStyle: const TextStyle(color: Color(0xFF94A3B8)),
+                    hintStyle: TextStyle(color: hintColor),
                     contentPadding: const EdgeInsets.all(16),
+                    filled: true,
+                    fillColor: inputBg,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
                       borderSide: BorderSide.none,
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: const BorderSide(
-                        color: Color(0xFF00A19C),
+                      borderSide: BorderSide(
+                        color: AppColors.accentColor,
                         width: 2,
                       ),
                     ),
@@ -456,11 +469,11 @@ class _EditReportScreenState extends State<EditReportScreen> {
               const SizedBox(height: 20),
 
               // Photo
-              const Text(
+              Text(
                 'Photo',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
-                  color: Color(0xFF1E293B),
+                  color: textColor,
                   fontSize: 16,
                 ),
               ),
@@ -473,10 +486,10 @@ class _EditReportScreenState extends State<EditReportScreen> {
                   child: Container(
                     height: 120,
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: cardBg,
                       borderRadius: BorderRadius.circular(16),
                       border: Border.all(
-                        color: const Color(0xFFE2E8F0),
+                        color: borderColor,
                         width: 2,
                       ),
                     ),
@@ -486,12 +499,12 @@ class _EditReportScreenState extends State<EditReportScreen> {
                         Icon(
                           Icons.add_photo_alternate_outlined,
                           size: 40,
-                          color: const Color(0xFF00A19C),
+                          color: AppColors.accentColor,
                         ),
                         const SizedBox(height: 8),
-                        const Text(
+                        Text(
                           'Tap to add photo',
-                          style: TextStyle(color: Color(0xFF64748B)),
+                          style: TextStyle(color: hintColor),
                         ),
                       ],
                     ),
@@ -501,7 +514,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                 Container(
                   height: 200,
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: cardBg,
                     borderRadius: BorderRadius.circular(16),
                     boxShadow: [
                       BoxShadow(
@@ -537,7 +550,7 @@ class _EditReportScreenState extends State<EditReportScreen> {
                           child: Container(
                             padding: const EdgeInsets.all(8),
                             decoration: const BoxDecoration(
-                              color: Colors.red,
+                              color: AppColors.errorColor,
                               shape: BoxShape.circle,
                             ),
                             child: const Icon(
@@ -567,17 +580,19 @@ class _EditReportScreenState extends State<EditReportScreen> {
                         child: const Center(
                           child: CircularProgressIndicator(
                             strokeWidth: 2.5,
-                            valueColor:
-                                AlwaysStoppedAnimation<Color>(Colors.white),
+                            valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                           ),
                         ),
                       )
                     : Container(
                         decoration: BoxDecoration(
-                          gradient: const LinearGradient(
+                          gradient: LinearGradient(
                             begin: Alignment.topLeft,
                             end: Alignment.bottomRight,
-                            colors: [Color(0xFF00A19C), Color(0xFF00D4AA)],
+                            colors: [
+                              AppColors.accentColor.withOpacity(0.9),
+                              AppColors.accentColor,
+                            ],
                           ),
                           borderRadius: BorderRadius.circular(25),
                         ),
