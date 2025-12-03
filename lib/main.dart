@@ -20,6 +20,7 @@ import '../constants/app_theme.dart';
 import 'package:profile_managemenr/welcome_page.dart';
 import 'dart:convert';
 import 'package:profile_managemenr/sprint2/renter_dashboard/review_view_renter.dart';
+import 'package:profile_managemenr/sprint2/searchRentee/search.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -52,6 +53,7 @@ class MyApp extends StatelessWidget {
           '/booking': (context) => const BookingScreen(),
           '/report': (context) => const ReportCenterScreen(),
           '/messages': (context) => const ItemChatListView(),
+          '/search' : (context) => const SearchPage(),
         },
       ),
     );
@@ -82,9 +84,6 @@ class AuthWrapper extends StatelessWidget {
   }
 }
 
-// ------------------------------
-// ITEM DETAIL SCREEN (with Image Carousel)
-// ------------------------------
 
 class ItemDetailScreen extends StatefulWidget {
   final Map<String, dynamic> item;
@@ -675,6 +674,15 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
             onPressed: () => Navigator.pushNamed(context, '/profile'),
             tooltip: 'Profile',
           ),
+          IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: (){
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context)=> const SearchPage()),
+                );
+              },
+            ),
         ],
       ),
       body: Column(

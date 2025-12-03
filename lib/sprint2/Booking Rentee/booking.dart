@@ -640,7 +640,7 @@ class _BookingScreenState extends State<BookingScreen> {
                     ),
                     const SizedBox(width: 16),
                     Expanded(
-                      // ✅ Disable if renterId missing
+                      
                       child: ElevatedButton(
                         onPressed: (_rentalDays > 0 && _renterId.isNotEmpty && !_isSubmitting)
                             ? _submitBooking
