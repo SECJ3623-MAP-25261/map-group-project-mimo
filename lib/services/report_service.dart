@@ -38,11 +38,11 @@ class ReportService {
 
   // Get reports for a specific user only
  // Fetch reports using email instead of userId
-Future<List<Map<String, dynamic>>> getUserReportsByEmail(String email) async {
+Future<List<Map<String, dynamic>>> getUserReportsByUserId(String userId) async {
   try {
     final querySnapshot = await _firestore
         .collection('reports')
-        .where('userEmail', isEqualTo: email)
+        .where('userId', isEqualTo: userId)  // ← query by userId, not email
         .orderBy('createdAt', descending: true)
         .get();
 
@@ -54,7 +54,7 @@ Future<List<Map<String, dynamic>>> getUserReportsByEmail(String email) async {
       };
     }).toList();
   } catch (e) {
-    print('Error fetching reports by email: $e');
+    print('Error fetching reports by userId: $e');
     return [];
   }
 }
