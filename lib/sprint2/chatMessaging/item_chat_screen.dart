@@ -508,12 +508,64 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>?;
-            final senderId = data?['senderId'] ?? '';
+
+            if (data == null) return const SizedBox.shrink();
+
+            final senderId = data['senderId'] ?? '';
             final isMe = senderId == _currentUserId;
-            
-            return _buildMessageBubble(doc, isMe);
+
+            final bool isDeleted = data['deleted'] == true;
+            final String messageId = doc.id;
+
+            return GestureDetector(
+              // 🔥 long press to soft-delete your own (non-deleted) messages
+              onLongPress: (!isMe || isDeleted || _currentUserId == null)
+                  ? null
+                  : () async {
+                      final confirm = await showDialog<bool>(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text('Delete message?'),
+                          content: const Text(
+                            'This will mark the message as deleted for everyone.',
+                          ),
+                          actions: [
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, false),
+                              child: const Text('Cancel'),
+                            ),
+                            TextButton(
+                              onPressed: () => Navigator.pop(context, true),
+                              child: const Text(
+                                'Delete',
+                                style: TextStyle(color: Colors.red),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+
+                      if (confirm == true) {
+                        final success = await _messageService.deleteMessage(
+                          widget.chatId,
+                          messageId,
+                          _currentUserId!, // 👈 must match deleteMessage(userId)
+                        );
+
+                        if (!success && mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text('You can only delete your own messages.'),
+                            ),
+                          );
+                        }
+                      }
+                    },
+              child: _buildMessageBubble(doc, isMe),
+            );
           },
         );
+
       },
     );
   }
