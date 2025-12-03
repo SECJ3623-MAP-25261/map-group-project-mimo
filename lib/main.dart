@@ -663,6 +663,15 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
         ),
         actions: [
           IconButton(
+            icon: const Icon(Icons.search, color: Colors.white),
+            onPressed: (){
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context)=> const SearchPage()),
+                );
+              },
+            ),
+          IconButton(
             icon: const Icon(Icons.message, color: Colors.white),
             onPressed: () {
               Navigator.pushNamed(context, '/messages');
@@ -674,15 +683,7 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
             onPressed: () => Navigator.pushNamed(context, '/profile'),
             tooltip: 'Profile',
           ),
-          IconButton(
-            icon: const Icon(Icons.search, color: Colors.white),
-            onPressed: (){
-              Navigator.push(
-                context,
-                MaterialPageRoute(builder: (context)=> const SearchPage()),
-                );
-              },
-            ),
+          
         ],
       ),
       body: Column(
