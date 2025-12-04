@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/edit_profile.dart';
 import 'package:profile_managemenr/accounts/personalization/personalization.dart';
-import 'package:profile_managemenr/sprint2/ReportCenter/my_reports.dart';
+import 'package:profile_managemenr/sprint2/IssueReport/MyReports/my_reports.dart';
 import 'change_password.dart';
 //import 'update_contact.dart';
 import 'notification.dart';
