@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
-import 'package:profile_managemenr/main.dart';
+
+import 'package:profile_managemenr/home/screens/campus_closet_screen.dart';
 
 import '../../constants/app_colors.dart';
 import 'validators.dart';

@@ -2,9 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/main.dart';
-import '../constants/app_colors.dart';
-import 'firebase_options.dart';
+import '../../../constants/app_colors.dart';
+import '../../firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'campus_closet_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
