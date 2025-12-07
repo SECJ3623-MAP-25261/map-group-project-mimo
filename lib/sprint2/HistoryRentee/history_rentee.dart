@@ -6,7 +6,7 @@ import 'package:profile_managemenr/services/auth_service.dart';
 import 'package:profile_managemenr/sprint2/ReviewRentee/review_rentee.dart';
 
 class HistoryRenteeScreen extends StatefulWidget {
-  final bool isRenter; // 👈 NEW: toggle between rentee/renter mode
+  final bool isRenter;
 
   const HistoryRenteeScreen({
     super.key,
@@ -35,7 +35,6 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
     try {
       final userId = _authService.userId;
       if (userId != null) {
-        // 👇 Use correct method based on mode
         final bookings = widget.isRenter
             ? await _bookingService.getRenterBookings(userId)
             : await _bookingService.getUserBookings(userId);
@@ -75,220 +74,356 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      appBar: AppBar(
-        backgroundColor: AppColors.accentColor,
-        title: Text(
-          widget.isRenter ? 'Your Earnings History' : 'Your Rental History',
-          style: const TextStyle(color: Colors.white),
+      appBar: _buildAppBar(context, isSmallScreen),
+      body: _isLoading
+          ? Center(
+              child: CircularProgressIndicator(
+                color: AppColors.accentColor,
+              ),
+            )
+          : _bookings.isEmpty
+              ? _buildEmptyState(isSmallScreen)
+              : _buildBookingsList(screenWidth, isSmallScreen),
+      bottomNavigationBar: _buildBottomButton(isSmallScreen),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context, bool isSmallScreen) {
+    return AppBar(
+      backgroundColor: AppColors.accentColor,
+      elevation: 0,
+      title: Text(
+        widget.isRenter ? 'Earnings History' : 'Rental History',
+        style: TextStyle(
+          color: Colors.white,
+          fontSize: isSmallScreen ? 18 : 20,
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.white),
-          onPressed: () => Navigator.pop(context),
+      ),
+      leading: IconButton(
+        icon: Icon(
+          Icons.arrow_back_ios_rounded,
+          color: Colors.white,
+          size: isSmallScreen ? 20 : 24,
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh, color: Colors.white),
-            onPressed: _loadBookings,
+        onPressed: () => Navigator.pop(context),
+      ),
+      actions: [
+        IconButton(
+          icon: Icon(
+            Icons.refresh_rounded,
+            color: Colors.white,
+            size: isSmallScreen ? 22 : 24,
+          ),
+          onPressed: _loadBookings,
+          tooltip: 'Refresh',
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyState(bool isSmallScreen) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.history_rounded,
+              size: isSmallScreen ? 64 : 80,
+              color: Colors.grey[400],
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            Text(
+              'No bookings yet',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 16 : 18,
+                color: Colors.grey[600],
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+            SizedBox(height: isSmallScreen ? 6 : 8),
+            Text(
+              widget.isRenter
+                  ? 'Your earnings history will appear here'
+                  : 'Your rental history will appear here',
+              style: TextStyle(
+                fontSize: isSmallScreen ? 13 : 14,
+                color: Colors.grey[500],
+              ),
+              textAlign: TextAlign.center,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildBookingsList(double screenWidth, bool isSmallScreen) {
+    return RefreshIndicator(
+      onRefresh: _loadBookings,
+      color: AppColors.accentColor,
+      child: ListView.builder(
+        physics: const BouncingScrollPhysics(),
+        padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+        itemCount: _bookings.length,
+        itemBuilder: (context, index) {
+          final booking = _bookings[index];
+          return _buildBookingCard(booking, isSmallScreen);
+        },
+      ),
+    );
+  }
+
+  Widget _buildBookingCard(Map<String, dynamic> booking, bool isSmallScreen) {
+    final status = booking['status'] ?? 'pending';
+    final hasReview = booking['hasReview'] ?? false;
+    final bookingId = booking['id'];
+    final shortId = bookingId.substring(0, 8).toUpperCase();
+    final statusColor = _getStatusColor(status);
+    final isVerySmallScreen = MediaQuery.of(context).size.width < 340;
+
+    return Container(
+      margin: EdgeInsets.only(bottom: isSmallScreen ? 12 : 16),
+      decoration: BoxDecoration(
+        color: AppColors.lightCardBackground,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: AppColors.lightBorderColor.withOpacity(0.5),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.04),
+            blurRadius: 8,
+            offset: const Offset(0, 2),
           ),
         ],
       ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _bookings.isEmpty
-              ? Center(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Header with Item Name and Status
+          Container(
+            padding: EdgeInsets.all(isVerySmallScreen ? 12 : 14),
+            decoration: BoxDecoration(
+              color: AppColors.accentColor.withOpacity(0.05),
+              borderRadius: const BorderRadius.only(
+                topLeft: Radius.circular(16),
+                topRight: Radius.circular(16),
+              ),
+            ),
+            child: Row(
+              children: [
+                Expanded(
                   child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(
-                        Icons.history,
-                        size: 80,
-                        color: Colors.grey[400],
-                      ),
-                      const SizedBox(height: 16),
                       Text(
-                        'No bookings yet',
+                        booking['itemName'] ?? 'Unknown Item',
                         style: TextStyle(
-                          fontSize: 18,
-                          color: Colors.grey[600],
-                          fontWeight: FontWeight.w500,
+                          color: AppColors.lightTextColor,
+                          fontWeight: FontWeight.bold,
+                          fontSize: isVerySmallScreen ? 15 : (isSmallScreen ? 16 : 17),
                         ),
+                        maxLines: 2,
+                        overflow: TextOverflow.ellipsis,
                       ),
-                      const SizedBox(height: 8),
+                      SizedBox(height: isSmallScreen ? 4 : 6),
                       Text(
-                        widget.isRenter
-                            ? 'Your earnings history will appear here'
-                            : 'Your rental history will appear here',
+                        'BKG-$shortId',
                         style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.grey[500],
+                          color: AppColors.lightHintColor,
+                          fontSize: isVerySmallScreen ? 11 : 12,
                         ),
                       ),
                     ],
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _loadBookings,
-                  child: SingleChildScrollView(
-                    scrollDirection: Axis.horizontal,
-                    child: Padding(
-                      padding: const EdgeInsets.all(16.0),
-                      child: Column(
-                        children: [
-                          Container(
-                            decoration: BoxDecoration(
-                              color: AppColors.accentColor.withOpacity(0.1),
-                              borderRadius: const BorderRadius.only(
-                                topLeft: Radius.circular(8),
-                                topRight: Radius.circular(8),
-                              ),
-                              border: Border.all(color: AppColors.lightBorderColor),
-                            ),
-                            child: const Row(
-                              children: [
-                                SizedBox(
-                                  width: 200,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: Text(
-                                      'Item',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.lightTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 120,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: Text(
-                                      'Booking ID',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.lightTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 120,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: Text(
-                                      'Start Date',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.lightTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 120,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: Text(
-                                      'Return (Actual)',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.lightTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 100,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: Text(
-                                      'Final Fee',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.lightTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 120,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: Text(
-                                      'Status',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.lightTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                                SizedBox(
-                                  width: 150,
-                                  child: Padding(
-                                    padding: EdgeInsets.all(12.0),
-                                    child: Text(
-                                      'Action',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        color: AppColors.lightTextColor,
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ],
-                            ),
-                          ),
-
-                          ..._bookings.map((booking) {
-                            final status = booking['status'] ?? 'pending';
-                            final hasReview = booking['hasReview'] ?? false;
-                            final bookingId = booking['id'];
-                            final shortId = bookingId.substring(0, 8).toUpperCase();
-
-                            return _RentalHistoryRow(
-                              item: booking['itemName'] ?? 'Unknown Item',
-                              bookingId: 'BKG-$shortId',
-                              startDate: _formatDate(booking['startDate']),
-                              returnDate: _formatDate(booking['actualReturnDate']),
-                              finalFee:
-                                  'RM ${(booking['finalFee'] ?? 0.0).toStringAsFixed(2)}',
-                              status: status.toUpperCase(),
-                              statusColor: _getStatusColor(status),
-                              actionText: hasReview
-                                  ? 'REVIEWED'
-                                  : status == 'completed'
-                                      ? 'LEAVE REVIEW'
-                                      : 'VIEW',
-                              actionEnabled: status == 'completed' && !hasReview,
-                              onTap: status == 'completed' && !hasReview
-                                  ? () async {
-                                      final result = await Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) => ReviewRenteeScreen(
-                                            itemName: booking['itemName'],
-                                            itemId: booking['itemId'],
-                                            bookingId: bookingId,
-                                          ),
-                                        ),
-                                      );
-                                      if (result == true) {
-                                        _loadBookings();
-                                      }
-                                    }
-                                  : null,
-                            );
-                          }).toList(),
-                        ],
-                      ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  padding: EdgeInsets.symmetric(
+                    horizontal: isVerySmallScreen ? 8 : 10,
+                    vertical: isVerySmallScreen ? 4 : 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor.withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: statusColor, width: 1.5),
+                  ),
+                  child: Text(
+                    status.toUpperCase(),
+                    style: TextStyle(
+                      color: statusColor,
+                      fontSize: isVerySmallScreen ? 10 : 11,
+                      fontWeight: FontWeight.bold,
                     ),
                   ),
                 ),
-      bottomNavigationBar: Padding(
-        padding: const EdgeInsets.all(16.0),
+              ],
+            ),
+          ),
+
+          // Booking Details
+          Padding(
+            padding: EdgeInsets.all(isVerySmallScreen ? 12 : 14),
+            child: Column(
+              children: [
+                _buildDetailRow(
+                  icon: Icons.calendar_today_rounded,
+                  label: 'Start Date',
+                  value: _formatDate(booking['startDate']),
+                  isSmallScreen: isSmallScreen,
+                  isVerySmallScreen: isVerySmallScreen,
+                ),
+                SizedBox(height: isSmallScreen ? 10 : 12),
+                _buildDetailRow(
+                  icon: Icons.event_available_rounded,
+                  label: 'Return Date',
+                  value: _formatDate(booking['actualReturnDate']),
+                  isSmallScreen: isSmallScreen,
+                  isVerySmallScreen: isVerySmallScreen,
+                ),
+                SizedBox(height: isSmallScreen ? 10 : 12),
+                _buildDetailRow(
+                  icon: Icons.payments_rounded,
+                  label: 'Final Fee',
+                  value: 'RM ${(booking['finalFee'] ?? 0.0).toStringAsFixed(2)}',
+                  isSmallScreen: isSmallScreen,
+                  isVerySmallScreen: isVerySmallScreen,
+                  valueColor: AppColors.accentColor,
+                  isBold: true,
+                ),
+              ],
+            ),
+          ),
+
+          // Action Button
+          if (status == 'completed')
+            Padding(
+              padding: EdgeInsets.fromLTRB(
+                isVerySmallScreen ? 12 : 14,
+                0,
+                isVerySmallScreen ? 12 : 14,
+                isVerySmallScreen ? 12 : 14,
+              ),
+              child: SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: hasReview
+                      ? null
+                      : () async {
+                          final result = await Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => ReviewRenteeScreen(
+                                itemName: booking['itemName'],
+                                itemId: booking['itemId'],
+                                bookingId: bookingId,
+                              ),
+                            ),
+                          );
+                          if (result == true) {
+                            _loadBookings();
+                          }
+                        },
+                  icon: Icon(
+                    hasReview ? Icons.check_circle_rounded : Icons.rate_review_rounded,
+                    size: isVerySmallScreen ? 16 : 18,
+                  ),
+                  label: Text(
+                    hasReview ? 'REVIEWED' : 'LEAVE REVIEW',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: isVerySmallScreen ? 12 : 13,
+                    ),
+                  ),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: hasReview ? Colors.grey : AppColors.accentColor,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(
+                      vertical: isVerySmallScreen ? 10 : 12,
+                    ),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    elevation: hasReview ? 0 : 2,
+                  ),
+                ),
+              ),
+            ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    required bool isSmallScreen,
+    required bool isVerySmallScreen,
+    Color? valueColor,
+    bool isBold = false,
+  }) {
+    return Row(
+      children: [
+        Icon(
+          icon,
+          size: isVerySmallScreen ? 16 : 18,
+          color: AppColors.accentColor.withOpacity(0.7),
+        ),
+        SizedBox(width: isSmallScreen ? 8 : 10),
+        Expanded(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.lightHintColor,
+                  fontSize: isVerySmallScreen ? 12 : 13,
+                ),
+              ),
+              const SizedBox(width: 8),
+              Flexible(
+                child: Text(
+                  value,
+                  style: TextStyle(
+                    color: valueColor ?? AppColors.lightTextColor,
+                    fontSize: isVerySmallScreen ? 13 : 14,
+                    fontWeight: isBold ? FontWeight.bold : FontWeight.w500,
+                  ),
+                  textAlign: TextAlign.right,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBottomButton(bool isSmallScreen) {
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      decoration: BoxDecoration(
+        color: AppColors.lightCardBackground,
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, -2),
+          ),
+        ],
+      ),
+      child: SafeArea(
         child: SizedBox(
           width: double.infinity,
           child: ElevatedButton(
@@ -296,174 +431,23 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentColor,
               foregroundColor: Colors.white,
-              padding: const EdgeInsets.symmetric(vertical: 16),
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(8),
+              padding: EdgeInsets.symmetric(
+                vertical: isSmallScreen ? 12 : 16,
               ),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+              elevation: 0,
             ),
-            child: const Text(
+            child: Text(
               'CLOSE',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
             ),
           ),
         ),
-      ),
-    );
-  }
-}
-
-class _RentalHistoryRow extends StatelessWidget {
-  // ... (same as your original code, no changes needed)
-  final String item;
-  final String bookingId;
-  final String startDate;
-  final String returnDate;
-  final String finalFee;
-  final String status;
-  final Color statusColor;
-  final String actionText;
-  final bool actionEnabled;
-  final VoidCallback? onTap;
-
-  const _RentalHistoryRow({
-    required this.item,
-    required this.bookingId,
-    required this.startDate,
-    required this.returnDate,
-    required this.finalFee,
-    required this.status,
-    required this.statusColor,
-    required this.actionText,
-    required this.actionEnabled,
-    this.onTap,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.lightCardBackground,
-        border: Border.all(color: AppColors.lightBorderColor),
-      ),
-      child: Row(
-        children: [
-          SizedBox(
-            width: 200,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                item,
-                style: const TextStyle(
-                  color: AppColors.lightTextColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 120,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                bookingId,
-                style: const TextStyle(
-                  color: AppColors.lightTextColor,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 120,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                startDate,
-                style: const TextStyle(
-                  color: AppColors.lightTextColor,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 120,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                returnDate,
-                style: const TextStyle(
-                  color: AppColors.lightTextColor,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 100,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Text(
-                finalFee,
-                style: const TextStyle(
-                  color: AppColors.lightTextColor,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 120,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                decoration: BoxDecoration(
-                  color: statusColor.withOpacity(0.1),
-                  borderRadius: BorderRadius.circular(4),
-                  border: Border.all(color: statusColor),
-                ),
-                child: Text(
-                  status,
-                  style: TextStyle(
-                    color: statusColor,
-                    fontSize: 12,
-                    fontWeight: FontWeight.w500,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ),
-          SizedBox(
-            width: 150,
-            child: Padding(
-              padding: const EdgeInsets.all(12.0),
-              child: ElevatedButton(
-                onPressed: actionEnabled ? onTap : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: actionEnabled
-                      ? AppColors.accentColor
-                      : Colors.grey,
-                  foregroundColor: Colors.white,
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(4),
-                  ),
-                ),
-                child: Text(
-                  actionText,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    fontWeight: FontWeight.bold,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ),
-            ),
-          ),
-        ],
       ),
     );
   }

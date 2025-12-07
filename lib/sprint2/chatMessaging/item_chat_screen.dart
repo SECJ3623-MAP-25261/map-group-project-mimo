@@ -16,7 +16,7 @@ class ItemChatScreen extends StatefulWidget {
   final String renterName;
   final String renteeId;
   final String renteeName;
-  final List<dynamic>? itemImages; // 👈 Added item images
+  final List<dynamic>? itemImages;
 
   const ItemChatScreen({
     super.key,
@@ -27,7 +27,7 @@ class ItemChatScreen extends StatefulWidget {
     required this.renterName,
     required this.renteeId,
     required this.renteeName,
-    this.itemImages, // 👈 Optional images
+    this.itemImages,
   });
 
   static String buildChatId(String itemId, String userId1, String userId2) {
@@ -193,6 +193,10 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
         SnackBar(
           content: Text(result.error ?? 'Failed to send message'),
           backgroundColor: AppColors.errorColor,
+          behavior: SnackBarBehavior.floating,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
         ),
       );
     }
@@ -204,7 +208,7 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
     return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
   }
 
-  Widget _buildMessageBubble(DocumentSnapshot doc, bool isMe) {
+  Widget _buildMessageBubble(DocumentSnapshot doc, bool isMe, bool isSmallScreen, bool isVerySmallScreen) {
     final data = doc.data() as Map<String, dynamic>?;
     if (data == null) return const SizedBox.shrink();
     
@@ -212,32 +216,43 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
     final isDeleted = data['deleted'] == true;
     final createdAt = data['createdAt'] as Timestamp?;
     
+    final avatarSize = isVerySmallScreen ? 28.0 : 32.0;
+    final maxBubbleWidth = isVerySmallScreen ? 240.0 : (isSmallScreen ? 260.0 : 280.0);
+    final fontSize = isVerySmallScreen ? 14.0 : 15.0;
+    final timeSize = isVerySmallScreen ? 9.0 : 10.0;
+    
     return Container(
-      margin: const EdgeInsets.symmetric(vertical: 4, horizontal: 8),
+      margin: EdgeInsets.symmetric(
+        vertical: isSmallScreen ? 3 : 4,
+        horizontal: isSmallScreen ? 6 : 8,
+      ),
       child: Row(
         mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
         crossAxisAlignment: CrossAxisAlignment.end,
         children: [
           if (!isMe) ...[
             Container(
-              width: 32,
-              height: 32,
+              width: avatarSize,
+              height: avatarSize,
               decoration: BoxDecoration(
                 color: AppColors.lightHintColor.withOpacity(0.3),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.person,
-                size: 18,
+              child: Icon(
+                Icons.person_rounded,
+                size: isVerySmallScreen ? 16 : 18,
                 color: AppColors.lightTextColor,
               ),
             ),
-            const SizedBox(width: 8),
+            SizedBox(width: isSmallScreen ? 6 : 8),
           ],
           Flexible(
             child: Container(
-              padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
-              constraints: const BoxConstraints(maxWidth: 280),
+              padding: EdgeInsets.symmetric(
+                vertical: isVerySmallScreen ? 6 : 8,
+                horizontal: isVerySmallScreen ? 10 : 12,
+              ),
+              constraints: BoxConstraints(maxWidth: maxBubbleWidth),
               decoration: BoxDecoration(
                 color: isMe ? AppColors.accentColor : AppColors.lightCardBackground,
                 borderRadius: BorderRadius.only(
@@ -248,8 +263,8 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: Colors.black.withOpacity(0.1),
-                    blurRadius: 2,
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 3,
                     offset: const Offset(0, 1),
                   ),
                 ],
@@ -262,13 +277,15 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
                     style: TextStyle(
                       color: isMe ? Colors.white : AppColors.lightTextColor,
                       fontStyle: isDeleted ? FontStyle.italic : FontStyle.normal,
+                      fontSize: fontSize,
+                      height: 1.4,
                     ),
                   ),
                   const SizedBox(height: 4),
                   Text(
                     _formatMessageTime(createdAt),
                     style: TextStyle(
-                      fontSize: 10,
+                      fontSize: timeSize,
                       color: isMe ? Colors.white70 : AppColors.lightHintColor,
                     ),
                   ),
@@ -276,19 +293,24 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
               ),
             ),
           ),
-          if (isMe) const SizedBox(width: 8),
+          if (isMe) SizedBox(width: isSmallScreen ? 6 : 8),
         ],
       ),
     );
   }
 
-  // 👇 NEW: Build item details section at top
-  Widget _buildItemDetails() {
+  Widget _buildItemDetails(bool isSmallScreen, bool isVerySmallScreen) {
     final hasImages = widget.itemImages != null && widget.itemImages!.isNotEmpty;
     final firstImage = hasImages ? widget.itemImages![0] : null;
 
+    final containerPadding = isVerySmallScreen ? 12.0 : (isSmallScreen ? 14.0 : 16.0);
+    final titleSize = isVerySmallScreen ? 16.0 : (isSmallScreen ? 17.0 : 18.0);
+    final imageHeight = isVerySmallScreen ? 100.0 : (isSmallScreen ? 110.0 : 120.0);
+    final metaSize = isVerySmallScreen ? 12.0 : (isSmallScreen ? 13.0 : 14.0);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: EdgeInsets.all(isSmallScreen ? 8 : 12),
+      padding: EdgeInsets.all(containerPadding),
       decoration: BoxDecoration(
         color: AppColors.lightCardBackground,
         borderRadius: BorderRadius.circular(12),
@@ -306,21 +328,23 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
           // Item Name
           Text(
             widget.itemName,
-            style: const TextStyle(
-              fontSize: 18,
+            style: TextStyle(
+              fontSize: titleSize,
               fontWeight: FontWeight.bold,
               color: AppColors.lightTextColor,
             ),
+            maxLines: 2,
+            overflow: TextOverflow.ellipsis,
           ),
           
-          const SizedBox(height: 12),
+          SizedBox(height: isSmallScreen ? 10 : 12),
           
           // Item Image
           if (hasImages) ...[
             GestureDetector(
               onTap: () => _showFullScreenImage(firstImage.toString()),
               child: Container(
-                height: 120,
+                height: imageHeight,
                 decoration: BoxDecoration(
                   borderRadius: BorderRadius.circular(8),
                   color: Colors.grey[200],
@@ -333,43 +357,54 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported),
+                          errorBuilder: (context, error, stackTrace) => 
+                              const Icon(Icons.image_not_supported_rounded),
                         )
                       : Image.memory(
                           base64Decode(firstImage.toString()),
                           fit: BoxFit.cover,
                           width: double.infinity,
                           height: double.infinity,
-                          errorBuilder: (context, error, stackTrace) => const Icon(Icons.image_not_supported),
+                          errorBuilder: (context, error, stackTrace) => 
+                              const Icon(Icons.image_not_supported_rounded),
                         ),
                 ),
               ),
             ),
-            const SizedBox(height: 8),
+            SizedBox(height: isSmallScreen ? 6 : 8),
             // Image counter if multiple images
             if (widget.itemImages!.length > 1)
               Center(
                 child: Text(
                   'View ${widget.itemImages!.length} photos',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.accentColor,
-                    fontSize: 12,
+                    fontSize: isVerySmallScreen ? 11 : 12,
+                    fontWeight: FontWeight.w500,
                   ),
                 ),
               ),
-            const SizedBox(height: 12),
+            SizedBox(height: isSmallScreen ? 8 : 12),
           ],
           
           // Participants Info
           Row(
             children: [
-              const Icon(Icons.person, size: 16, color: AppColors.lightHintColor),
-              const SizedBox(width: 8),
-              Text(
-                'With ${widget.renterName}',
-                style: const TextStyle(
-                  color: AppColors.lightTextColor,
-                  fontSize: 14,
+              Icon(
+                Icons.person_rounded,
+                size: isVerySmallScreen ? 14 : 16,
+                color: AppColors.lightHintColor,
+              ),
+              SizedBox(width: isSmallScreen ? 6 : 8),
+              Flexible(
+                child: Text(
+                  'With ${widget.renterName}',
+                  style: TextStyle(
+                    color: AppColors.lightTextColor,
+                    fontSize: metaSize,
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
             ],
@@ -402,7 +437,7 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
               top: 20,
               right: 20,
               child: IconButton(
-                icon: const Icon(Icons.close, color: Colors.white, size: 30),
+                icon: const Icon(Icons.close_rounded, color: Colors.white, size: 30),
                 onPressed: () => Navigator.pop(context),
               ),
             ),
@@ -412,15 +447,18 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
     );
   }
 
-  Widget _buildMessagesList() {
+  Widget _buildMessagesList(bool isSmallScreen, bool isVerySmallScreen) {
     if (_isLoading) {
-      return const Center(
+      return Center(
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            CircularProgressIndicator(),
-            SizedBox(height: 16),
-            Text('Loading chat...'),
+            CircularProgressIndicator(color: AppColors.accentColor),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            Text(
+              'Loading chat...',
+              style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+            ),
           ],
         ),
       );
@@ -429,23 +467,30 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
     if (_errorMessage != null) {
       return Center(
         child: Padding(
-          padding: const EdgeInsets.all(16.0),
+          padding: const EdgeInsets.all(24.0),
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.error_outline, size: 64, color: AppColors.errorColor),
-              const SizedBox(height: 16),
+              Icon(
+                Icons.error_outline_rounded,
+                size: isSmallScreen ? 56 : 64,
+                color: AppColors.errorColor,
+              ),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               Text(
                 _errorMessage!,
-                style: const TextStyle(
+                style: TextStyle(
                   color: AppColors.errorColor,
-                  fontSize: 16,
+                  fontSize: isSmallScreen ? 13 : 14,
                 ),
                 textAlign: TextAlign.center,
               ),
-              const SizedBox(height: 16),
+              SizedBox(height: isSmallScreen ? 12 : 16),
               ElevatedButton(
                 onPressed: _initializeChat,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.accentColor,
+                ),
                 child: const Text('Retry'),
               ),
               const SizedBox(height: 8),
@@ -463,29 +508,41 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
       stream: _messageService.getMessagesStream(widget.chatId),
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+          return Center(
+            child: CircularProgressIndicator(color: AppColors.accentColor),
+          );
         }
 
         if (snapshot.hasError) {
           return Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline, size: 48, color: AppColors.errorColor),
-                const SizedBox(height: 16),
-                const Text('Failed to load messages.'),
-                const SizedBox(height: 8),
-                Text(
-                  snapshot.error.toString(),
-                  style: const TextStyle(fontSize: 12),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                ElevatedButton(
-                  onPressed: () => setState(() {}),
-                  child: const Text('Retry'),
-                ),
-              ],
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.error_outline_rounded,
+                    size: isSmallScreen ? 48 : 56,
+                    color: AppColors.errorColor,
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 16),
+                  const Text('Failed to load messages.'),
+                  const SizedBox(height: 8),
+                  Text(
+                    snapshot.error.toString(),
+                    style: const TextStyle(fontSize: 12),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 8),
+                  ElevatedButton(
+                    onPressed: () => setState(() {}),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentColor,
+                    ),
+                    child: const Text('Retry'),
+                  ),
+                ],
+              ),
             ),
           );
         }
@@ -503,7 +560,11 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
 
         return ListView.builder(
           controller: _scrollController,
-          padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 12),
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.symmetric(
+            vertical: isSmallScreen ? 6 : 8,
+            horizontal: isSmallScreen ? 8 : 12,
+          ),
           itemCount: docs.length,
           itemBuilder: (context, index) {
             final doc = docs[index];
@@ -518,13 +579,15 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
             final String messageId = doc.id;
 
             return GestureDetector(
-              // 🔥 long press to soft-delete your own (non-deleted) messages
               onLongPress: (!isMe || isDeleted || _currentUserId == null)
                   ? null
                   : () async {
                       final confirm = await showDialog<bool>(
                         context: context,
                         builder: (context) => AlertDialog(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           title: const Text('Delete message?'),
                           content: const Text(
                             'This will mark the message as deleted for everyone.',
@@ -549,29 +612,36 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
                         final success = await _messageService.deleteMessage(
                           widget.chatId,
                           messageId,
-                          _currentUserId!, // 👈 must match deleteMessage(userId)
+                          _currentUserId!,
                         );
 
                         if (!success && mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('You can only delete your own messages.'),
+                            SnackBar(
+                              content: const Text('You can only delete your own messages.'),
+                              behavior: SnackBarBehavior.floating,
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           );
                         }
                       }
                     },
-              child: _buildMessageBubble(doc, isMe),
+              child: _buildMessageBubble(doc, isMe, isSmallScreen, isVerySmallScreen),
             );
           },
         );
-
       },
     );
   }
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final isVerySmallScreen = screenWidth < 340;
+    
     final isRenter = _currentUserId == widget.renterId;
     final otherName = isRenter ? widget.renteeName : widget.renterName;
 
@@ -581,27 +651,41 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
         elevation: 0,
         title: Text(
           'Chat with $otherName',
-          style: const TextStyle(color: Colors.white, fontSize: 16),
+          style: TextStyle(
+            color: Colors.white,
+            fontSize: isVerySmallScreen ? 15 : (isSmallScreen ? 16 : 17),
+          ),
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_rounded,
+            size: isSmallScreen ? 20 : 24,
+          ),
+          onPressed: () => Navigator.pop(context),
         ),
         iconTheme: const IconThemeData(color: Colors.white),
       ),
       backgroundColor: AppColors.lightBackground,
       body: Column(
         children: [
-          // 👇 ITEM DETAILS AT TOP
-          _buildItemDetails(),
-          const SizedBox(height: 16),
+          // Item details at top
+          _buildItemDetails(isSmallScreen, isVerySmallScreen),
           
           // Messages
           Expanded(
-            child: _buildMessagesList(),
+            child: _buildMessagesList(isSmallScreen, isVerySmallScreen),
           ),
           
           // Input field
           if (_errorMessage == null)
             SafeArea(
               child: Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: EdgeInsets.symmetric(
+                  horizontal: isSmallScreen ? 6 : 8,
+                  vertical: isSmallScreen ? 6 : 8,
+                ),
                 decoration: BoxDecoration(
                   color: AppColors.lightCardBackground,
                   boxShadow: [
@@ -620,10 +704,19 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
                         minLines: 1,
                         maxLines: 5,
                         textCapitalization: TextCapitalization.sentences,
-                        decoration: const InputDecoration(
+                        style: TextStyle(
+                          fontSize: isVerySmallScreen ? 14 : 15,
+                        ),
+                        decoration: InputDecoration(
                           hintText: 'Type a message...',
+                          hintStyle: TextStyle(
+                            fontSize: isVerySmallScreen ? 14 : 15,
+                          ),
                           border: InputBorder.none,
-                          contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                          contentPadding: EdgeInsets.symmetric(
+                            horizontal: isSmallScreen ? 10 : 12,
+                            vertical: 8,
+                          ),
                         ),
                         onSubmitted: (_) => _sendMessage(),
                         enabled: !_isSending,
@@ -631,12 +724,15 @@ class _ItemChatScreenState extends State<ItemChatScreen> {
                     ),
                     IconButton(
                       icon: _isSending
-                          ? const SizedBox(
-                              width: 20,
-                              height: 20,
-                              child: CircularProgressIndicator(strokeWidth: 2),
+                          ? SizedBox(
+                              width: isVerySmallScreen ? 18 : 20,
+                              height: isVerySmallScreen ? 18 : 20,
+                              child: const CircularProgressIndicator(strokeWidth: 2),
                             )
-                          : const Icon(Icons.send),
+                          : Icon(
+                              Icons.send_rounded,
+                              size: isVerySmallScreen ? 20 : 22,
+                            ),
                       color: _isSending ? AppColors.lightHintColor : AppColors.accentColor,
                       onPressed: _isSending ? null : _sendMessage,
                     ),

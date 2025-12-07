@@ -1,7 +1,3 @@
-// ============================================
-// FILE 1: lib/accounts/profile/screen/edit_report.dart
-// ============================================
-
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
@@ -153,13 +149,18 @@ class _EditReportScreenState extends State<EditReportScreen> {
   }
 
   void _showSnackBar(String message, Color color) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalMargin = screenWidth < 360 ? 12.0 : 16.0;
+    
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(message),
         backgroundColor: color,
         behavior: SnackBarBehavior.floating,
-        margin: const EdgeInsets.all(16),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+        margin: EdgeInsets.all(horizontalMargin),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+        ),
       ),
     );
   }
@@ -167,63 +168,133 @@ class _EditReportScreenState extends State<EditReportScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = ThemeHelper(context);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 360;
+    final isVerySmallScreen = screenWidth < 340;
+    
+    // Responsive padding
+    final horizontalPadding = isVerySmallScreen ? 12.0 : (isSmallScreen ? 16.0 : 20.0);
+    final verticalSpacing = isSmallScreen ? 16.0 : 20.0;
+    final sectionSpacing = isSmallScreen ? 24.0 : 32.0;
 
     return Scaffold(
       backgroundColor: theme.backgroundColor,
-      appBar: _buildAppBar(),
-      body: SingleChildScrollView(
-        child: Padding(
-          padding: const EdgeInsets.all(20.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              CategoryDropdown(
-                categories: _categories,
-                selectedCategory: _selectedCategory,
-                onChanged: (value) => setState(() => _selectedCategory = value),
-                theme: theme,
-              ),
-              const SizedBox(height: 20),
-              UserTypeSelector(
-                userType: _userType,
-                onChanged: (value) => setState(() => _userType = value),
-                theme: theme,
-              ),
-              const SizedBox(height: 20),
-              InputField(
-                label: 'Subject',
-                controller: _subjectController,
-                theme: theme,
-              ),
-              const SizedBox(height: 20),
-              InputField(
-                label: 'Details',
-                controller: _detailsController,
-                maxLines: 6,
-                theme: theme,
-              ),
-              const SizedBox(height: 20),
-              PhotoSection(
-                imageBase64: _imageBase64,
-                selectedImage: _selectedImage,
-                onPickImage: _pickImage,
-                onRemoveImage: _removeImage,
-                theme: theme,
-              ),
-              const SizedBox(height: 32),
-              SubmitButton(
-                isSubmitting: _isSubmitting,
-                onPressed: _updateReport,
-                buttonText: 'UPDATE REPORT',
-              ),
-            ],
+      appBar: _buildAppBar(context),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          physics: const BouncingScrollPhysics(),
+          child: Padding(
+            padding: EdgeInsets.symmetric(
+              horizontal: horizontalPadding,
+              vertical: isSmallScreen ? 12.0 : 16.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Header Text
+                _buildHeaderText(isSmallScreen),
+                SizedBox(height: verticalSpacing),
+                
+                // Category Dropdown
+                CategoryDropdown(
+                  categories: _categories,
+                  selectedCategory: _selectedCategory,
+                  onChanged: (value) => setState(() => _selectedCategory = value),
+                  theme: theme,
+                ),
+                SizedBox(height: verticalSpacing),
+                
+                // User Type Selector
+                UserTypeSelector(
+                  userType: _userType,
+                  onChanged: (value) => setState(() => _userType = value),
+                  theme: theme,
+                ),
+                SizedBox(height: verticalSpacing),
+                
+                // Subject Input
+                InputField(
+                  label: 'Subject',
+                  controller: _subjectController,
+                  theme: theme,
+                ),
+                SizedBox(height: verticalSpacing),
+                
+                // Details Input
+                InputField(
+                  label: 'Details',
+                  controller: _detailsController,
+                  maxLines: isSmallScreen ? 5 : 6,
+                  theme: theme,
+                ),
+                SizedBox(height: verticalSpacing),
+                
+                // Photo Section
+                PhotoSection(
+                  imageBase64: _imageBase64,
+                  selectedImage: _selectedImage,
+                  onPickImage: _pickImage,
+                  onRemoveImage: _removeImage,
+                  theme: theme,
+                ),
+                SizedBox(height: sectionSpacing),
+                
+                // Submit Button
+                SubmitButton(
+                  isSubmitting: _isSubmitting,
+                  onPressed: _updateReport,
+                  buttonText: 'UPDATE REPORT',
+                ),
+                
+                // Bottom spacing for better scrolling
+                SizedBox(height: screenHeight * 0.02),
+              ],
+            ),
           ),
         ),
       ),
     );
   }
 
-  PreferredSizeWidget _buildAppBar() {
+  Widget _buildHeaderText(bool isSmallScreen) {
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? 12 : 16),
+      decoration: BoxDecoration(
+        color: AppColors.accentColor.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: AppColors.accentColor.withOpacity(0.2),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            Icons.edit_note_rounded,
+            color: AppColors.accentColor,
+            size: isSmallScreen ? 20 : 24,
+          ),
+          SizedBox(width: isSmallScreen ? 8 : 12),
+          Expanded(
+            child: Text(
+              'Update your report details below',
+              style: TextStyle(
+                color: AppColors.accentColor,
+                fontSize: isSmallScreen ? 13 : 14,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight),
       child: Container(
@@ -240,23 +311,39 @@ class _EditReportScreenState extends State<EditReportScreen> {
         child: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text(
+          centerTitle: false,
+          title: Text(
             'Edit Report',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: isSmallScreen ? 18 : 20,
               fontWeight: FontWeight.bold,
             ),
           ),
           leading: IconButton(
-            icon: const Icon(Icons.arrow_back, color: Colors.white),
+            icon: Icon(
+              Icons.arrow_back_ios_rounded,
+              color: Colors.white,
+              size: isSmallScreen ? 20 : 24,
+            ),
             onPressed: () => Navigator.pop(context),
+            tooltip: 'Back',
           ),
+          actions: [
+            // Optional: Add a save icon button
+            if (!_isSubmitting)
+              IconButton(
+                icon: Icon(
+                  Icons.check_rounded,
+                  color: Colors.white,
+                  size: isSmallScreen ? 22 : 26,
+                ),
+                onPressed: _updateReport,
+                tooltip: 'Save',
+              ),
+          ],
         ),
       ),
     );
   }
 }
-
-
-

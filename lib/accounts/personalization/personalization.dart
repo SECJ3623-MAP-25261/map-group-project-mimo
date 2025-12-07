@@ -27,7 +27,7 @@ class RenterDashboard extends StatelessWidget {
         });
   }
 
-  // ✅ NEW: Stream for dynamic earnings
+  // Stream for dynamic earnings
   Stream<double> getEarningsStream(String renterId) {
     return FirebaseFirestore.instance
         .collection('bookings')
@@ -53,294 +53,406 @@ class RenterDashboard extends StatelessWidget {
     }
     final String currentUserId = user.uid;
 
+    // Responsive variables
+    final screenWidth = MediaQuery.of(context).size.width;
+    final screenHeight = MediaQuery.of(context).size.height;
+    final isSmallScreen = screenWidth < 360;
+    final isVerySmallScreen = screenWidth < 340;
+
+    // Adaptive sizing
+    final containerPadding = isVerySmallScreen ? 16.0 : (isSmallScreen ? 20.0 : 24.0);
+    final outerPadding = isSmallScreen ? 12.0 : 16.0;
+    final verticalSpacing = isSmallScreen ? 16.0 : 20.0;
+    final titleFontSize = isVerySmallScreen ? 18.0 : (isSmallScreen ? 20.0 : 22.0);
+    final subtitleFontSize = isSmallScreen ? 12.0 : 14.0;
+
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
-      body: Center(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.all(16),
-          child: Container(
-            padding: const EdgeInsets.all(24),
-            constraints: const BoxConstraints(maxWidth: 400),
-            decoration: BoxDecoration(
-              color: AppColors.lightCardBackground,
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.08),
-                  blurRadius: 20,
-                  offset: const Offset(0, 8),
-                ),
-              ],
-            ),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Welcome, $name 👕',
-                  style: TextStyle(
-                    color: AppColors.accentColor,
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
+      body: SafeArea(
+        child: Center(
+          child: SingleChildScrollView(
+            physics: const BouncingScrollPhysics(),
+            padding: EdgeInsets.all(outerPadding),
+            child: Container(
+              padding: EdgeInsets.all(containerPadding),
+              constraints: BoxConstraints(
+                maxWidth: isSmallScreen ? screenWidth : 400,
+              ),
+              decoration: BoxDecoration(
+                color: AppColors.lightCardBackground,
+                borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.08),
+                    blurRadius: 20,
+                    offset: const Offset(0, 8),
                   ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Manage your items, requests, and earnings.',
-                  style: TextStyle(color: AppColors.lightHintColor),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 20),
-
-                // Stats Row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                  children: [
-                    // Items Listed
-                    StreamBuilder<QuerySnapshot>(
-                      stream: FirebaseFirestore.instance
-                          .collection('items')
-                          .where('renterId', isEqualTo: currentUserId)
-                          .snapshots(),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return buildClickableStat(
-                            context,
-                            value: '...',
-                            label: 'Items Listed',
-                            page: YourItemsPage(renterId: currentUserId),
-                          );
-                        }
-                        int itemCount = snapshot.data!.docs.length;
-                        return buildClickableStat(
-                          context,
-                          value: '$itemCount',
-                          label: 'Items Listed',
-                          page: YourItemsPage(renterId: currentUserId),
-                        );
-                      },
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // Welcome Header
+                  Text(
+                    'Welcome, $name 👕',
+                    style: TextStyle(
+                      color: AppColors.accentColor,
+                      fontSize: titleFontSize,
+                      fontWeight: FontWeight.bold,
                     ),
-
-                    // ✅ Earnings (Dynamic)
-                    StreamBuilder<double>(
-                      stream: getEarningsStream(currentUserId),
-                      builder: (context, snapshot) {
-                        String earningsText = 'RM0.00';
-                        if (snapshot.hasData) {
-                          earningsText = 'RM${snapshot.data!.toStringAsFixed(2)}';
-                        } else if (snapshot.hasError) {
-                          earningsText = 'Error';
-                        }
-                        return buildClickableStat(
-                          context,
-                          value: earningsText,
-                          label: 'Earnings',
-                          page: HistoryRenteeScreen(isRenter: true),
-                        );
-                      },
-                    ),
-
-                    // Pending Requests
-                    StreamBuilder<int>(
-                      stream: getPendingRequestsCount(currentUserId),
-                      builder: (context, snapshot) {
-                        if (!snapshot.hasData) {
-                          return buildClickableStat(
-                            context,
-                            value: '...',
-                            label: 'Requests',
-                            page: BookingRequestsScreen(renterId: currentUserId),
-                          );
-                        }
-
-                        int pendingCount = snapshot.data!;
-                        Widget statWidget = buildClickableStat(
-                          context,
-                          value: '$pendingCount',
-                          label: 'Requests',
-                          page: BookingRequestsScreen(renterId: currentUserId),
-                        );
-
-                        if (pendingCount > 0) {
-                          return Stack(
-                            children: [
-                              statWidget,
-                              Positioned(
-                                top: -5,
-                                right: -5,
-                                child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
-                                  ),
-                                  child: Text(
-                                    '$pendingCount',
-                                    style: const TextStyle(
-                                      color: Colors.white,
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          );
-                        }
-                        return statWidget;
-                      },
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 30),
-
-                // Action buttons
-                menuButton(context, 'Add New Item', Icons.add, currentUserId),
-                menuButton(context, 'View Rental Requests', Icons.inventory, currentUserId),
-                menuButton(context, 'Transaction History', Icons.receipt_long, currentUserId),
-                menuButton(context, 'Help & Support', Icons.help_outline, currentUserId),
-                menuButton(context, 'View Item Reviews', Icons.star_rate, currentUserId),
-
-                const SizedBox(height: 20),
-
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (_) => const ProfileScreen()),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: AppColors.accentColor,
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 30,
-                      vertical: 12,
-                    ),
-                    elevation: 2,
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
                   ),
-                  child: const Text(
-                    'Back to Profile 👤',
-                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
+                  SizedBox(height: isSmallScreen ? 6 : 8),
+                  Text(
+                    'Manage your items, requests, and earnings.',
+                    style: TextStyle(
+                      color: AppColors.lightHintColor,
+                      fontSize: subtitleFontSize,
+                    ),
+                    textAlign: TextAlign.center,
+                    maxLines: 2,
                   ),
-                ),
-                const SizedBox(height: 20),
-                Text(
-                  'Campus Closet © 2025',
-                  style: TextStyle(
-                    color: AppColors.lightHintColor,
-                    fontSize: 12,
+                  SizedBox(height: verticalSpacing),
+
+                  // Stats Row
+                  _buildStatsRow(context, currentUserId, isSmallScreen, isVerySmallScreen),
+                  SizedBox(height: isSmallScreen ? 20 : 30),
+
+                  // Action buttons
+                  _buildMenuButton(
+                    context,
+                    'Add New Item',
+                    Icons.add_rounded,
+                    currentUserId,
+                    isSmallScreen,
                   ),
-                ),
-              ],
+                  _buildMenuButton(
+                    context,
+                    'View Rental Requests',
+                    Icons.inventory_rounded,
+                    currentUserId,
+                    isSmallScreen,
+                  ),
+                  _buildMenuButton(
+                    context,
+                    'Transaction History',
+                    Icons.receipt_long_rounded,
+                    currentUserId,
+                    isSmallScreen,
+                  ),
+                  _buildMenuButton(
+                    context,
+                    'Help & Support',
+                    Icons.help_outline_rounded,
+                    currentUserId,
+                    isSmallScreen,
+                  ),
+                  _buildMenuButton(
+                    context,
+                    'View Item Reviews',
+                    Icons.star_rate_rounded,
+                    currentUserId,
+                    isSmallScreen,
+                  ),
+
+                  SizedBox(height: verticalSpacing),
+
+                  // Back to Profile Button
+                  ElevatedButton(
+                    onPressed: () {
+                      Navigator.pushReplacement(
+                        context,
+                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                      );
+                    },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      padding: EdgeInsets.symmetric(
+                        horizontal: isSmallScreen ? 24 : 30,
+                        vertical: isSmallScreen ? 10 : 12,
+                      ),
+                      elevation: 2,
+                    ),
+                    child: Text(
+                      'Back to Profile 👤',
+                      style: TextStyle(
+                        fontSize: isSmallScreen ? 14 : 16,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+                  SizedBox(height: isSmallScreen ? 12 : 20),
+                  
+                  // Footer
+                  Text(
+                    'Campus Closet © 2025',
+                    style: TextStyle(
+                      color: AppColors.lightHintColor,
+                      fontSize: isSmallScreen ? 11 : 12,
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),
       ),
     );
   }
-}
 
-// ✅ Updated menuButton to accept currentUserId
-Widget menuButton(BuildContext context, String title, IconData icon, String currentUserId) {
-  return Container(
-    margin: const EdgeInsets.symmetric(vertical: 6),
-    child: ElevatedButton.icon(
-      onPressed: () {
-        if (title == 'Add New Item') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => AddItemPage()),
-          );
-        } else if (title == 'View Rental Requests') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => BookingRequestsScreen(renterId: currentUserId),
-            ),
-          );
-        } else if (title == 'Transaction History') {
-          // ✅ Navigate to real history (renter mode)
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => HistoryRenteeScreen(isRenter: true),
-            ),
-          );
-        } else if (title == 'View Item Reviews') {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => RenterAllReviewsScreen(renterId: currentUserId),
-            ),
-          );
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (_) => PlaceholderPage(title: title)),
-          );
-        }
-      },
-      icon: Icon(icon, color: AppColors.lightTextColor),
-      label: Text(title, style: TextStyle(color: AppColors.lightTextColor)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: AppColors.lightInputFillColor,
-        minimumSize: const Size(double.infinity, 50),
-        alignment: Alignment.centerLeft,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-      ),
-    ),
-  );
-}
+  Widget _buildStatsRow(
+    BuildContext context,
+    String currentUserId,
+    bool isSmallScreen,
+    bool isVerySmallScreen,
+  ) {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+      children: [
+        // Items Listed
+        StreamBuilder<QuerySnapshot>(
+          stream: FirebaseFirestore.instance
+              .collection('items')
+              .where('renterId', isEqualTo: currentUserId)
+              .snapshots(),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return _buildClickableStat(
+                context,
+                value: '...',
+                label: 'Items Listed',
+                page: YourItemsPage(renterId: currentUserId),
+                isSmallScreen: isSmallScreen,
+                isVerySmallScreen: isVerySmallScreen,
+              );
+            }
+            int itemCount = snapshot.data!.docs.length;
+            return _buildClickableStat(
+              context,
+              value: '$itemCount',
+              label: 'Items Listed',
+              page: YourItemsPage(renterId: currentUserId),
+              isSmallScreen: isSmallScreen,
+              isVerySmallScreen: isVerySmallScreen,
+            );
+          },
+        ),
 
-Widget buildClickableStat(
-  BuildContext context, {
-  required String value,
-  required String label,
-  required Widget page,
-}) {
-  return Expanded(
-    child: GestureDetector(
-      onTap: () {
-        Navigator.push(context, MaterialPageRoute(builder: (_) => page));
-      },
-      child: Container(
-        margin: const EdgeInsets.symmetric(horizontal: 4),
-        padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
-        decoration: BoxDecoration(
-          color: AppColors.accentColor.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: AppColors.accentColor.withOpacity(0.3),
-            width: 1,
+        // Earnings (Dynamic)
+        StreamBuilder<double>(
+          stream: getEarningsStream(currentUserId),
+          builder: (context, snapshot) {
+            String earningsText = 'RM0.00';
+            if (snapshot.hasData) {
+              earningsText = 'RM${snapshot.data!.toStringAsFixed(2)}';
+            } else if (snapshot.hasError) {
+              earningsText = 'Error';
+            }
+            return _buildClickableStat(
+              context,
+              value: earningsText,
+              label: 'Earnings',
+              page: HistoryRenteeScreen(isRenter: true),
+              isSmallScreen: isSmallScreen,
+              isVerySmallScreen: isVerySmallScreen,
+            );
+          },
+        ),
+
+        // Pending Requests
+        StreamBuilder<int>(
+          stream: getPendingRequestsCount(currentUserId),
+          builder: (context, snapshot) {
+            if (!snapshot.hasData) {
+              return _buildClickableStat(
+                context,
+                value: '...',
+                label: 'Requests',
+                page: BookingRequestsScreen(renterId: currentUserId),
+                isSmallScreen: isSmallScreen,
+                isVerySmallScreen: isVerySmallScreen,
+              );
+            }
+
+            int pendingCount = snapshot.data!;
+            Widget statWidget = _buildClickableStat(
+              context,
+              value: '$pendingCount',
+              label: 'Requests',
+              page: BookingRequestsScreen(renterId: currentUserId),
+              isSmallScreen: isSmallScreen,
+              isVerySmallScreen: isVerySmallScreen,
+            );
+
+            if (pendingCount > 0) {
+              return Stack(
+                clipBehavior: Clip.none,
+                children: [
+                  statWidget,
+                  Positioned(
+                    top: -5,
+                    right: -5,
+                    child: Container(
+                      padding: EdgeInsets.all(isVerySmallScreen ? 3 : 4),
+                      decoration: const BoxDecoration(
+                        color: Colors.red,
+                        shape: BoxShape.circle,
+                      ),
+                      child: Text(
+                        '$pendingCount',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: isVerySmallScreen ? 9 : 10,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              );
+            }
+            return statWidget;
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildClickableStat(
+    BuildContext context, {
+    required String value,
+    required String label,
+    required Widget page,
+    required bool isSmallScreen,
+    required bool isVerySmallScreen,
+  }) {
+    final valueFontSize = isVerySmallScreen ? 14.0 : (isSmallScreen ? 16.0 : 18.0);
+    final labelFontSize = isVerySmallScreen ? 10.0 : 11.0;
+    final verticalPadding = isSmallScreen ? 10.0 : 12.0;
+
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          Navigator.push(context, MaterialPageRoute(builder: (_) => page));
+        },
+        child: Container(
+          margin: EdgeInsets.symmetric(horizontal: isVerySmallScreen ? 2 : 4),
+          padding: EdgeInsets.symmetric(
+            vertical: verticalPadding,
+            horizontal: isVerySmallScreen ? 4 : 8,
+          ),
+          decoration: BoxDecoration(
+            color: AppColors.accentColor.withOpacity(0.1),
+            borderRadius: BorderRadius.circular(12),
+            border: Border.all(
+              color: AppColors.accentColor.withOpacity(0.3),
+              width: 1,
+            ),
+          ),
+          child: Column(
+            children: [
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: valueFontSize,
+                  color: AppColors.accentColor,
+                  fontWeight: FontWeight.bold,
+                ),
+                overflow: TextOverflow.ellipsis,
+                maxLines: 1,
+              ),
+              const SizedBox(height: 4),
+              Text(
+                label,
+                style: TextStyle(
+                  color: AppColors.lightHintColor,
+                  fontSize: labelFontSize,
+                ),
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ],
           ),
         ),
-        child: Column(
-          children: [
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 18,
-                color: AppColors.accentColor,
-                fontWeight: FontWeight.bold,
+      ),
+    );
+  }
+
+  Widget _buildMenuButton(
+    BuildContext context,
+    String title,
+    IconData icon,
+    String currentUserId,
+    bool isSmallScreen,
+  ) {
+    final buttonHeight = isSmallScreen ? 46.0 : 50.0;
+    final iconSize = isSmallScreen ? 20.0 : 22.0;
+    final textSize = isSmallScreen ? 13.0 : 14.0;
+
+    return Container(
+      margin: EdgeInsets.symmetric(vertical: isSmallScreen ? 4 : 6),
+      child: ElevatedButton.icon(
+        onPressed: () {
+          if (title == 'Add New Item') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => AddItemPage()),
+            );
+          } else if (title == 'View Rental Requests') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => BookingRequestsScreen(renterId: currentUserId),
               ),
-              overflow: TextOverflow.ellipsis,
-            ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(color: AppColors.lightHintColor, fontSize: 11),
-              textAlign: TextAlign.center,
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
+            );
+          } else if (title == 'Transaction History') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => HistoryRenteeScreen(isRenter: true),
+              ),
+            );
+          } else if (title == 'View Item Reviews') {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => RenterAllReviewsScreen(renterId: currentUserId),
+              ),
+            );
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => PlaceholderPage(title: title)),
+            );
+          }
+        },
+        icon: Icon(icon, color: AppColors.lightTextColor, size: iconSize),
+        label: Text(
+          title,
+          style: TextStyle(
+            color: AppColors.lightTextColor,
+            fontSize: textSize,
+          ),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: AppColors.lightInputFillColor,
+          minimumSize: Size(double.infinity, buttonHeight),
+          alignment: Alignment.centerLeft,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(12),
+          ),
+          padding: EdgeInsets.symmetric(horizontal: isSmallScreen ? 12 : 16),
         ),
       ),
-    ),
-  );
+    );
+  }
 }
 
 class PlaceholderPage extends StatelessWidget {
@@ -350,35 +462,58 @@ class PlaceholderPage extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
 
     return Scaffold(
       backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
         backgroundColor: AppColors.lightCardBackground,
         foregroundColor: AppColors.lightTextColor,
-        title: Text(title),
+        title: Text(
+          title,
+          style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
+        ),
         elevation: isDark ? 0 : 1,
+        leading: IconButton(
+          icon: Icon(
+            Icons.arrow_back_ios_rounded,
+            size: isSmallScreen ? 20 : 24,
+          ),
+          onPressed: () => Navigator.pop(context),
+        ),
       ),
       body: Center(
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            Icon(Icons.construction, size: 64, color: AppColors.accentColor),
-            const SizedBox(height: 16),
-            Text(
-              '$title',
-              style: TextStyle(
-                color: AppColors.lightTextColor,
-                fontSize: 20,
-                fontWeight: FontWeight.w600,
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.construction_rounded,
+                size: isSmallScreen ? 56 : 64,
+                color: AppColors.accentColor,
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Coming soon...',
-              style: TextStyle(color: AppColors.lightHintColor, fontSize: 16),
-            ),
-          ],
+              SizedBox(height: isSmallScreen ? 12 : 16),
+              Text(
+                title,
+                style: TextStyle(
+                  color: AppColors.lightTextColor,
+                  fontSize: isSmallScreen ? 18 : 20,
+                  fontWeight: FontWeight.w600,
+                ),
+                textAlign: TextAlign.center,
+              ),
+              SizedBox(height: isSmallScreen ? 6 : 8),
+              Text(
+                'Coming soon...',
+                style: TextStyle(
+                  color: AppColors.lightHintColor,
+                  fontSize: isSmallScreen ? 14 : 16,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

@@ -1,7 +1,3 @@
-// ============================================
-// FILE 2: lib/accounts/profile/widgets/report_card.dart
-// ============================================
-
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'dart:convert';
@@ -10,14 +6,14 @@ import '.../../status_helper.dart';
 
 class ReportCard extends StatelessWidget {
   final Map<String, dynamic> report;
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const ReportCard({
     super.key,
     required this.report,
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
@@ -29,9 +25,10 @@ class ReportCard extends StatelessWidget {
 
     final status = report['status'] ?? 'pending';
     final hasPhoto = report['photoBase64'] != null;
+    final screenWidth = MediaQuery.of(context).size.width;
 
     return Container(
-      margin: const EdgeInsets.only(bottom: 16),
+      margin: EdgeInsets.only(bottom: screenWidth < 360 ? 12 : 16),
       decoration: BoxDecoration(
         color: cardBg,
         borderRadius: BorderRadius.circular(16),
@@ -65,10 +62,12 @@ class ReportCard extends StatelessWidget {
               photoBase64: report['photoBase64']!,
               isDark: isDark,
             ),
-          _ReportActions(
-            onEdit: onEdit,
-            onDelete: onDelete,
-          ),
+          // Only show actions if callbacks are provided
+          if (onEdit != null || onDelete != null)
+            _ReportActions(
+              onEdit: onEdit,
+              onDelete: onDelete,
+            ),
         ],
       ),
     );
@@ -94,18 +93,23 @@ class _ReportHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final horizontalPadding = isSmallScreen ? 12.0 : 16.0;
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(horizontalPadding),
       child: Row(
         children: [
           Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Row(
+                Wrap(
+                  spacing: 6,
+                  runSpacing: 6,
                   children: [
                     _StatusBadge(status: status),
-                    const SizedBox(width: 8),
                     _UserTypeBadge(userType: userType),
                   ],
                 ),
@@ -114,18 +118,20 @@ class _ReportHeader extends StatelessWidget {
                   category ?? 'Unknown Category',
                   style: TextStyle(
                     color: hintColor,
-                    fontSize: 12,
+                    fontSize: isSmallScreen ? 11 : 12,
                   ),
                 ),
               ],
             ),
           ),
+          const SizedBox(width: 8),
           Text(
             DateFormatter.format(createdAt),
             style: TextStyle(
               color: hintColor,
-              fontSize: 12,
+              fontSize: isSmallScreen ? 10 : 12,
             ),
+            textAlign: TextAlign.right,
           ),
         ],
       ),
@@ -141,9 +147,14 @@ class _StatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final color = StatusHelper.getColor(status);
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
 
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 6 : 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: color.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
@@ -152,7 +163,7 @@ class _StatusBadge extends StatelessWidget {
         status.toUpperCase(),
         style: TextStyle(
           color: color,
-          fontSize: 10,
+          fontSize: isSmallScreen ? 9 : 10,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -167,8 +178,14 @@ class _UserTypeBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      padding: EdgeInsets.symmetric(
+        horizontal: isSmallScreen ? 6 : 8,
+        vertical: 4,
+      ),
       decoration: BoxDecoration(
         color: AppColors.accentColor.withOpacity(0.1),
         borderRadius: BorderRadius.circular(6),
@@ -177,7 +194,7 @@ class _UserTypeBadge extends StatelessWidget {
         userType ?? 'User',
         style: TextStyle(
           color: AppColors.accentColor,
-          fontSize: 10,
+          fontSize: isSmallScreen ? 9 : 10,
           fontWeight: FontWeight.bold,
         ),
       ),
@@ -200,32 +217,37 @@ class _ReportContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final horizontalPadding = isSmallScreen ? 12.0 : 16.0;
+
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16),
+      padding: EdgeInsets.symmetric(horizontal: horizontalPadding),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             subject ?? 'No subject',
             style: TextStyle(
-              fontSize: 16,
+              fontSize: isSmallScreen ? 15 : 16,
               fontWeight: FontWeight.bold,
               color: textColor,
             ),
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
           ),
-          const SizedBox(height: 8),
+          SizedBox(height: isSmallScreen ? 6 : 8),
           Text(
             details ?? 'No details provided',
             style: TextStyle(
-              fontSize: 14,
+              fontSize: isSmallScreen ? 13 : 14,
               color: hintColor,
-              height: 1.4,
+              height: 1.5,
             ),
-            maxLines: 3,
+            maxLines: 5, // Increased from 3 to show more content
             overflow: TextOverflow.ellipsis,
           ),
+          SizedBox(height: isSmallScreen ? 8 : 12),
         ],
       ),
     );
@@ -243,25 +265,44 @@ class _ReportPhoto extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final horizontalPadding = isSmallScreen ? 12.0 : 16.0;
+    final imageHeight = isSmallScreen ? 130.0 : 150.0;
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.fromLTRB(
+        horizontalPadding,
+        0,
+        horizontalPadding,
+        horizontalPadding,
+      ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(8),
+        borderRadius: BorderRadius.circular(12),
         child: Image.memory(
           base64Decode(photoBase64),
-          height: 150,
+          height: imageHeight,
           width: double.infinity,
           fit: BoxFit.cover,
           errorBuilder: (context, error, stackTrace) {
             return Container(
-              height: 150,
+              height: imageHeight,
               color: isDark ? AppColors.darkCardBackground : Colors.grey[300],
-              child: const Column(
+              child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.error_outline, color: Colors.grey),
-                  SizedBox(height: 8),
-                  Text('Failed to load image'),
+                  Icon(
+                    Icons.error_outline,
+                    color: Colors.grey,
+                    size: isSmallScreen ? 28 : 32,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Failed to load image',
+                    style: TextStyle(
+                      fontSize: isSmallScreen ? 12 : 14,
+                    ),
+                  ),
                 ],
               ),
             );
@@ -273,49 +314,75 @@ class _ReportPhoto extends StatelessWidget {
 }
 
 class _ReportActions extends StatelessWidget {
-  final VoidCallback onEdit;
-  final VoidCallback onDelete;
+  final VoidCallback? onEdit;
+  final VoidCallback? onDelete;
 
   const _ReportActions({
-    required this.onEdit,
-    required this.onDelete,
+    this.onEdit,
+    this.onDelete,
   });
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final horizontalPadding = isSmallScreen ? 12.0 : 16.0;
+
+    // Filter out null callbacks
+    final hasEdit = onEdit != null;
+    final hasDelete = onDelete != null;
+
+    if (!hasEdit && !hasDelete) {
+      return const SizedBox.shrink();
+    }
+
     return Padding(
-      padding: const EdgeInsets.all(16),
+      padding: EdgeInsets.all(horizontalPadding),
       child: Row(
         children: [
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: onEdit,
-              icon: const Icon(Icons.edit, size: 18),
-              label: const Text('Edit'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.accentColor,
-                side: BorderSide(color: AppColors.accentColor),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          if (hasEdit)
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onEdit,
+                icon: Icon(Icons.edit_rounded, size: isSmallScreen ? 16 : 18),
+                label: Text(
+                  'Edit',
+                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.accentColor,
+                  side: BorderSide(color: AppColors.accentColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isSmallScreen ? 10 : 12,
+                  ),
                 ),
               ),
             ),
-          ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: OutlinedButton.icon(
-              onPressed: onDelete,
-              icon: const Icon(Icons.delete, size: 18),
-              label: const Text('Delete'),
-              style: OutlinedButton.styleFrom(
-                foregroundColor: AppColors.errorColor,
-                side: BorderSide(color: AppColors.errorColor),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(8),
+          if (hasEdit && hasDelete) SizedBox(width: isSmallScreen ? 8 : 12),
+          if (hasDelete)
+            Expanded(
+              child: OutlinedButton.icon(
+                onPressed: onDelete,
+                icon: Icon(Icons.delete_rounded, size: isSmallScreen ? 16 : 18),
+                label: Text(
+                  'Delete',
+                  style: TextStyle(fontSize: isSmallScreen ? 13 : 14),
+                ),
+                style: OutlinedButton.styleFrom(
+                  foregroundColor: AppColors.errorColor,
+                  side: BorderSide(color: AppColors.errorColor),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  padding: EdgeInsets.symmetric(
+                    vertical: isSmallScreen ? 10 : 12,
+                  ),
                 ),
               ),
             ),
-          ),
         ],
       ),
     );

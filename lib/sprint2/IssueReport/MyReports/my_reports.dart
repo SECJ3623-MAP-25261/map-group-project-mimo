@@ -1,7 +1,3 @@
-// ============================================
-// FILE 1: lib/accounts/profile/screen/my_reports.dart
-// ============================================
-
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/services/report_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
@@ -9,7 +5,6 @@ import 'package:profile_managemenr/constants/app_colors.dart';
 import '.../../report_card.dart';
 import '.../../empty_states.dart';
 import 'package:profile_managemenr/sprint2/IssueReport/EditReport/edit_report.dart';
-//import 'package:profile_managemenr/sprint2/IssueReport/ReportCenter/report_form_manager.dart';
 import '../ReportCenter/report_center.dart';
 
 class MyReportsScreen extends StatefulWidget {
@@ -124,6 +119,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(12),
         ),
+        margin: EdgeInsets.only(
+          bottom: MediaQuery.of(context).size.height * 0.02,
+          left: 16,
+          right: 16,
+        ),
       ),
     );
   }
@@ -166,6 +166,8 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   }
 
   PreferredSizeWidget _buildAppBar() {
+    final screenWidth = MediaQuery.of(context).size.width;
+    
     return PreferredSize(
       preferredSize: const Size.fromHeight(kToolbarHeight),
       child: Container(
@@ -182,11 +184,11 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
         child: AppBar(
           backgroundColor: Colors.transparent,
           elevation: 0,
-          title: const Text(
+          title: Text(
             'My Reports',
             style: TextStyle(
               color: Colors.white,
-              fontSize: 20,
+              fontSize: screenWidth < 360 ? 18 : 20,
               fontWeight: FontWeight.bold,
             ),
           ),
@@ -233,21 +235,141 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     }
 
     final isDark = Theme.of(context).brightness == Brightness.dark;
+    final screenWidth = MediaQuery.of(context).size.width;
+    final horizontalPadding = screenWidth < 360 ? 12.0 : 16.0;
 
     return RefreshIndicator(
       onRefresh: _loadReports,
       backgroundColor: isDark ? AppColors.darkCardBackground : Colors.white,
       color: AppColors.accentColor,
       child: ListView.builder(
-        padding: const EdgeInsets.all(16),
+        padding: EdgeInsets.symmetric(
+          horizontal: horizontalPadding,
+          vertical: 12,
+        ),
         itemCount: _reports.length,
         itemBuilder: (context, index) {
-          return ReportCard(
-            report: _reports[index],
-            onEdit: () => _navigateToEditReport(_reports[index]),
-            onDelete: () => _deleteReport(_reports[index]['id'], index),
-          );
+          return _buildSwipeableReportCard(index, isDark);
         },
+      ),
+    );
+  }
+
+  Widget _buildSwipeableReportCard(int index, bool isDark) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final cardMargin = screenWidth < 360 ? 8.0 : 12.0;
+    
+    return Dismissible(
+      key: Key(_reports[index]['id'].toString()),
+      direction: DismissDirection.horizontal,
+      confirmDismiss: (direction) async {
+        if (direction == DismissDirection.endToStart) {
+          // Swipe left - Delete
+          final confirm = await _showDeleteConfirmation();
+          if (confirm == true) {
+            final success = await _reportService.deleteReport(_reports[index]['id']);
+            if (success) {
+              if (mounted) {
+                _showSnackBar('Report deleted successfully', AppColors.successColor);
+              }
+              return true;
+            } else {
+              if (mounted) {
+                _showSnackBar('Failed to delete report', AppColors.errorColor);
+              }
+              return false;
+            }
+          }
+          return false;
+        } else if (direction == DismissDirection.startToEnd) {
+          // Swipe right - Edit
+          await _navigateToEditReport(_reports[index]);
+          return false;
+        }
+        return false;
+      },
+      background: Container(
+        margin: EdgeInsets.only(bottom: cardMargin),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.blue.shade400, Colors.blue.shade600],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.blue.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        alignment: Alignment.centerLeft,
+        padding: EdgeInsets.only(left: screenWidth * 0.08),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.edit_rounded,
+              color: Colors.white,
+              size: screenWidth < 360 ? 28 : 32,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Edit',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: screenWidth < 360 ? 12 : 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+      secondaryBackground: Container(
+        margin: EdgeInsets.only(bottom: cardMargin),
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            colors: [Colors.red.shade400, Colors.red.shade600],
+          ),
+          borderRadius: BorderRadius.circular(16),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.red.withOpacity(0.3),
+              blurRadius: 8,
+              offset: const Offset(0, 2),
+            ),
+          ],
+        ),
+        alignment: Alignment.centerRight,
+        padding: EdgeInsets.only(right: screenWidth * 0.08),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.delete_rounded,
+              color: Colors.white,
+              size: screenWidth < 360 ? 28 : 32,
+            ),
+            const SizedBox(height: 4),
+            Text(
+              'Delete',
+              style: TextStyle(
+                color: Colors.white,
+                fontWeight: FontWeight.bold,
+                fontSize: screenWidth < 360 ? 12 : 14,
+              ),
+            ),
+          ],
+        ),
+      ),
+      child: GestureDetector(
+        onTap: () => _navigateToEditReport(_reports[index]),
+        child: ReportCard(
+          report: _reports[index],
+          // Remove onEdit and onDelete to hide buttons
+          onEdit: null,
+          onDelete: null,
+        ),
       ),
     );
   }
@@ -255,24 +377,26 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
   Widget? _buildFAB() {
     if (_authService.userId == null) return null;
 
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+
     return FloatingActionButton.extended(
       onPressed: _navigateToReportCenter,
       backgroundColor: AppColors.accentColor,
-      icon: const Icon(Icons.add, color: Colors.white),
-      label: const Text(
+      icon: Icon(
+        Icons.add_rounded,
+        color: Colors.white,
+        size: isSmallScreen ? 20 : 24,
+      ),
+      label: Text(
         'New Report',
         style: TextStyle(
           color: Colors.white,
           fontWeight: FontWeight.bold,
+          fontSize: isSmallScreen ? 13 : 15,
         ),
       ),
+      elevation: 4,
     );
   }
 }
-
-
-
-
-
-
-

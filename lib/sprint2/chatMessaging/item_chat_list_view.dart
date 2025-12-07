@@ -20,57 +20,104 @@ class _ItemChatListViewState extends State<ItemChatListView> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isSmallScreen = screenWidth < 360;
+    final isVerySmallScreen = screenWidth < 340;
+
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Messages'),
-        backgroundColor: AppColors.accentColor,
-        foregroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.person),
-            onPressed: () {
-              final auth = Provider.of<AuthService>(context, listen: false);
-              showDialog(
-                context: context,
-                builder: (context) => AlertDialog(
-                  title: const Text('Current User'),
-                  content: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text('User ID: ${auth.userId ?? "Not logged in"}'),
-                      Text('Email: ${auth.userEmail ?? "No email"}'),
-                      if (auth.userId != null) ...[
-                        const SizedBox(height: 8),
-                        const Text(
-                          'Logged in and ready to chat!',
-                          style: TextStyle(
-                            color: Colors.green,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ],
-                  ),
-                  actions: [
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('OK'),
-                    ),
-                  ],
-                ),
-              );
-            },
-          ),
-        ],
-      ),
+      appBar: _buildAppBar(context, isSmallScreen),
       backgroundColor: AppColors.lightBackground,
       body: Column(
         children: [
-          // 🔥 FIXED: Compatible segmented button
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          // Toggle Buttons
+          _buildToggleButtons(isSmallScreen, isVerySmallScreen),
+          SizedBox(height: isSmallScreen ? 8 : 16),
+          // Chat list content
+          Expanded(
+            child: _selectedIndex == 0
+                ? _RenterChatList(
+                    isSmallScreen: isSmallScreen,
+                    isVerySmallScreen: isVerySmallScreen,
+                  )
+                : _RenteeChatList(
+                    isSmallScreen: isSmallScreen,
+                    isVerySmallScreen: isVerySmallScreen,
+                  ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(BuildContext context, bool isSmallScreen) {
+    return AppBar(
+      title: Text(
+        'Messages',
+        style: TextStyle(
+          fontSize: isSmallScreen ? 18 : 20,
+        ),
+      ),
+      backgroundColor: AppColors.accentColor,
+      foregroundColor: Colors.white,
+      elevation: 0,
+      actions: [
+        IconButton(
+          icon: Icon(
+            Icons.person_rounded,
+            size: isSmallScreen ? 22 : 24,
+          ),
+          onPressed: () {
+            final auth = Provider.of<AuthService>(context, listen: false);
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Current User'),
+                content: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('User ID: ${auth.userId ?? "Not logged in"}'),
+                    Text('Email: ${auth.userEmail ?? "No email"}'),
+                    if (auth.userId != null) ...[
+                      const SizedBox(height: 8),
+                      const Text(
+                        'Logged in and ready to chat!',
+                        style: TextStyle(
+                          color: Colors.green,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('OK'),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildToggleButtons(bool isSmallScreen, bool isVerySmallScreen) {
+    final horizontalPadding = isVerySmallScreen ? 12.0 : 16.0;
+    final iconSize = isVerySmallScreen ? 16.0 : 18.0;
+    final textSize = isVerySmallScreen ? 13.0 : 14.0;
+    final buttonPadding = isVerySmallScreen ? 12.0 : 16.0;
+
+    return Container(
+      padding: EdgeInsets.symmetric(
+        horizontal: horizontalPadding,
+        vertical: 8,
+      ),
+      child: Row(
+        children: [
+          Expanded(
             child: ToggleButtons(
               isSelected: [_selectedIndex == 0, _selectedIndex == 1],
               onPressed: (int index) {
@@ -85,38 +132,49 @@ class _ItemChatListViewState extends State<ItemChatListView> {
               borderColor: AppColors.lightBorderColor,
               selectedBorderColor: AppColors.accentColor,
               borderWidth: 2,
-              children: const [
+              constraints: BoxConstraints(
+                minHeight: isVerySmallScreen ? 42 : 48,
+                minWidth: (MediaQuery.of(context).size.width - horizontalPadding * 2) / 2 - 2,
+              ),
+              children: [
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: buttonPadding, vertical: 8),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.home, size: 18),
-                      SizedBox(width: 8),
-                      Text('My Rentals'),
+                      Icon(Icons.home_rounded, size: iconSize),
+                      SizedBox(width: isVerySmallScreen ? 4 : 8),
+                      Flexible(
+                        child: Text(
+                          'My Rentals',
+                          style: TextStyle(fontSize: textSize),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
                 Padding(
-                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: EdgeInsets.symmetric(horizontal: buttonPadding, vertical: 8),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
+                    mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Icon(Icons.shopping_bag, size: 18),
-                      SizedBox(width: 8),
-                      Text('My Bookings'),
+                      Icon(Icons.shopping_bag_rounded, size: iconSize),
+                      SizedBox(width: isVerySmallScreen ? 4 : 8),
+                      Flexible(
+                        child: Text(
+                          'My Bookings',
+                          style: TextStyle(fontSize: textSize),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      ),
                     ],
                   ),
                 ),
               ],
             ),
-          ),
-          const SizedBox(height: 16),
-          // Chat list content
-          Expanded(
-            child: _selectedIndex == 0
-                ? _RenterChatList() // As renter - people messaging you about your items
-                : _RenteeChatList(), // As rentee - your conversations about items you want
           ),
         ],
       ),
@@ -124,23 +182,15 @@ class _ItemChatListViewState extends State<ItemChatListView> {
   }
 }
 
-// Rest of the code remains the same...
-// 🔥 Chat List for RENTER (people messaging you about your items)
+// Chat List for RENTER (people messaging you about your items)
 class _RenterChatList extends StatelessWidget {
-  const _RenterChatList();
+  final bool isSmallScreen;
+  final bool isVerySmallScreen;
 
-  String _formatTime(Timestamp? timestamp) {
-    if (timestamp == null) return '';
-    final dt = timestamp.toDate();
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final messageDate = DateTime(dt.year, dt.month, dt.day);
-    if (messageDate == today) {
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${dt.day}/${dt.month}';
-    }
-  }
+  const _RenterChatList({
+    required this.isSmallScreen,
+    required this.isVerySmallScreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -148,10 +198,9 @@ class _RenterChatList extends StatelessWidget {
     final currentUserId = auth.userId;
 
     if (currentUserId == null) {
-      return _buildNotLoggedIn();
+      return _buildNotLoggedIn(isSmallScreen);
     }
 
-    // 🔥 Query: Get chats where current user is the RENTER
     final stream = FirebaseFirestore.instance
         .collection('item_chats')
         .where('renterId', isEqualTo: currentUserId)
@@ -162,34 +211,36 @@ class _RenterChatList extends StatelessWidget {
       stream: stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading your rentals...'),
-              ],
-            ),
-          );
+          return _buildLoading('Loading your rentals...', isSmallScreen);
         }
 
         if (snapshot.hasError) {
           print('❌ Renter chat list error: ${snapshot.error}');
-          return _buildError(snapshot.error.toString(), currentUserId);
+          return _buildError(
+            snapshot.error.toString(),
+            currentUserId,
+            'Failed to load your rental conversations',
+            isSmallScreen,
+          );
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return _buildNoMessages(
             'No one has messaged you about your items yet.',
             currentUserId,
+            Icons.home_rounded,
+            isSmallScreen,
           );
         }
 
         final docs = snapshot.data!.docs;
         return ListView.separated(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.symmetric(
+            vertical: isSmallScreen ? 8 : 12,
+          ),
           itemCount: docs.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          separatorBuilder: (_, __) => const SizedBox(height: 0),
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
@@ -199,6 +250,8 @@ class _RenterChatList extends StatelessWidget {
               currentUserId,
               context,
               isRenterView: true,
+              isSmallScreen: isSmallScreen,
+              isVerySmallScreen: isVerySmallScreen,
             );
           },
         );
@@ -206,19 +259,39 @@ class _RenterChatList extends StatelessWidget {
     );
   }
 
-  Widget _buildNotLoggedIn() {
-    return const Center(
+  Widget _buildLoading(String message, bool isSmallScreen) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: AppColors.accentColor),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          Text(
+            message,
+            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotLoggedIn(bool isSmallScreen) {
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.login, size: 64, color: AppColors.lightHintColor),
-            SizedBox(height: 16),
+            Icon(
+              Icons.login_rounded,
+              size: isSmallScreen ? 56 : 64,
+              color: AppColors.lightHintColor,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Text(
               'Please log in to see your messages',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 color: AppColors.lightHintColor,
               ),
               textAlign: TextAlign.center,
@@ -229,20 +302,24 @@ class _RenterChatList extends StatelessWidget {
     );
   }
 
-  Widget _buildError(String error, String userId) {
+  Widget _buildError(String error, String userId, String title, bool isSmallScreen) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: AppColors.errorColor),
-            const SizedBox(height: 16),
-            const Text(
-              'Failed to load your rental conversations',
+            Icon(
+              Icons.error_outline_rounded,
+              size: isSmallScreen ? 56 : 64,
+              color: AppColors.errorColor,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            Text(
+              title,
               style: TextStyle(
                 color: AppColors.errorColor,
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
               textAlign: TextAlign.center,
             ),
@@ -266,20 +343,24 @@ class _RenterChatList extends StatelessWidget {
     );
   }
 
-  Widget _buildNoMessages(String message, String userId) {
+  Widget _buildNoMessages(String message, String userId, IconData icon, bool isSmallScreen) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.home, size: 64, color: AppColors.lightHintColor),
-            const SizedBox(height: 16),
+            Icon(
+              icon,
+              size: isSmallScreen ? 56 : 64,
+              color: AppColors.lightHintColor,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Text(
               message,
               style: TextStyle(
                 color: AppColors.lightHintColor,
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
               textAlign: TextAlign.center,
             ),
@@ -287,8 +368,8 @@ class _RenterChatList extends StatelessWidget {
             Text(
               'User: $userId',
               style: const TextStyle(
-                fontSize: 12, 
-                color: AppColors.lightHintColor
+                fontSize: 12,
+                color: AppColors.lightHintColor,
               ),
             ),
           ],
@@ -298,22 +379,15 @@ class _RenterChatList extends StatelessWidget {
   }
 }
 
-// 🔥 Chat List for RENTEE (your conversations about items you want to rent)
+// Chat List for RENTEE (your conversations about items you want to rent)
 class _RenteeChatList extends StatelessWidget {
-  const _RenteeChatList();
+  final bool isSmallScreen;
+  final bool isVerySmallScreen;
 
-  String _formatTime(Timestamp? timestamp) {
-    if (timestamp == null) return '';
-    final dt = timestamp.toDate();
-    final now = DateTime.now();
-    final today = DateTime(now.year, now.month, now.day);
-    final messageDate = DateTime(dt.year, dt.month, dt.day);
-    if (messageDate == today) {
-      return '${dt.hour.toString().padLeft(2, '0')}:${dt.minute.toString().padLeft(2, '0')}';
-    } else {
-      return '${dt.day}/${dt.month}';
-    }
-  }
+  const _RenteeChatList({
+    required this.isSmallScreen,
+    required this.isVerySmallScreen,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -321,10 +395,9 @@ class _RenteeChatList extends StatelessWidget {
     final currentUserId = auth.userId;
 
     if (currentUserId == null) {
-      return _buildNotLoggedIn();
+      return _buildNotLoggedIn(isSmallScreen);
     }
 
-    // 🔥 Query: Get chats where current user is the RENTEE
     final stream = FirebaseFirestore.instance
         .collection('item_chats')
         .where('renteeId', isEqualTo: currentUserId)
@@ -335,34 +408,36 @@ class _RenteeChatList extends StatelessWidget {
       stream: stream,
       builder: (context, snapshot) {
         if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                CircularProgressIndicator(),
-                SizedBox(height: 16),
-                Text('Loading your bookings...'),
-              ],
-            ),
-          );
+          return _buildLoading('Loading your bookings...', isSmallScreen);
         }
 
         if (snapshot.hasError) {
           print('❌ Rentee chat list error: ${snapshot.error}');
-          return _buildError(snapshot.error.toString(), currentUserId);
+          return _buildError(
+            snapshot.error.toString(),
+            currentUserId,
+            'Failed to load your booking conversations',
+            isSmallScreen,
+          );
         }
 
         if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
           return _buildNoMessages(
             'You haven\'t messaged any renters yet.\nStart by browsing items!',
             currentUserId,
+            Icons.shopping_bag_rounded,
+            isSmallScreen,
           );
         }
 
         final docs = snapshot.data!.docs;
         return ListView.separated(
+          physics: const BouncingScrollPhysics(),
+          padding: EdgeInsets.symmetric(
+            vertical: isSmallScreen ? 8 : 12,
+          ),
           itemCount: docs.length,
-          separatorBuilder: (_, __) => const Divider(height: 1),
+          separatorBuilder: (_, __) => const SizedBox(height: 0),
           itemBuilder: (context, index) {
             final doc = docs[index];
             final data = doc.data() as Map<String, dynamic>;
@@ -372,6 +447,8 @@ class _RenteeChatList extends StatelessWidget {
               currentUserId,
               context,
               isRenterView: false,
+              isSmallScreen: isSmallScreen,
+              isVerySmallScreen: isVerySmallScreen,
             );
           },
         );
@@ -379,19 +456,39 @@ class _RenteeChatList extends StatelessWidget {
     );
   }
 
-  Widget _buildNotLoggedIn() {
-    return const Center(
+  Widget _buildLoading(String message, bool isSmallScreen) {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          CircularProgressIndicator(color: AppColors.accentColor),
+          SizedBox(height: isSmallScreen ? 12 : 16),
+          Text(
+            message,
+            style: TextStyle(fontSize: isSmallScreen ? 14 : 16),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildNotLoggedIn(bool isSmallScreen) {
+    return Center(
       child: Padding(
-        padding: EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(Icons.login, size: 64, color: AppColors.lightHintColor),
-            SizedBox(height: 16),
+            Icon(
+              Icons.login_rounded,
+              size: isSmallScreen ? 56 : 64,
+              color: AppColors.lightHintColor,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Text(
               'Please log in to see your messages',
               style: TextStyle(
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
                 color: AppColors.lightHintColor,
               ),
               textAlign: TextAlign.center,
@@ -402,20 +499,24 @@ class _RenteeChatList extends StatelessWidget {
     );
   }
 
-  Widget _buildError(String error, String userId) {
+  Widget _buildError(String error, String userId, String title, bool isSmallScreen) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.error_outline, size: 64, color: AppColors.errorColor),
-            const SizedBox(height: 16),
-            const Text(
-              'Failed to load your booking conversations',
+            Icon(
+              Icons.error_outline_rounded,
+              size: isSmallScreen ? 56 : 64,
+              color: AppColors.errorColor,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
+            Text(
+              title,
               style: TextStyle(
                 color: AppColors.errorColor,
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
               textAlign: TextAlign.center,
             ),
@@ -439,20 +540,24 @@ class _RenteeChatList extends StatelessWidget {
     );
   }
 
-  Widget _buildNoMessages(String message, String userId) {
+  Widget _buildNoMessages(String message, String userId, IconData icon, bool isSmallScreen) {
     return Center(
       child: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: const EdgeInsets.all(24.0),
         child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            const Icon(Icons.shopping_bag, size: 64, color: AppColors.lightHintColor),
-            const SizedBox(height: 16),
+            Icon(
+              icon,
+              size: isSmallScreen ? 56 : 64,
+              color: AppColors.lightHintColor,
+            ),
+            SizedBox(height: isSmallScreen ? 12 : 16),
             Text(
               message,
               style: TextStyle(
                 color: AppColors.lightHintColor,
-                fontSize: 16,
+                fontSize: isSmallScreen ? 14 : 16,
               ),
               textAlign: TextAlign.center,
             ),
@@ -460,8 +565,8 @@ class _RenteeChatList extends StatelessWidget {
             Text(
               'User: $userId',
               style: const TextStyle(
-                fontSize: 12, 
-                color: AppColors.lightHintColor
+                fontSize: 12,
+                color: AppColors.lightHintColor,
               ),
             ),
           ],
@@ -471,13 +576,16 @@ class _RenteeChatList extends StatelessWidget {
   }
 }
 
-// 🔥 Shared chat list item builder
+// Shared chat list item builder
 Widget _buildChatListItem(
-    Map<String, dynamic> data,
-    String chatId,
-    String currentUserId,
-    BuildContext context,
-    {required bool isRenterView}) {
+  Map<String, dynamic> data,
+  String chatId,
+  String currentUserId,
+  BuildContext context, {
+  required bool isRenterView,
+  required bool isSmallScreen,
+  required bool isVerySmallScreen,
+}) {
   final itemName = data['itemName'] ?? 'Item';
   final lastMessage = data['lastMessage'] ?? '';
   final renterId = data['renterId'] ?? '';
@@ -485,45 +593,56 @@ Widget _buildChatListItem(
   final renteeId = data['renteeId'] ?? '';
   final renteeName = data['renteeName'] ?? 'Rentee';
   final updatedAt = data['updatedAt'] as Timestamp?;
-
   final lastSenderId = data['lastSender'] ?? '';
-  // Determine the other person's name based on view
+
   final otherName = isRenterView ? renteeName : renterName;
-    // Determine if the current user is the last sender
   final isLastSenderMe = lastSenderId == currentUserId;
-  // Determine the name of the last sender
-  final lastSenderName = isLastSenderMe 
-      ? 'You' 
-      : lastSenderId == renterId 
+  final lastSenderName = isLastSenderMe
+      ? 'You'
+      : lastSenderId == renterId
           ? renterName
           : renteeName;
 
+  final horizontalMargin = isVerySmallScreen ? 8.0 : (isSmallScreen ? 12.0 : 16.0);
+  final verticalMargin = isSmallScreen ? 6.0 : 8.0;
+  final avatarSize = isVerySmallScreen ? 44.0 : (isSmallScreen ? 48.0 : 50.0);
+  final iconSize = isVerySmallScreen ? 22.0 : 24.0;
+  final titleSize = isVerySmallScreen ? 15.0 : 16.0;
+  final subtitleSize = isVerySmallScreen ? 12.0 : 13.0;
+  final metaSize = isVerySmallScreen ? 10.0 : 11.0;
+
   return Card(
-    margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+    margin: EdgeInsets.symmetric(
+      horizontal: horizontalMargin,
+      vertical: verticalMargin,
+    ),
     elevation: 2,
     shape: RoundedRectangleBorder(
       borderRadius: BorderRadius.circular(12),
     ),
     child: ListTile(
-      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: isVerySmallScreen ? 12 : 16,
+        vertical: isSmallScreen ? 8 : 12,
+      ),
       leading: Container(
-        width: 50,
-        height: 50,
+        width: avatarSize,
+        height: avatarSize,
         decoration: BoxDecoration(
           color: AppColors.accentColor.withOpacity(0.15),
           shape: BoxShape.circle,
         ),
         child: Icon(
-          isRenterView ? Icons.person : Icons.shopping_bag,
+          isRenterView ? Icons.person_rounded : Icons.shopping_bag_rounded,
           color: AppColors.accentColor,
-          size: 24,
+          size: iconSize,
         ),
       ),
       title: Text(
         itemName,
-        style: const TextStyle(
+        style: TextStyle(
           fontWeight: FontWeight.bold,
-          fontSize: 16,
+          fontSize: titleSize,
           color: AppColors.lightTextColor,
         ),
         maxLines: 1,
@@ -532,13 +651,15 @@ Widget _buildChatListItem(
       subtitle: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          SizedBox(height: isSmallScreen ? 4 : 6),
           Text(
             lastMessage.isEmpty ? 'No messages yet' : '$lastSenderName: $lastMessage',
             maxLines: 2,
             overflow: TextOverflow.ellipsis,
-            style: const TextStyle(
+            style: TextStyle(
               color: AppColors.lightHintColor,
               height: 1.3,
+              fontSize: subtitleSize,
             ),
           ),
           const SizedBox(height: 4),
@@ -547,16 +668,16 @@ Widget _buildChatListItem(
               children: [
                 TextSpan(
                   text: isRenterView ? 'From: ' : 'To: ',
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.lightHintColor,
-                    fontSize: 11,
+                    fontSize: metaSize,
                   ),
                 ),
                 TextSpan(
                   text: otherName,
-                  style: const TextStyle(
+                  style: TextStyle(
                     color: AppColors.lightTextColor,
-                    fontSize: 11,
+                    fontSize: metaSize,
                     fontWeight: FontWeight.bold,
                   ),
                 ),
@@ -567,14 +688,14 @@ Widget _buildChatListItem(
       ),
       trailing: Text(
         _formatTime(updatedAt),
-        style: const TextStyle(
-          fontSize: 11,
+        style: TextStyle(
+          fontSize: metaSize,
           color: AppColors.lightHintColor,
         ),
       ),
       onTap: () async {
         print('💬 Opening chat: $chatId for user: $currentUserId');
-        
+
         List<dynamic> itemImages = [];
         try {
           final itemId = data['itemId'] ?? '';
@@ -583,7 +704,7 @@ Widget _buildChatListItem(
                 .collection('items')
                 .doc(itemId)
                 .get();
-            
+
             if (itemDoc.exists) {
               final itemData = itemDoc.data() as Map<String, dynamic>?;
               itemImages = itemData?['images'] as List<dynamic>? ?? [];
@@ -592,7 +713,7 @@ Widget _buildChatListItem(
         } catch (e) {
           print('Error fetching item images: $e');
         }
-        
+
         Navigator.push(
           context,
           MaterialPageRoute(
@@ -613,7 +734,7 @@ Widget _buildChatListItem(
   );
 }
 
-// Helper methods (moved outside classes)
+// Helper method
 String _formatTime(Timestamp? timestamp) {
   if (timestamp == null) return '';
   final dt = timestamp.toDate();
