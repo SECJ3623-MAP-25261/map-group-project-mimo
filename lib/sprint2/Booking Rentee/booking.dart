@@ -1,5 +1,3 @@
-
-
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/services/booking_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
@@ -27,6 +25,11 @@ class _BookingScreenState extends State<BookingScreen> {
   String _selectedPaymentMethod = 'Credit/Debit Card';
   bool _isSubmitting = false;
   
+  List<Map<String, dynamic>> _existingBookings = [];
+  Set<DateTime> _unavailableDates = {};
+  bool _isLoadingBookings = true;
+  String _debugMessage = '';
+  
   final List<String> _paymentMethods = [
     'Credit/Debit Card',
     'Online Banking',
@@ -34,9 +37,9 @@ class _BookingScreenState extends State<BookingScreen> {
     'Cash (Upon Pickup)'
   ];
 
-  // ✅ GETTERS
+  // GETTERS
   String get _itemName => widget.itemData?['name'] ?? 'Selected Attire';
-  String get _itemId => widget.itemData?['id'] ?? 'unknown';
+  String get _itemId => widget.itemData?['id'] ?? '';
   String get _renterId => widget.itemData?['renterId'] ?? '';
   List<dynamic> get _itemImages {
     final images = widget.itemData?['images'];
@@ -54,58 +57,175 @@ class _BookingScreenState extends State<BookingScreen> {
   int get _rentalDays {
     if (_startDate == null || _endDate == null) return 0;
     if (_endDate!.isBefore(_startDate!)) return 0;
-    // Calculate days including the start and end date (+1)
     return _endDate!.difference(_startDate!).inDays + 1;
   }
 
   double get _estimatedTotal => _rentalDays * _ratePerDay;
 
-  // 🛠️ DATE SELECTION LOGIC
-  Future<void> _selectDate(BuildContext context, bool isStart) async {
-    final DateTime? picked = await showDatePicker(
-      context: context,
-      initialDate: isStart
-          ? (_startDate ?? DateTime.now())
-          : (_endDate ?? _startDate ?? DateTime.now()),
-      firstDate: DateTime.now(),
-      lastDate: DateTime(2027),
-      builder: (context, child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: const ColorScheme.light(
-              primary: AppColors.accentColor,
-              onPrimary: Colors.white,
-              onSurface: AppColors.lightTextColor,
-            ),
-            dialogBackgroundColor: AppColors.lightCardBackground,
-          ),
-          child: child!,
-        );
-      },
-    );
+  @override
+  void initState() {
+    super.initState();
+    print('🔍 DEBUG: BookingScreen initialized');
+    print('🔍 DEBUG: itemData = ${widget.itemData}');
+    print('🔍 DEBUG: itemId = $_itemId');
+    print('🔍 DEBUG: renterId = $_renterId');
+    
+    _loadExistingBookings();
+  }
 
-    if (picked != null) {
+  Future<void> _loadExistingBookings() async {
+    print('🔍 DEBUG: Starting to load bookings for itemId: $_itemId');
+    
+    if (_itemId.isEmpty) {
+      print('⚠️ DEBUG: itemId is empty, skipping booking load');
       setState(() {
-        if (isStart) {
-          _startDate = picked;
-          // Ensure end date is not before new start date
-          if (_endDate != null && _endDate!.isBefore(_startDate!)) {
-            _endDate = null;
-          }
-        } else {
-          // Ensure end date is not before start date
-          if (_startDate != null && picked.isBefore(_startDate!)) {
-            _endDate = _startDate;
-          } else {
-            _endDate = picked;
-          }
-        }
+        _isLoadingBookings = false;
+        _debugMessage = 'No item ID provided';
       });
+      return;
+    }
+
+    try {
+      print('🔍 DEBUG: Calling getItemBookings...');
+      final bookings = await _bookingService.getItemBookings(_itemId);
+      print('✅ DEBUG: Got ${bookings.length} bookings');
+      
+      print('🔍 DEBUG: Calculating unavailable dates...');
+      final unavailable = _bookingService.getUnavailableDates(bookings);
+      print('✅ DEBUG: Found ${unavailable.length} unavailable dates');
+      
+      if (mounted) {
+        setState(() {
+          _existingBookings = bookings;
+          _unavailableDates = unavailable;
+          _isLoadingBookings = false;
+          _debugMessage = 'Loaded ${bookings.length} bookings, ${unavailable.length} unavailable dates';
+        });
+        print('✅ DEBUG: State updated successfully');
+      }
+    } catch (e, stackTrace) {
+      print('❌ DEBUG: Error loading bookings: $e');
+      print('❌ DEBUG: Stack trace: $stackTrace');
+      
+      if (mounted) {
+        setState(() {
+          _isLoadingBookings = false;
+          _debugMessage = 'Error: ${e.toString()}';
+        });
+      }
+      
+      _showSnackBar('Error loading bookings: ${e.toString()}', Colors.red);
     }
   }
 
-  // 🛠️ SUBMISSION LOGIC WITH ATOMIC CHECK
+  bool _isDateUnavailable(DateTime date) {
+    final normalizedDate = DateTime(date.year, date.month, date.day);
+    final isUnavailable = _unavailableDates.contains(normalizedDate);
+    print('🔍 DEBUG: Checking date $normalizedDate: ${isUnavailable ? "UNAVAILABLE" : "available"}');
+    return isUnavailable;
+  }
+
+  Future<void> _selectDate(BuildContext context, bool isStart) async {
+    print('🔍 DEBUG: Opening date picker, isStart=$isStart');
+    
+    try {
+      // Find a valid initial date (first available date)
+      DateTime initialDate = isStart
+          ? (_startDate ?? DateTime.now())
+          : (_endDate ?? _startDate ?? DateTime.now());
+      
+      // If the initial date is unavailable, find the next available date
+      while (_isDateUnavailable(initialDate) && initialDate.isBefore(DateTime(2027))) {
+        initialDate = initialDate.add(const Duration(days: 1));
+      }
+      
+      final DateTime? picked = await showDatePicker(
+        context: context,
+        initialDate: initialDate,
+        firstDate: DateTime.now(),
+        lastDate: DateTime(2027),
+        
+        selectableDayPredicate: (DateTime date) {
+          final isSelectable = !_isDateUnavailable(date);
+          return isSelectable;
+        },
+        
+        builder: (context, child) {
+          return Theme(
+            data: ThemeData.light().copyWith(
+              colorScheme: const ColorScheme.light(
+                primary: AppColors.accentColor,
+                onPrimary: Colors.white,
+                onSurface: AppColors.lightTextColor,
+              ),
+              dialogBackgroundColor: AppColors.lightCardBackground,
+              disabledColor: Colors.red.withOpacity(0.3),
+            ),
+            child: child!,
+          );
+        },
+      );
+
+      print('🔍 DEBUG: Date picked: $picked');
+
+      if (picked != null) {
+        if (isStart) {
+          setState(() {
+            _startDate = picked;
+            if (_endDate != null && _endDate!.isBefore(_startDate!)) {
+              _endDate = null;
+            }
+            if (_endDate != null && !_isRangeAvailable(_startDate!, _endDate!)) {
+              _showSnackBar(
+                'Selected range contains already booked dates. Please choose different dates.',
+                Colors.orange,
+              );
+              _endDate = null;
+            }
+          });
+        } else {
+          if (_startDate != null && picked.isBefore(_startDate!)) {
+            _showSnackBar('End date cannot be before start date', Colors.red);
+            return;
+          }
+          
+          if (_startDate != null && !_isRangeAvailable(_startDate!, picked)) {
+            _showSnackBar(
+              'Selected range contains already booked dates. Please choose different dates.',
+              Colors.orange,
+            );
+            return;
+          }
+          
+          setState(() {
+            _endDate = picked;
+          });
+        }
+        print('✅ DEBUG: Date set successfully');
+      }
+    } catch (e, stackTrace) {
+      print('❌ DEBUG: Error in date selection: $e');
+      print('❌ DEBUG: Stack trace: $stackTrace');
+      _showSnackBar('Error selecting date: ${e.toString()}', Colors.red);
+    }
+  }
+
+  bool _isRangeAvailable(DateTime start, DateTime end) {
+    DateTime current = DateTime(start.year, start.month, start.day);
+    final endDate = DateTime(end.year, end.month, end.day);
+    
+    while (current.isBefore(endDate) || current.isAtSameMomentAs(endDate)) {
+      if (_unavailableDates.contains(current)) {
+        return false;
+      }
+      current = current.add(const Duration(days: 1));
+    }
+    return true;
+  }
+
   Future<void> _submitBooking() async {
+    print('🔍 DEBUG: Starting booking submission...');
+    
     if (_rentalDays <= 0) {
       _showSnackBar('Please select valid rental dates', Colors.red);
       return;
@@ -113,6 +233,20 @@ class _BookingScreenState extends State<BookingScreen> {
 
     if (_renterId.isEmpty) {
       _showSnackBar('Item owner information missing. Cannot book.', Colors.red);
+      return;
+    }
+
+    if (_itemId.isEmpty) {
+      _showSnackBar('Item information missing. Cannot book.', Colors.red);
+      return;
+    }
+
+    if (!_isRangeAvailable(_startDate!, _endDate!)) {
+      _showSnackBar(
+        'These dates are no longer available. Please select different dates.',
+        Colors.red,
+      );
+      await _loadExistingBookings();
       return;
     }
 
@@ -137,7 +271,8 @@ class _BookingScreenState extends State<BookingScreen> {
         userName = userEmail.split('@')[0];
       }
 
-      // 🛑 Call the transactional createBooking method
+      print('🔍 DEBUG: Creating booking with userId=$userId, itemId=$_itemId');
+
       final bookingId = await _bookingService.createBooking(
         userId: userId,
         userEmail: userEmail,
@@ -154,15 +289,17 @@ class _BookingScreenState extends State<BookingScreen> {
         paymentMethod: _selectedPaymentMethod,
       );
 
+      print('🔍 DEBUG: Booking result: $bookingId');
+
       if (!mounted) return;
 
-      // 🛑 Handle the specific conflict signal returned by the service
       if (bookingId == 'ABORTED: OVERLAP') {
         _showSnackBar(
-          'Booking conflict! The item was just booked for those dates. Please select a new date range.',
+          'Booking conflict! The item was just booked for those dates. Please select new dates.',
           Colors.orange,
         );
         setState(() => _isSubmitting = false);
+        await _loadExistingBookings();
         return;
       }
 
@@ -172,7 +309,6 @@ class _BookingScreenState extends State<BookingScreen> {
           Colors.green,
         );
 
-        // Show success dialog and navigate back
         Future.delayed(const Duration(seconds: 1), () {
           if (mounted) {
             showDialog(
@@ -198,8 +334,8 @@ class _BookingScreenState extends State<BookingScreen> {
                 actions: [
                   ElevatedButton(
                     onPressed: () {
-                      Navigator.pop(context); // Close dialog
-                      Navigator.pop(context); // Go back to previous screen
+                      Navigator.pop(context);
+                      Navigator.pop(context);
                     },
                     style: ElevatedButton.styleFrom(
                       backgroundColor: AppColors.accentColor,
@@ -215,20 +351,19 @@ class _BookingScreenState extends State<BookingScreen> {
         _showSnackBar('Failed to create booking. Please try again.', Colors.red);
         setState(() => _isSubmitting = false);
       }
-    } catch (e) {
+    } catch (e, stackTrace) {
       if (!mounted) return;
-      print('Error submitting booking: $e');
+      print('❌ DEBUG: Error submitting booking: $e');
+      print('❌ DEBUG: Stack trace: $stackTrace');
       _showSnackBar('Error: ${e.toString()}', Colors.red);
       setState(() => _isSubmitting = false);
     } finally {
-      // Ensure the button state is reset if we exit due to an uncaught error
       if (mounted && _isSubmitting) {
         setState(() => _isSubmitting = false);
       }
     }
   }
 
-  // 🛠️ SNACKBAR UTILITY
   void _showSnackBar(String message, Color color) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -263,118 +398,169 @@ class _BookingScreenState extends State<BookingScreen> {
           ],
         ),
       ),
-      body: Container(
-        color: AppColors.lightCardBackground,
-        padding: const EdgeInsets.all(24.0),
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 1. Item Details Card (Name and Images)
-              ItemDetailsCard(
-                itemName: _itemName,
-                itemImages: _itemImages,
-              ),
-
-              const SizedBox(height: 24),
-
-              // 2. Date Selection Fields (Delegating logic to stateful class)
-              DateSelectionField(
-                label: 'Rental Start Date (Pickup)',
-                date: _startDate,
-                isStart: true,
-                onDateSelected: (isStart) => _selectDate(context, isStart),
-              ),
-              const SizedBox(height: 24),
-              DateSelectionField(
-                label: 'Rental End Date (Return)',
-                date: _endDate,
-                isStart: false,
-                onDateSelected: (isStart) => _selectDate(context, isStart),
-              ),
-
-              const SizedBox(height: 32),
-
-              // 3. Rental Summary
-              RentalSummaryCard(
-                ratePerDay: _ratePerDay,
-                rentalDays: _rentalDays,
-                estimatedTotal: _estimatedTotal,
-              ),
-
-              const SizedBox(height: 32),
-
-              // 4. Payment Method Selector
-              PaymentMethodSelector(
-                selectedMethod: _selectedPaymentMethod,
-                paymentMethods: _paymentMethods,
-                onMethodChanged: (newValue) {
-                  if (newValue != null) {
-                    setState(() => _selectedPaymentMethod = newValue);
-                  }
-                },
-              ),
-              
-              const SizedBox(height: 32),
-
-              // 5. Action Buttons
-              Padding(
-                padding: const EdgeInsets.only(bottom: 8.0),
-                child: Row(
-                  children: [
-                    Expanded(
-                      child: OutlinedButton(
-                        onPressed: () => Navigator.pop(context),
-                        style: OutlinedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          side: const BorderSide(
-                              color: AppColors.lightBorderColor, width: 2),
-                          foregroundColor: AppColors.lightHintColor,
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                        ),
-                        child: const Text('CANCEL',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+      body: _isLoadingBookings
+          ? Center(
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  const CircularProgressIndicator(
+                    color: AppColors.accentColor,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Loading bookings...',
+                    style: TextStyle(color: AppColors.lightHintColor),
+                  ),
+                  if (_debugMessage.isNotEmpty) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      _debugMessage,
+                      style: TextStyle(
+                        color: AppColors.lightHintColor,
+                        fontSize: 12,
                       ),
+                      textAlign: TextAlign.center,
                     ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: ElevatedButton(
-                        // Button is enabled if rental days > 0 AND item owner is known AND not submitting
-                        onPressed: (_rentalDays > 0 &&
-                                _renterId.isNotEmpty &&
-                                !_isSubmitting)
-                            ? _submitBooking
-                            : null,
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppColors.accentColor,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(vertical: 16),
-                          shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(8)),
-                          elevation: 4,
+                  ],
+                ],
+              ),
+            )
+          : Container(
+              color: AppColors.lightCardBackground,
+              padding: const EdgeInsets.all(24.0),
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Debug info banner
+                    if (_debugMessage.isNotEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(12),
+                        margin: const EdgeInsets.only(bottom: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.blue.withOpacity(0.1),
+                          borderRadius: BorderRadius.circular(8),
+                          border: Border.all(color: Colors.blue),
                         ),
-                        child: _isSubmitting
-                            ? const SizedBox(
-                                height: 20,
-                                width: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  valueColor:
-                                      AlwaysStoppedAnimation<Color>(Colors.white),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.info, color: Colors.blue, size: 20),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                _debugMessage,
+                                style: const TextStyle(
+                                  fontSize: 12,
+                                  color: Colors.blue,
                                 ),
-                              )
-                            : const Text('BOOKING & PAY',
-                                style: TextStyle(fontWeight: FontWeight.bold)),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    ItemDetailsCard(
+                      itemName: _itemName,
+                      itemImages: _itemImages,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    DateSelectionField(
+                      label: 'Rental Start Date (Pickup)',
+                      date: _startDate,
+                      isStart: true,
+                      onDateSelected: (isStart) => _selectDate(context, isStart),
+                      unavailableDates: _unavailableDates,
+                    ),
+                    const SizedBox(height: 24),
+                    DateSelectionField(
+                      label: 'Rental End Date (Return)',
+                      date: _endDate,
+                      isStart: false,
+                      onDateSelected: (isStart) => _selectDate(context, isStart),
+                      unavailableDates: _unavailableDates,
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    RentalSummaryCard(
+                      ratePerDay: _ratePerDay,
+                      rentalDays: _rentalDays,
+                      estimatedTotal: _estimatedTotal,
+                    ),
+
+                    const SizedBox(height: 32),
+
+                    PaymentMethodSelector(
+                      selectedMethod: _selectedPaymentMethod,
+                      paymentMethods: _paymentMethods,
+                      onMethodChanged: (newValue) {
+                        if (newValue != null) {
+                          setState(() => _selectedPaymentMethod = newValue);
+                        }
+                      },
+                    ),
+                    
+                    const SizedBox(height: 32),
+
+                    Padding(
+                      padding: const EdgeInsets.only(bottom: 8.0),
+                      child: Row(
+                        children: [
+                          Expanded(
+                            child: OutlinedButton(
+                              onPressed: () => Navigator.pop(context),
+                              style: OutlinedButton.styleFrom(
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                side: const BorderSide(
+                                    color: AppColors.lightBorderColor, width: 2),
+                                foregroundColor: AppColors.lightHintColor,
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                              ),
+                              child: const Text('CANCEL',
+                                  style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: ElevatedButton(
+                              onPressed: (_rentalDays > 0 &&
+                                      _renterId.isNotEmpty &&
+                                      _itemId.isNotEmpty &&
+                                      !_isSubmitting)
+                                  ? _submitBooking
+                                  : null,
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppColors.accentColor,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8)),
+                                elevation: 4,
+                              ),
+                              child: _isSubmitting
+                                  ? const SizedBox(
+                                      height: 20,
+                                      width: 20,
+                                      child: CircularProgressIndicator(
+                                        strokeWidth: 2,
+                                        valueColor:
+                                            AlwaysStoppedAnimation<Color>(Colors.white),
+                                      ),
+                                    )
+                                  : const Text('BOOKING & PAY',
+                                      style: TextStyle(fontWeight: FontWeight.bold)),
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-            ],
-          ),
-        ),
-      ),
+            ),
     );
   }
 }

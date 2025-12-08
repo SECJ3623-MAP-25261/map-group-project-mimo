@@ -7,7 +7,77 @@ class BookingService {
   final String _bookingsCollection = 'bookings';
   final String _reviewsCollection = 'reviews';
 
-  /// Create a new booking
+  // ========== NEW: OVERLAP PREVENTION METHODS ==========
+
+  /// Fetch all existing bookings for a specific item
+  Future<List<Map<String, dynamic>>> getItemBookings(String itemId) async {
+    try {
+      final snapshot = await _firestore
+          .collection(_bookingsCollection)
+          .where('itemId', isEqualTo: itemId)
+          .where('status', whereIn: ['pending', 'confirmed', 'ongoing'])
+          .get();
+
+      return snapshot.docs.map((doc) {
+        final data = doc.data();
+        return {
+          'id': doc.id,
+          'startDate': (data['startDate'] as Timestamp).toDate(),
+          'endDate': (data['endDate'] as Timestamp).toDate(),
+          'status': data['status'],
+        };
+      }).toList();
+    } catch (e) {
+      print('Error fetching item bookings: $e');
+      return [];
+    }
+  }
+
+  /// Check if a date range overlaps with existing bookings
+  bool isDateRangeAvailable(
+    DateTime startDate,
+    DateTime endDate,
+    List<Map<String, dynamic>> existingBookings,
+  ) {
+    for (var booking in existingBookings) {
+      final bookedStart = booking['startDate'] as DateTime;
+      final bookedEnd = booking['endDate'] as DateTime;
+
+      // Check for overlap:
+      // New booking overlaps if it starts before existing ends
+      // AND ends after existing starts
+      if (startDate.isBefore(bookedEnd.add(const Duration(days: 1))) &&
+          endDate.isAfter(bookedStart.subtract(const Duration(days: 1)))) {
+        return false; // Overlap detected
+      }
+    }
+    return true; // No overlap
+  }
+
+  /// Get set of all unavailable dates for the item
+  Set<DateTime> getUnavailableDates(List<Map<String, dynamic>> bookings) {
+    final unavailableDates = <DateTime>{};
+    
+    for (var booking in bookings) {
+      final startDate = booking['startDate'] as DateTime;
+      final endDate = booking['endDate'] as DateTime;
+      
+      // Add all dates in the range (inclusive)
+      DateTime current = DateTime(startDate.year, startDate.month, startDate.day);
+      final end = DateTime(endDate.year, endDate.month, endDate.day);
+      
+      while (current.isBefore(end) || current.isAtSameMomentAs(end)) {
+        unavailableDates.add(current);
+        current = current.add(const Duration(days: 1));
+      }
+    }
+    
+    return unavailableDates;
+  }
+
+  // ========== EXISTING METHODS (UPDATED) ==========
+
+  /// Create a new booking with overlap check
   Future<String?> createBooking({
     required String userId,
     required String userEmail,
@@ -24,6 +94,13 @@ class BookingService {
     required String paymentMethod,
   }) async {
     try {
+      // ✅ Check for overlapping bookings before creating
+      final existingBookings = await getItemBookings(itemId);
+      
+      if (!isDateRangeAvailable(startDate, endDate, existingBookings)) {
+        return 'ABORTED: OVERLAP';
+      }
+
       final docRef = await _firestore.collection(_bookingsCollection).add({
         'userId': userId,
         'userEmail': userEmail,
@@ -73,7 +150,7 @@ class BookingService {
     }
   }
 
-  /// ✅ NEW: Get bookings where user is the RENTER (lender)
+  /// Get bookings where user is the RENTER (lender)
   Future<List<Map<String, dynamic>>> getRenterBookings(String renterId) async {
     try {
       final querySnapshot = await _firestore
@@ -240,7 +317,7 @@ class BookingService {
     });
   }
 
-  /// ✅ NEW: Stream for renter bookings (optional but useful)
+  /// Stream for renter bookings
   Stream<List<Map<String, dynamic>>> getRenterBookingsStream(String renterId) {
     return _firestore
         .collection(_bookingsCollection)

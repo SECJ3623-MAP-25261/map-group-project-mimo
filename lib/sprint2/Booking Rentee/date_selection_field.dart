@@ -8,6 +8,7 @@ class DateSelectionField extends StatelessWidget {
   final DateTime? date;
   final bool isStart;
   final Function(bool isStart) onDateSelected;
+  final Set<DateTime>? unavailableDates; // NEW: Add unavailable dates parameter
 
   const DateSelectionField({
     super.key,
@@ -15,6 +16,7 @@ class DateSelectionField extends StatelessWidget {
     required this.date,
     required this.isStart,
     required this.onDateSelected,
+    this.unavailableDates, // Make it optional with default null
   });
 
   String get _formattedDate {
@@ -62,6 +64,33 @@ class DateSelectionField extends StatelessWidget {
             ),
           ),
         ),
+        
+        // NEW: Show legend for unavailable dates
+        if (unavailableDates != null && unavailableDates!.isNotEmpty) ...[
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Container(
+                width: 12,
+                height: 12,
+                decoration: BoxDecoration(
+                  color: Colors.red.withOpacity(0.3),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: Colors.red, width: 1),
+                ),
+              ),
+              const SizedBox(width: 6),
+              const Text(
+                'Already booked dates (disabled in calendar)',
+                style: TextStyle(
+                  fontSize: 12,
+                  color: AppColors.lightHintColor,
+                  fontStyle: FontStyle.italic,
+                ),
+              ),
+            ],
+          ),
+        ],
       ],
     );
   }
