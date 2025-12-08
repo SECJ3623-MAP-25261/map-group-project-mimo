@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../../sprint2/Booking Rentee/booking.dart';
+import '../Booking Rentee/booking.dart';
 
 class SearchPage extends StatefulWidget {
   const SearchPage({super.key});

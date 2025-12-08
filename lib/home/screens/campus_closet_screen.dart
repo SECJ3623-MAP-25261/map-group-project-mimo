@@ -9,7 +9,7 @@ import '../widgets/item_grid_card.dart';
 import '../models/item_model.dart';
 import '../screens/item_detail_screen.dart';
 import 'package:profile_managemenr/services/item_service.dart';
-import 'package:profile_managemenr/sprint2/searchRentee/search.dart';
+import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
 
 class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});
