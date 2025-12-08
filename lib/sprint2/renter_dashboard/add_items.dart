@@ -36,6 +36,9 @@ class _AddItemPageState extends State<AddItemPage> {
     'Sportswear',
     'Formal',
     'Accessories',
+    'Presentation',
+    'Convocation',
+    'Dinner',
     'Other',
   ];
 

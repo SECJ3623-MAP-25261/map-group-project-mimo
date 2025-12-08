@@ -66,7 +66,7 @@ class DateSelectionField extends StatelessWidget {
         ),
         
         // NEW: Show legend for unavailable dates
-        if (unavailableDates != null && unavailableDates!.isNotEmpty) ...[
+        /*if (unavailableDates != null && unavailableDates!.isNotEmpty) ...[
           const SizedBox(height: 8),
           Row(
             children: [
@@ -80,17 +80,17 @@ class DateSelectionField extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 6),
-              const Text(
+              /*const Text(
                 'Already booked dates (disabled in calendar)',
                 style: TextStyle(
                   fontSize: 12,
                   color: AppColors.lightHintColor,
                   fontStyle: FontStyle.italic,
                 ),
-              ),
+              ),*/
             ],
           ),
-        ],
+        ],*/
       ],
     );
   }

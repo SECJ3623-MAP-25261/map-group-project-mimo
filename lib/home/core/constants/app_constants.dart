@@ -10,6 +10,9 @@ class AppConstants {
     'Sportswear',
     'Formal',
     'Accessories',
+    'Presentation',
+    'Convocation',
+    'Dinner',
     'Other',
   ];
 

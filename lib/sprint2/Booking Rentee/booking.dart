@@ -74,10 +74,10 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _loadExistingBookings() async {
-    print('🔍 DEBUG: Starting to load bookings for itemId: $_itemId');
+    print(' DEBUG: Starting to load bookings for itemId: $_itemId');
     
     if (_itemId.isEmpty) {
-      print('⚠️ DEBUG: itemId is empty, skipping booking load');
+      print(' DEBUG: itemId is empty, skipping booking load');
       setState(() {
         _isLoadingBookings = false;
         _debugMessage = 'No item ID provided';
@@ -86,26 +86,25 @@ class _BookingScreenState extends State<BookingScreen> {
     }
 
     try {
-      print('🔍 DEBUG: Calling getItemBookings...');
+      print(' DEBUG: Calling getItemBookings...');
       final bookings = await _bookingService.getItemBookings(_itemId);
-      print('✅ DEBUG: Got ${bookings.length} bookings');
+      print(' DEBUG: Got ${bookings.length} bookings');
       
-      print('🔍 DEBUG: Calculating unavailable dates...');
+      print(' DEBUG: Calculating unavailable dates...');
       final unavailable = _bookingService.getUnavailableDates(bookings);
-      print('✅ DEBUG: Found ${unavailable.length} unavailable dates');
+      print(' DEBUG: Found ${unavailable.length} unavailable dates');
       
       if (mounted) {
         setState(() {
           _existingBookings = bookings;
           _unavailableDates = unavailable;
           _isLoadingBookings = false;
-          _debugMessage = 'Loaded ${bookings.length} bookings, ${unavailable.length} unavailable dates';
         });
-        print('✅ DEBUG: State updated successfully');
+        print(' DEBUG: State updated successfully');
       }
     } catch (e, stackTrace) {
-      print('❌ DEBUG: Error loading bookings: $e');
-      print('❌ DEBUG: Stack trace: $stackTrace');
+      print(' DEBUG: Error loading bookings: $e');
+      print(' DEBUG: Stack trace: $stackTrace');
       
       if (mounted) {
         setState(() {
@@ -121,12 +120,12 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _isDateUnavailable(DateTime date) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     final isUnavailable = _unavailableDates.contains(normalizedDate);
-    print('🔍 DEBUG: Checking date $normalizedDate: ${isUnavailable ? "UNAVAILABLE" : "available"}');
+    print(' DEBUG: Checking date $normalizedDate: ${isUnavailable ? "UNAVAILABLE" : "available"}');
     return isUnavailable;
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
-    print('🔍 DEBUG: Opening date picker, isStart=$isStart');
+    print(' DEBUG: Opening date picker, isStart=$isStart');
     
     try {
       // Find a valid initial date (first available date)
@@ -166,7 +165,7 @@ class _BookingScreenState extends State<BookingScreen> {
         },
       );
 
-      print('🔍 DEBUG: Date picked: $picked');
+      print(' DEBUG: Date picked: $picked');
 
       if (picked != null) {
         if (isStart) {
@@ -204,8 +203,8 @@ class _BookingScreenState extends State<BookingScreen> {
         print('✅ DEBUG: Date set successfully');
       }
     } catch (e, stackTrace) {
-      print('❌ DEBUG: Error in date selection: $e');
-      print('❌ DEBUG: Stack trace: $stackTrace');
+      print(' DEBUG: Error in date selection: $e');
+      print(' DEBUG: Stack trace: $stackTrace');
       _showSnackBar('Error selecting date: ${e.toString()}', Colors.red);
     }
   }
