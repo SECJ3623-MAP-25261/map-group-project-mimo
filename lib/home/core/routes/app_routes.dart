@@ -5,10 +5,10 @@ import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
-import 'package:profile_managemenr/sprint2/Booking%20Rentee/booking.dart';
+import 'package:profile_managemenr/sprint2/Rentee/Booking%20Rentee/booking.dart';
 import 'package:profile_managemenr/sprint2/chatMessaging/item_chat_list_view.dart';
 import 'package:profile_managemenr/sprint2/IssueReport/ReportCenter/report_center.dart';
-import 'package:profile_managemenr/sprint2/searchRentee/search.dart';
+import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
 import 'package:profile_managemenr/home/screens/campus_closet_screen.dart';
 
 class AppRoutes {

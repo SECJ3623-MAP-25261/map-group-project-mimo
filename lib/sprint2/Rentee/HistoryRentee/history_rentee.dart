@@ -1,9 +1,9 @@
 // lib/accounts/profile/screen/history_rentee.dart
 import 'package:flutter/material.dart';
-import '../../constants/app_colors.dart';
+import '../../../constants/app_colors.dart';
 import 'package:profile_managemenr/services/booking_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
-import 'package:profile_managemenr/sprint2/ReviewRentee/review_rentee.dart';
+import 'package:profile_managemenr/sprint2/Rentee/ReviewRentee/review_rentee.dart';
 
 class HistoryRenteeScreen extends StatefulWidget {
   final bool isRenter;

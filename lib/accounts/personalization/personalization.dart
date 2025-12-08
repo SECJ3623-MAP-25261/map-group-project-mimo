@@ -8,7 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/sprint2/renter_dashboard/booking_request.dart';
 import 'package:profile_managemenr/sprint2/renter_dashboard/renter_all_review_screen.dart';
-import 'package:profile_managemenr/sprint2/HistoryRentee/history_rentee.dart';
+import 'package:profile_managemenr/sprint2/Rentee/HistoryRentee/history_rentee.dart';
 
 class RenterDashboard extends StatelessWidget {
   final Map<String, dynamic> userData;

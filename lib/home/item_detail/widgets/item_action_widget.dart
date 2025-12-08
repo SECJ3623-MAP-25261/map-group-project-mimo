@@ -2,7 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
-import 'package:profile_managemenr/sprint2/Booking%20Rentee/booking.dart';
+import 'package:profile_managemenr/sprint2/Rentee/Booking%20Rentee/booking.dart';
 import 'package:profile_managemenr/sprint2/chatMessaging/item_chat_screen.dart';
 import 'package:profile_managemenr/services/user_service.dart';
 

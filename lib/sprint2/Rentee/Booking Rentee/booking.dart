@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/services/booking_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
-import '../../constants/app_colors.dart';
+import '../../../constants/app_colors.dart';
 import 'item_details_card.dart';
 import 'date_selection_field.dart';
 import 'rental_summary_card.dart';

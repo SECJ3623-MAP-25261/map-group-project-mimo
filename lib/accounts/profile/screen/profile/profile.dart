@@ -10,7 +10,7 @@ import 'delete_account.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
 import 'dart:convert';
-import 'package:profile_managemenr/sprint2/HistoryRentee/history_rentee.dart';
+import 'package:profile_managemenr/sprint2/Rentee/HistoryRentee/history_rentee.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
