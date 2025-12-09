@@ -10,6 +10,7 @@ import '../models/item_model.dart';
 import '../screens/item_detail_screen.dart';
 import 'package:profile_managemenr/services/item_service.dart';
 import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
+import 'package:profile_managemenr/sprint2/AIChatbot/aichatbotscreen.dart';
 
 class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});
@@ -177,6 +178,19 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
           onPressed: () => Navigator.pushNamed(context, '/profile'),
           tooltip: 'Profile',
         ),
+        // Example: Add to your AppBar actions or as FAB
+        IconButton(
+           icon: const Icon(Icons.smart_toy_rounded, color: Colors.white),
+            onPressed: () {
+              Navigator.push(
+               context,
+              MaterialPageRoute(
+              builder: (context) => const AIChatbotScreen(),
+          ),
+    );
+  },
+  tooltip: 'AI Assistant',
+)
       ],
     );
   }

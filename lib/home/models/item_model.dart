@@ -1,5 +1,4 @@
-// 4. features/home/models/item_model.dart
-
+// features/home/models/item_model.dart
 
 class ItemModel {
   final String id;
@@ -40,13 +39,10 @@ class ItemModel {
 
   Map<String, dynamic> toMap() {
     return {
-      'id': id,
       'name': name,
       'pricePerDay': pricePerDay,
-      'price': pricePerDay,
       'category': category,
       'images': images,
-      'image': images.isNotEmpty ? images[0] : null,
       'description': description,
       'size': size,
       'renterId': renterId,
