@@ -33,7 +33,7 @@ class ItemService {
     try {
       final doc = await _firestore.collection('items').doc(itemId).get();
       if (!doc.exists) return null;
-      final data = doc.data() as Map<String, dynamic>?;
+      final data = doc.data();
       if (data == null) return null;
       return ItemModel.fromFirestore(doc.id, data);
     } catch (e) {
@@ -81,7 +81,7 @@ class ItemService {
               final item = ItemModel.fromFirestore(doc.id, data);
               final matches = item.name.toLowerCase().contains(normalizedQuery) ||
                   item.category.toLowerCase().contains(normalizedQuery) ||
-                  (item.description?.toLowerCase().contains(normalizedQuery) ?? false);
+                  (item.description.toLowerCase().contains(normalizedQuery));
               return matches ? item : null;
             } catch (e) {
               print('Error parsing item during search ${doc.id}: $e');

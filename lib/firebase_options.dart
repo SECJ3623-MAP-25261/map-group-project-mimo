@@ -72,4 +72,5 @@ class DefaultFirebaseOptions {
     storageBucket: 'campuscloset-8c8f5.firebasestorage.app',
     iosBundleId: 'com.example.profileManagemenr',
   );
+
 }

@@ -209,7 +209,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
         'name': item.name,
         'category': item.category,
         'pricePerDay': item.pricePerDay,
-        'description': item.description ?? '',
+        'description': item.description,
       }).toList();
 
       final systemPrompt = '''You are a fashion assistant for Campus Closet in Malaysia. Help users find outfits.

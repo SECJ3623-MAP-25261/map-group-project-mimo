@@ -47,10 +47,10 @@ Future<List<Map<String, dynamic>>> getUserReportsByUserId(String userId) async {
         .get();
 
     return querySnapshot.docs.map((doc) {
-      final data = doc.data() as Map<String, dynamic>;
+      //final data = doc.data() as Map<String, dynamic>;
       return {
         'id': doc.id,
-        ...data,
+        //...data,
       };
     }).toList();
   } catch (e) {

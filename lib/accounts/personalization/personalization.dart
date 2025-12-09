@@ -36,10 +36,10 @@ class RenterDashboard extends StatelessWidget {
         .snapshots()
         .map((snapshot) {
           double total = 0.0;
-          for (var doc in snapshot.docs) {
+          /*for (var doc in snapshot.docs) {
             final data = doc.data() as Map<String, dynamic>;
             total += (data['finalFee'] as num?)?.toDouble() ?? 0.0;
-          }
+          }*/
           return total;
         });
   }
@@ -55,7 +55,7 @@ class RenterDashboard extends StatelessWidget {
 
     // Responsive variables
     final screenWidth = MediaQuery.of(context).size.width;
-    final screenHeight = MediaQuery.of(context).size.height;
+    //final screenHeight = MediaQuery.of(context).size.height;
     final isSmallScreen = screenWidth < 360;
     final isVerySmallScreen = screenWidth < 340;
 
@@ -83,6 +83,7 @@ class RenterDashboard extends StatelessWidget {
                 borderRadius: BorderRadius.circular(isSmallScreen ? 16 : 20),
                 boxShadow: [
                   BoxShadow(
+                    // ignore: deprecated_member_use
                     color: Colors.black.withOpacity(0.08),
                     blurRadius: 20,
                     offset: const Offset(0, 8),

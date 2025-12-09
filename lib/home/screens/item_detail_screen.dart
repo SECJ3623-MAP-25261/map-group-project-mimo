@@ -3,6 +3,7 @@ import 'package:profile_managemenr/constants/app_colors.dart';
 import '../item_detail/widgets/image_carousel.dart';
 import '../item_detail/widgets/item_action_widget.dart';
 import '../item_detail/widgets/review_summary_widget.dart';
+//import 'package:profile_managemenr/services/auth_service.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final Map item;

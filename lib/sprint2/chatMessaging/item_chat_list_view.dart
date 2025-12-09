@@ -5,7 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:provider/provider.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
-import 'package:profile_managemenr/services/message_service.dart';
+//import 'package:profile_managemenr/services/message_service.dart';
 import 'item_chat_screen.dart';
 
 class ItemChatListView extends StatefulWidget {
@@ -706,7 +706,7 @@ Widget _buildChatListItem(
                 .get();
 
             if (itemDoc.exists) {
-              final itemData = itemDoc.data() as Map<String, dynamic>?;
+              final itemData = itemDoc.data();
               itemImages = itemData?['images'] as List<dynamic>? ?? [];
             }
           }

@@ -18,7 +18,7 @@ class ItemActionsWidget extends StatelessWidget {
     final renterName = item['renterName'] as String? ?? 'Renter';
 
     // 💡 CAST ITEM KE Map<String, dynamic> SEBELUM HANTAR
-    final Map<String, dynamic> safeItem = (item as Map).cast<String, dynamic>();
+    final Map<String, dynamic> safeItem = (item).cast<String, dynamic>();
 
     if (user != null && renterId != null && renterId != user.uid) {
       return Column(

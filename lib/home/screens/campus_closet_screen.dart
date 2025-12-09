@@ -40,7 +40,7 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => ItemDetailScreen(item: item.toMap()),
+        builder: (context) => ItemDetailScreen(item: item.toDetailMap()),
       ),
     );
   }

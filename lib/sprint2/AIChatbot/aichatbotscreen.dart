@@ -5,10 +5,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/home/models/item_model.dart';
-import 'package:profile_managemenr/home/screens/item_detail_screen.dart'; // Add this import
+import 'package:profile_managemenr/home/screens/item_detail_screen.dart';
 import '../../services/item_service.dart';
+import '../../services/auth_service.dart'; // ✅ ADD THIS
+import 'package:provider/provider.dart'; // ✅ ADD THIS if not already imported
 import 'package:speech_to_text/speech_to_text.dart' as stt;
 import 'package:http/http.dart' as http;
+import 'package:vibration/vibration.dart';
 
 class AIChatbotScreen extends StatefulWidget {
   const AIChatbotScreen({super.key});
@@ -30,6 +33,7 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   List<ItemModel> _allItems = [];
   String? _apiKey;
   String _debugInfo = 'Initializing...';
+  String _userName = 'there'; // ✅ ADD THIS - default greeting
 
   @override
   void initState() {
@@ -40,7 +44,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   Future<void> _initializeEverything() async {
     debugPrint('🚀 ========== GROQ AI INITIALIZATION ==========');
     
-    // 1. Check API Key
+    // ✅ 1. GET USER NAME FIRST
+    await _loadUserName();
+    
+    // 2. Check API Key
     _apiKey = dotenv.env['GROQ_API_KEY'];
     if (_apiKey == null || _apiKey!.isEmpty) {
       debugPrint('❌ GROQ_API_KEY missing in .env');
@@ -59,16 +66,37 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
     debugPrint('✅ Groq API key found');
     setState(() => _debugInfo = '✅ Groq Connected');
     
-    // 2. Initialize Speech
+    // 3. Initialize Speech
     await _initializeSpeech();
     
-    // 3. Load items from database
+    // 4. Load items from database
     await _loadItems();
     
-    // 4. Show welcome message
+    // 5. Show welcome message
     _showWelcomeMessage();
     
     debugPrint('🚀 ========== INITIALIZATION COMPLETE ==========');
+  }
+
+  // ✅ NEW METHOD: Load user name from Firestore
+  Future<void> _loadUserName() async {
+    try {
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final userId = authService.userId;
+      
+      if (userId != null) {
+        final userData = await authService.getUserData(userId);
+        if (userData != null) {
+          setState(() {
+            _userName = userData['fullName'] ?? 'there';
+          });
+          debugPrint('✅ User name loaded: $_userName');
+        }
+      }
+    } catch (e) {
+      debugPrint('⚠️ Could not load user name: $e');
+      // Keep default 'there'
+    }
   }
 
   Future<void> _loadItems() async {
@@ -92,9 +120,10 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
 
   void _showWelcomeMessage() {
     if (_apiKey != null && _allItems.isNotEmpty) {
+      // ✅ PERSONALIZED GREETING WITH USER NAME
       _addBotMessage(
-        "Hi! I'm your Campus Closet AI assistant powered by Groq ⚡\n\n"
-        "I have ${_allItems.length} items ready. Try asking:\n"
+        "Hi $_userName! 👋 I'm your Campus Closet AI assistant powered by Groq ⚡\n\n"
+        "I have ${_allItems.length} items ready for you. Try asking:\n"
         "• 'Show me formal outfits'\n"
         "• 'I need casual wear'\n"
         "• 'Traditional clothes'"
@@ -123,32 +152,50 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
   }
 
   void _startListening() async {
-    if (!_speechAvailable) {
-      _addBotMessage("Voice not available on this device.");
-      return;
-    }
+  if (!_speechAvailable || _isListening) return;
+  
 
-    debugPrint('🎤 Starting to listen...');
-    setState(() => _isListening = true);
-    
-    await _speech.listen(
-      onResult: (result) {
-        debugPrint('🎤 Recognized: ${result.recognizedWords}');
-        if (result.finalResult) {
-          _messageController.text = result.recognizedWords;
-          _sendMessage();
-        }
-      },
-      listenFor: const Duration(seconds: 30),
-      pauseFor: const Duration(seconds: 3),
-    );
-  }
+// Inside _startListening():
+if (await Vibration.hasVibrator()) {
+  Vibration.vibrate(duration: 30);
+}
+
+  debugPrint('🎤 Starting to listen (press-and-hold)...');
+  setState(() => _isListening = true);
+
+  // Auto-stop after 30 seconds max
+  final timeout = Future.delayed(const Duration(seconds: 30), () {
+    if (_isListening) {
+      _stopListening();
+    }
+  });
+
+  await _speech.listen(
+    onResult: (result) {
+      debugPrint('🎤 Recognized: ${result.recognizedWords}');
+      if (result.finalResult) {
+        _messageController.text = result.recognizedWords;
+        _sendMessage();
+        _stopListening(); // Stop immediately after final result
+      }
+    },
+    listenFor: const Duration(seconds: 30),
+    pauseFor: const Duration(seconds: 2),
+  );
+
+  // Cancel timeout if stopped earlier
+  //timeout.cancel();
+}
 
   void _stopListening() async {
-    debugPrint('🎤 Stopping listening...');
-    await _speech.stop();
+  if (!_isListening) return;
+  
+  debugPrint('🎤 Stopping listening (release or timeout)...');
+  await _speech.stop();
+  if (mounted) {
     setState(() => _isListening = false);
   }
+}
 
   void _addBotMessage(String text, {List<ItemModel>? suggestedItems}) {
     setState(() {
@@ -231,7 +278,8 @@ class _AIChatbotScreenState extends State<AIChatbotScreen> {
         'name': item.name,
         'category': item.category,
         'pricePerDay': item.pricePerDay,
-        'description': item.description ?? '',
+        //'description': item.description ?? '',
+        
       }).toList();
 
       debugPrint('🤖 Prepared ${itemSummaries.length} items for AI');
@@ -266,7 +314,7 @@ RESPOND WITH JSON ONLY. NO OTHER TEXT.''';
           'Authorization': 'Bearer $_apiKey',
         },
         body: jsonEncode({
-          'model': 'llama-3.3-70b-versatile', // Fast & powerful free model
+          'model': 'llama-3.3-70b-versatile',
           'messages': [
             {'role': 'system', 'content': systemPrompt},
             {'role': 'user', 'content': userMessage},
@@ -371,10 +419,52 @@ RESPOND WITH JSON ONLY. NO OTHER TEXT.''';
     return cleaned;
   }
 
-  void _navigateToItemDetail(ItemModel item) {
+  // ✅ FIXED: Check authentication before navigation
+  void _navigateToItemDetail(ItemModel item) async {
     debugPrint('🔗 Navigating to item: ${item.name} (ID: ${item.id})');
     
     try {
+      // ✅ CHECK IF USER IS LOGGED IN
+      final authService = Provider.of<AuthService>(context, listen: false);
+      final userId = authService.userId;
+      
+      if (userId == null) {
+        debugPrint('❌ User not logged in!');
+        
+        // Show login required dialog
+        if (!mounted) return;
+        
+        showDialog(
+          context: context,
+          builder: (BuildContext context) {
+            return AlertDialog(
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              title: const Text('Login Required'),
+              content: const Text('Please login to view item details and make bookings.'),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                ElevatedButton(
+                  onPressed: () {
+                    Navigator.pop(context); // Close dialog
+                    Navigator.pushNamed(context, '/login'); // Navigate to login
+                  },
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: AppColors.accentColor,
+                  ),
+                  child: const Text('Login'),
+                ),
+              ],
+            );
+          },
+        );
+        return;
+      }
+      
+      debugPrint('✅ User is logged in: $userId');
+      
       // Convert ItemModel to Map for ItemDetailScreen
       final itemMap = {
         'id': item.id,
@@ -385,7 +475,6 @@ RESPOND WITH JSON ONLY. NO OTHER TEXT.''';
         'size': item.size,
         'images': item.images,
         'ownerId': item.renterId,
-        //'availability': item.availability,
       };
       
       debugPrint('📦 Item map: $itemMap');
@@ -394,7 +483,7 @@ RESPOND WITH JSON ONLY. NO OTHER TEXT.''';
       Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => ItemDetailScreen(item: itemMap),
+          builder: (context) => ItemDetailScreen(item: item.toDetailMap()),
         ),
       );
     } catch (e, stackTrace) {
@@ -402,6 +491,8 @@ RESPOND WITH JSON ONLY. NO OTHER TEXT.''';
       debugPrint('Stack: $stackTrace');
       
       // Show error message
+      if (!mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Could not open item details: $e'),
@@ -656,20 +747,32 @@ RESPOND WITH JSON ONLY. NO OTHER TEXT.''';
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: isReady ? (_isListening ? _stopListening : _startListening) : null,
-              child: Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(
-                  color: !isReady ? Colors.grey : _isListening ? Colors.red : AppColors.accentColor,
-                  shape: BoxShape.circle,
-                ),
-                child: Icon(
-                  _isListening ? Icons.mic : Icons.mic_none_rounded,
-                  color: Colors.white,
-                  size: 24,
-                ),
-              ),
-            ),
+  onTapDown: isReady && !_isListening
+      ? (_) => _startListening()
+      : null,
+  onTapUp: isReady && _isListening
+      ? (_) => _stopListening()
+      : null,
+  onTapCancel: isReady && _isListening
+      ? () => _stopListening()
+      : null,
+  child: Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: !isReady
+          ? Colors.grey
+          : _isListening
+              ? Colors.red
+              : AppColors.accentColor,
+      shape: BoxShape.circle,
+    ),
+    child: Icon(
+      _isListening ? Icons.mic : Icons.mic_none_rounded,
+      color: Colors.white,
+      size: 24,
+    ),
+  ),
+),
             const SizedBox(width: 8),
             GestureDetector(
               onTap: (_isProcessing || !isReady) ? null : _sendMessage,

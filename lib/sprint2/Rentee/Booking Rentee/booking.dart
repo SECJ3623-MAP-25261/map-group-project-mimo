@@ -25,7 +25,6 @@ class _BookingScreenState extends State<BookingScreen> {
   String _selectedPaymentMethod = 'Credit/Debit Card';
   bool _isSubmitting = false;
   
-  List<Map<String, dynamic>> _existingBookings = [];
   Set<DateTime> _unavailableDates = {};
   bool _isLoadingBookings = true;
   String _debugMessage = '';
@@ -96,7 +95,6 @@ class _BookingScreenState extends State<BookingScreen> {
       
       if (mounted) {
         setState(() {
-          _existingBookings = bookings;
           _unavailableDates = unavailable;
           _isLoadingBookings = false;
         });

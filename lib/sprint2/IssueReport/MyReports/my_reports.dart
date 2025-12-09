@@ -66,24 +66,6 @@ class _MyReportsScreenState extends State<MyReportsScreen> {
     }
   }
 
-  Future<void> _deleteReport(String reportId, int index) async {
-    final confirm = await _showDeleteConfirmation();
-
-    if (confirm == true) {
-      final success = await _reportService.deleteReport(reportId);
-      
-      if (success) {
-        setState(() => _reports.removeAt(index));
-        if (mounted) {
-          _showSnackBar('Report deleted successfully', AppColors.successColor);
-        }
-      } else {
-        if (mounted) {
-          _showSnackBar('Failed to delete report', AppColors.errorColor);
-        }
-      }
-    }
-  }
 
   Future<bool?> _showDeleteConfirmation() {
     return showDialog<bool>(
