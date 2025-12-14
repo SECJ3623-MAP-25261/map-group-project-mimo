@@ -1,3 +1,15 @@
+buildscript {
+    repositories {
+        google()
+        mavenCentral()
+    }
+    dependencies {
+        classpath("com.android.tools.build:gradle:8.2.2")
+        classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.9.22")
+        classpath("com.google.gms:google-services:4.4.0")
+    }
+}
+
 allprojects {
     repositories {
         google()
@@ -5,22 +17,6 @@ allprojects {
     }
 }
 
-// Set build directory for root project
-rootProject.layout.buildDirectory.set(
-    rootProject.layout.projectDirectory.dir("../../build")
-)
-
-subprojects {
-    // Set build directory for each subproject
-    layout.buildDirectory.set(
-        rootProject.layout.buildDirectory.dir(project.name)
-    )
-}
-
-subprojects {
-    project.evaluationDependsOn(":app")
-}
-
 tasks.register<Delete>("clean") {
-    delete(rootProject.layout.buildDirectory)
+    delete(rootProject.buildDir)
 }

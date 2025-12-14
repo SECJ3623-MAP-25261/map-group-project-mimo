@@ -6,6 +6,7 @@ import 'item_details_card.dart';
 import 'date_selection_field.dart';
 import 'rental_summary_card.dart';
 import 'payment_method_selector.dart';
+import 'package:profile_managemenr/sprint3/FaceVerification/face_capture_screen.dart';
 
 class BookingScreen extends StatefulWidget {
   final Map<String, dynamic>? itemData;
@@ -24,6 +25,8 @@ class _BookingScreenState extends State<BookingScreen> {
   DateTime? _endDate;
   String _selectedPaymentMethod = 'Credit/Debit Card';
   bool _isSubmitting = false;
+  bool _isFaceVerified = false; // 👈 NEW: Track face verification
+  String? _faceImageUrl; // 👈 NEW: Store face image URL
   
   Set<DateTime> _unavailableDates = {};
   bool _isLoadingBookings = true;
@@ -73,10 +76,10 @@ class _BookingScreenState extends State<BookingScreen> {
   }
 
   Future<void> _loadExistingBookings() async {
-    print(' DEBUG: Starting to load bookings for itemId: $_itemId');
+    print('📅 DEBUG: Starting to load bookings for itemId: $_itemId');
     
     if (_itemId.isEmpty) {
-      print(' DEBUG: itemId is empty, skipping booking load');
+      print('⚠️ DEBUG: itemId is empty, skipping booking load');
       setState(() {
         _isLoadingBookings = false;
         _debugMessage = 'No item ID provided';
@@ -85,24 +88,24 @@ class _BookingScreenState extends State<BookingScreen> {
     }
 
     try {
-      print(' DEBUG: Calling getItemBookings...');
+      print('🔄 DEBUG: Calling getItemBookings...');
       final bookings = await _bookingService.getItemBookings(_itemId);
-      print(' DEBUG: Got ${bookings.length} bookings');
+      print('✅ DEBUG: Got ${bookings.length} bookings');
       
-      print(' DEBUG: Calculating unavailable dates...');
+      print('📊 DEBUG: Calculating unavailable dates...');
       final unavailable = _bookingService.getUnavailableDates(bookings);
-      print(' DEBUG: Found ${unavailable.length} unavailable dates');
+      print('✅ DEBUG: Found ${unavailable.length} unavailable dates');
       
       if (mounted) {
         setState(() {
           _unavailableDates = unavailable;
           _isLoadingBookings = false;
         });
-        print(' DEBUG: State updated successfully');
+        print('✅ DEBUG: State updated successfully');
       }
     } catch (e, stackTrace) {
-      print(' DEBUG: Error loading bookings: $e');
-      print(' DEBUG: Stack trace: $stackTrace');
+      print('❌ DEBUG: Error loading bookings: $e');
+      print('❌ DEBUG: Stack trace: $stackTrace');
       
       if (mounted) {
         setState(() {
@@ -118,20 +121,17 @@ class _BookingScreenState extends State<BookingScreen> {
   bool _isDateUnavailable(DateTime date) {
     final normalizedDate = DateTime(date.year, date.month, date.day);
     final isUnavailable = _unavailableDates.contains(normalizedDate);
-    print(' DEBUG: Checking date $normalizedDate: ${isUnavailable ? "UNAVAILABLE" : "available"}');
     return isUnavailable;
   }
 
   Future<void> _selectDate(BuildContext context, bool isStart) async {
-    print(' DEBUG: Opening date picker, isStart=$isStart');
+    print('📅 DEBUG: Opening date picker, isStart=$isStart');
     
     try {
-      // Find a valid initial date (first available date)
       DateTime initialDate = isStart
           ? (_startDate ?? DateTime.now())
           : (_endDate ?? _startDate ?? DateTime.now());
       
-      // If the initial date is unavailable, find the next available date
       while (_isDateUnavailable(initialDate) && initialDate.isBefore(DateTime(2027))) {
         initialDate = initialDate.add(const Duration(days: 1));
       }
@@ -143,8 +143,7 @@ class _BookingScreenState extends State<BookingScreen> {
         lastDate: DateTime(2027),
         
         selectableDayPredicate: (DateTime date) {
-          final isSelectable = !_isDateUnavailable(date);
-          return isSelectable;
+          return !_isDateUnavailable(date);
         },
         
         builder: (context, child) {
@@ -162,8 +161,6 @@ class _BookingScreenState extends State<BookingScreen> {
           );
         },
       );
-
-      print(' DEBUG: Date picked: $picked');
 
       if (picked != null) {
         if (isStart) {
@@ -198,11 +195,9 @@ class _BookingScreenState extends State<BookingScreen> {
             _endDate = picked;
           });
         }
-        print('✅ DEBUG: Date set successfully');
       }
     } catch (e, stackTrace) {
-      print(' DEBUG: Error in date selection: $e');
-      print(' DEBUG: Stack trace: $stackTrace');
+      print('❌ DEBUG: Error in date selection: $e');
       _showSnackBar('Error selecting date: ${e.toString()}', Colors.red);
     }
   }
@@ -220,9 +215,46 @@ class _BookingScreenState extends State<BookingScreen> {
     return true;
   }
 
+  // 👇 NEW: Navigate to face capture for verification
+  Future<void> _verifyFace() async {
+    final userId = _authService.userId;
+    if (userId == null) {
+      _showSnackBar('Please log in first', Colors.red);
+      return;
+    }
+
+    // Generate temporary booking ID for face registration
+    final tempBookingId = 'temp_${userId}_${DateTime.now().millisecondsSinceEpoch}';
+
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceCaptureScreen(
+          bookingId: tempBookingId,
+          userId: userId,
+          verificationType: 'booking',
+        ),
+      ),
+    );
+
+    if (result != null && result['success'] == true) {
+      setState(() {
+        _isFaceVerified = true;
+        _faceImageUrl = result['imageUrl'];
+      });
+      _showSnackBar('Face verified successfully!', Colors.green);
+    }
+  }
+
   Future<void> _submitBooking() async {
     print('🔍 DEBUG: Starting booking submission...');
     
+    // 👇 NEW: Check face verification
+    if (!_isFaceVerified) {
+      _showSnackBar('Please verify your face before booking', Colors.orange);
+      return;
+    }
+
     if (_rentalDays <= 0) {
       _showSnackBar('Please select valid rental dates', Colors.red);
       return;
@@ -323,6 +355,14 @@ class _BookingScreenState extends State<BookingScreen> {
                     Text('Total: RM ${_estimatedTotal.toStringAsFixed(2)}'),
                     const SizedBox(height: 8),
                     Text('Payment: $_selectedPaymentMethod'),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: const [
+                        Icon(Icons.verified_user, color: Colors.green, size: 16),
+                        SizedBox(width: 4),
+                        Text('Face Verified', style: TextStyle(color: Colors.green)),
+                      ],
+                    ),
                   ],
                 ),
                 shape: RoundedRectangleBorder(
@@ -429,36 +469,88 @@ class _BookingScreenState extends State<BookingScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // Debug info banner
-                    if (_debugMessage.isNotEmpty)
-                      Container(
-                        padding: const EdgeInsets.all(12),
-                        margin: const EdgeInsets.only(bottom: 16),
-                        decoration: BoxDecoration(
-                          color: Colors.blue.withOpacity(0.1),
-                          borderRadius: BorderRadius.circular(8),
-                          border: Border.all(color: Colors.blue),
+                    ItemDetailsCard(
+                      itemName: _itemName,
+                      itemImages: _itemImages,
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // 👇 NEW: Face Verification Section
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: _isFaceVerified 
+                            ? Colors.green.withOpacity(0.1)
+                            : Colors.orange.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(
+                          color: _isFaceVerified ? Colors.green : Colors.orange,
+                          width: 2,
                         ),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.info, color: Colors.blue, size: 20),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                _debugMessage,
-                                style: const TextStyle(
-                                  fontSize: 12,
-                                  color: Colors.blue,
+                      ),
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Icon(
+                                _isFaceVerified 
+                                    ? Icons.verified_user 
+                                    : Icons.face_retouching_natural,
+                                color: _isFaceVerified ? Colors.green : Colors.orange,
+                                size: 32,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      _isFaceVerified 
+                                          ? 'Face Verified ✓'
+                                          : 'Face Verification Required',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 16,
+                                        color: _isFaceVerified ? Colors.green : Colors.orange,
+                                      ),
+                                    ),
+                                    const SizedBox(height: 4),
+                                    Text(
+                                      _isFaceVerified
+                                          ? 'Your identity has been verified'
+                                          : 'Verify your face to proceed with booking',
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (!_isFaceVerified) ...[
+                            const SizedBox(height: 12),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                onPressed: _verifyFace,
+                                icon: const Icon(Icons.camera_alt),
+                                label: const Text('Verify Face'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppColors.accentColor,
+                                  foregroundColor: Colors.white,
+                                  padding: const EdgeInsets.symmetric(vertical: 12),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
                                 ),
                               ),
                             ),
                           ],
-                        ),
+                        ],
                       ),
-
-                    ItemDetailsCard(
-                      itemName: _itemName,
-                      itemImages: _itemImages,
                     ),
 
                     const SizedBox(height: 24),
@@ -526,6 +618,7 @@ class _BookingScreenState extends State<BookingScreen> {
                               onPressed: (_rentalDays > 0 &&
                                       _renterId.isNotEmpty &&
                                       _itemId.isNotEmpty &&
+                                      _isFaceVerified && // 👈 NEW: Check face verification
                                       !_isSubmitting)
                                   ? _submitBooking
                                   : null,
