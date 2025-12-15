@@ -123,6 +123,76 @@ Future<void> _pickImageFromCamera() async {
   }
 }
 
+Future<void> _onPhotoLongPress(int index) async {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.star),
+            title: const Text("Set as cover photo"),
+            subtitle: const Text("Cover photo will be the first image"),
+            onTap: () {
+              Navigator.pop(context);
+              setState(() {
+                final img = images.removeAt(index);
+                images.insert(0, img);
+              });
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text("Replace using camera"),
+            onTap: () async {
+              Navigator.pop(context);
+              await _replaceWithCamera(index);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.delete),
+            title: const Text("Delete photo"),
+            onTap: () {
+              Navigator.pop(context);
+              _removeImage(index);
+            },
+          ),
+        ],
+      ),
+    ),
+  );
+}
+
+Future<void> _replaceWithCamera(int index) async {
+  final status = await Permission.camera.request();
+  if (!status.isGranted) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Camera permission denied")),
+    );
+    return;
+  }
+
+  final XFile? photo = await picker.pickImage(
+    source: ImageSource.camera,
+    preferredCameraDevice: CameraDevice.rear,
+    maxWidth: 800,
+    maxHeight: 800,
+    imageQuality: 70,
+  );
+
+  if (photo != null) {
+    setState(() {
+      images[index] = File(photo.path);
+    });
+  }
+}
+
+
 
   Future<List<String>> convertImagesToBase64() async {
     List<String> base64Images = [];
@@ -340,27 +410,78 @@ Future<void> _pickImageFromCamera() async {
                   final index = entry.key;
                   final img = entry.value;
                   
-                  return Stack(
-                    children: [
-                      ClipRRect(
+                  return Dismissible(
+                    key: ValueKey(img.path),
+                    direction: DismissDirection.horizontal, // swipe left or right
+                    background: Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.15),
                         borderRadius: BorderRadius.circular(12),
-                        child: Image.file(
-                          img,
-                          width: 90,
-                          height: 90,
-                          fit: BoxFit.cover,
-                        ),
                       ),
-                      Positioned(
-                        top: -5,
-                        right: -5,
-                        child: IconButton(
-                          icon: const Icon(Icons.cancel, color: Colors.red),
-                          onPressed: () => _removeImage(index),
-                        ),
+                      alignment: Alignment.centerLeft,
+                      padding: const EdgeInsets.only(left: 12),
+                      child: const Icon(Icons.delete, color: Colors.red),
+                    ),
+                    secondaryBackground: Container(
+                      width: 90,
+                      height: 90,
+                      decoration: BoxDecoration(
+                        color: Colors.red.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
+                      alignment: Alignment.centerRight,
+                      padding: const EdgeInsets.only(right: 12),
+                      child: const Icon(Icons.delete, color: Colors.red),
+                    ),
+                    onDismissed: (_) => _removeImage(index),
+                    child: GestureDetector(
+                      onLongPress: () => _onPhotoLongPress(index),
+                      child: Stack(
+                        children: [
+                          ClipRRect(
+                            borderRadius: BorderRadius.circular(12),
+                            child: Image.file(
+                              img,
+                              width: 90,
+                              height: 90,
+                              fit: BoxFit.cover,
+                            ),
+                          ),
+
+                          // Cover badge for the first image
+                          if (index == 0)
+                            Positioned(
+                              left: 6,
+                              top: 6,
+                              child: Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                decoration: BoxDecoration(
+                                  color: Colors.black.withOpacity(0.55),
+                                  borderRadius: BorderRadius.circular(8),
+                                ),
+                                child: const Text(
+                                  "Cover",
+                                  style: TextStyle(color: Colors.white, fontSize: 11),
+                                ),
+                              ),
+                            ),
+
+                          // Keep the remove button (optional, can remove this if swipe is enough)
+                          Positioned(
+                            top: -5,
+                            right: -5,
+                            child: IconButton(
+                              icon: const Icon(Icons.cancel, color: Colors.red),
+                              onPressed: () => _removeImage(index),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                   );
+
                 }),
                 GestureDetector(
                   onTap: _showImageSourceSheet,
