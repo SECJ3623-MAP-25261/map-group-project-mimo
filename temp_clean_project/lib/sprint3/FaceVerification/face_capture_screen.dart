@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
-import 'package:profile_managemenr/services/face_verification_service.dart';
+import 'package:profile_managemenr/services/face_verification_service.dart'; // ✅ Unified service
 
 class FaceCaptureScreen extends StatefulWidget {
   final String bookingId;
@@ -32,8 +32,12 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   // Common
   bool _isProcessing = false;
   final ImagePicker _picker = ImagePicker();
-  final FaceVerificationServiceBase64 _faceService = FaceVerificationServiceBase64();
-  //final FaceVerificationServiceStorage _faceService = FaceVerificationServiceStorage();
+  
+  // ✅ Using unified service with FREE mode
+  final FaceVerificationService _faceService = FaceVerificationService(
+    storeDisplayImage: false, // FREE mode - no images stored
+    similarityThreshold: 75.0, // 75% match required (more secure)
+  );
 
   @override
   void initState() {
@@ -80,6 +84,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   // Web: Use image picker with camera
   Future<void> _captureFromWebCamera() async {
+    if (_isProcessing) return;
     try {
       setState(() => _isProcessing = true);
 
@@ -97,52 +102,11 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         return;
       }
 
-      // For web, we need to handle XFile differently
-      await _processWebImage(pickedFile);
+      await _processImageAndDetectFace(pickedFile);
 
     } catch (e) {
       print('❌ Error capturing from web camera: $e');
       _showError('Error accessing camera: ${e.toString()}');
-      setState(() => _isProcessing = false);
-    }
-  }
-
-  // Process image for web
-  Future<void> _processWebImage(XFile imageFile) async {
-    try {
-      _showLoadingDialog('Detecting face...');
-
-      // Convert XFile to bytes for web
-      final bytes = await imageFile.readAsBytes();
-      
-      // Create a temporary file from bytes (for compatibility with service)
-      final tempFile = File(imageFile.path);
-      
-      final faces = await _faceService.detectFaces(tempFile);
-      
-      if (!mounted) return;
-      Navigator.pop(context); // Close loading
-
-      if (faces.isEmpty) {
-        _showError('No face detected. Please try again.');
-        setState(() => _isProcessing = false);
-        return;
-      }
-
-      if (faces.length > 1) {
-        _showError('Multiple faces detected. Please ensure only one person is in the frame.');
-        setState(() => _isProcessing = false);
-        return;
-      }
-
-      // Show preview for web
-      _showWebPreviewDialog(imageFile);
-
-    } catch (e) {
-      if (mounted) {
-        Navigator.pop(context);
-        _showError('Error processing image: ${e.toString()}');
-      }
       setState(() => _isProcessing = false);
     }
   }
@@ -160,13 +124,28 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
     try {
       final XFile imageFile = await _cameraController!.takePicture();
-      final File capturedFile = File(imageFile.path);
+      await _processImageAndDetectFace(imageFile);
 
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        _showError('Error capturing image: ${e.toString()}');
+      }
+      setState(() => _isProcessing = false);
+    }
+  }
+
+  // Unified method to process the captured XFile
+  Future<void> _processImageAndDetectFace(XFile imageFile) async {
+    try {
       _showLoadingDialog('Detecting face...');
+
+      final capturedFile = File(imageFile.path); 
+      
       final faces = await _faceService.detectFaces(capturedFile);
       
       if (!mounted) return;
-      Navigator.pop(context);
+      Navigator.pop(context); // Close loading
 
       if (faces.isEmpty) {
         _showError('No face detected. Please try again.');
@@ -180,12 +159,16 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         return;
       }
 
-      _showPreviewDialog(capturedFile);
+      if (kIsWeb) {
+        _showWebPreviewDialog(imageFile);
+      } else {
+        _showPreviewDialog(capturedFile);
+      }
 
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
-        _showError('Error capturing image: ${e.toString()}');
+        if (Navigator.of(context).canPop()) Navigator.pop(context); 
+        _showError('Error processing image: ${e.toString()}');
       }
       setState(() => _isProcessing = false);
     }
@@ -216,26 +199,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               style: TextStyle(color: Colors.grey[700]),
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.info_outline, color: Colors.blue, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Using Base64 storage - No Firebase Storage costs!',
-                      style: TextStyle(color: Colors.blue, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildFreeInfoContainer(),
           ],
         ),
         shape: RoundedRectangleBorder(
@@ -286,7 +250,10 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                       fit: BoxFit.cover,
                     );
                   }
-                  return const CircularProgressIndicator();
+                  return const SizedBox(
+                    height: 300,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
                 },
               ),
             ),
@@ -297,26 +264,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               style: TextStyle(color: Colors.grey[700]),
             ),
             const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.blue.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: const [
-                  Icon(Icons.info_outline, color: Colors.blue, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      'Using Base64 storage - No Firebase Storage costs!',
-                      style: TextStyle(color: Colors.blue, fontSize: 12),
-                    ),
-                  ),
-                ],
-              ),
-            ),
+            _buildFreeInfoContainer(),
           ],
         ),
         shape: RoundedRectangleBorder(
@@ -333,14 +281,42 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
           ElevatedButton(
             onPressed: () async {
               Navigator.pop(context);
-              // Convert XFile to File for processing
-              final file = File(imageFile.path);
+              final file = File(imageFile.path); 
               await _processFaceVerification(file);
             },
             style: ElevatedButton.styleFrom(
               backgroundColor: AppColors.accentColor,
             ),
             child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
+  
+  // ✅ Updated info widget for FREE mode
+  Widget _buildFreeInfoContainer() {
+    return Container(
+      padding: const EdgeInsets.all(8),
+      decoration: BoxDecoration(
+        color: Colors.green.withOpacity(0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.green),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: const [
+          Icon(Icons.savings, color: Colors.green, size: 16),
+          SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              '100% FREE - Only face features used (no image stored)',
+              style: TextStyle(
+                color: Colors.green,
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
           ),
         ],
       ),
@@ -353,25 +329,16 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     try {
       Map<String, dynamic> result;
 
+      print('🔐 Starting verification type: ${widget.verificationType}');
+      print('🔐 BookingId: ${widget.bookingId}');
+      print('🔐 UserId: ${widget.userId}');
+
       if (widget.verificationType == 'booking') {
         result = await _faceService.registerFace(
           imageFile: imageFile,
           userId: widget.userId,
           bookingId: widget.bookingId,
         );
-
-        if (!mounted) return;
-        Navigator.pop(context);
-
-        if (result['success']) {
-          _showSuccessDialog(
-            'Face registered successfully!',
-            result['imageBase64'],
-          );
-        } else {
-          _showError(result['message']);
-          setState(() => _isProcessing = false);
-        }
 
       } else if (widget.verificationType == 'pickup') {
         result = await _faceService.verifyFaceForPickup(
@@ -380,52 +347,40 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
           renterId: widget.userId,
         );
 
-        if (!mounted) return;
-        Navigator.pop(context);
-
-        if (result['success']) {
-          _showSuccessDialog(
-            'Identity verified! Similarity: ${result['similarity'].toStringAsFixed(1)}%',
-            null,
-          );
-        } else {
-          _showError(result['message']);
-          setState(() => _isProcessing = false);
-        }
-
       } else if (widget.verificationType == 'return') {
         result = await _faceService.verifyFaceForReturn(
           bookingId: widget.bookingId,
           scannedImageFile: imageFile,
           renterId: widget.userId,
         );
+      } else {
+        throw Exception('Invalid verification type: ${widget.verificationType}');
+      }
+      
+      print('🔐 Verification result: $result');
+      
+      if (!mounted) return;
+      Navigator.pop(context); // Close loading
 
-        if (!mounted) return;
-        Navigator.pop(context);
-
-        if (result['success']) {
-          _showSuccessDialog(
-            'Return verified! Similarity: ${result['similarity'].toStringAsFixed(1)}%',
-            null,
-          );
-        } else {
-          _showError(result['message']);
-          setState(() => _isProcessing = false);
-        }
+      if (result['success'] == true) {
+        print('✅ Verification successful!');
+        _showSuccessDialog(
+          result['message'],
+          result['imageBase64'], // Will be null in FREE mode
+        );
+      } else {
+        print('❌ Verification failed: ${result['message']}');
+        _showError(result['message'] ?? 'Verification failed');
+        setState(() => _isProcessing = false);
       }
 
-    } catch (e) {
+    } catch (e, stackTrace) {
+      print('❌ EXCEPTION in _processFaceVerification: $e');
+      print('📍 Stack trace: $stackTrace');
+      
       if (mounted) {
-        Navigator.pop(context);
-        
-        if (e.toString().contains('maximum size') || 
-            e.toString().contains('too large')) {
-          _showError(
-            'Image too large for Firestore. Please try again.',
-          );
-        } else {
-          _showError('Verification error: ${e.toString()}');
-        }
+        if (Navigator.of(context).canPop()) Navigator.pop(context); 
+        _showError('Verification error: ${e.toString()}');
         setState(() => _isProcessing = false);
       }
     }
@@ -484,7 +439,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                   SizedBox(width: 8),
                   Expanded(
                     child: Text(
-                      '100% Free - No storage costs!',
+                      '100% FREE - Only features stored for verification!',
                       style: TextStyle(
                         color: Colors.green,
                         fontSize: 12,
@@ -506,7 +461,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               Navigator.pop(context);
               Navigator.pop(context, {
                 'success': true,
-                'imageBase64': imageBase64,
+                'imageBase64': imageBase64, // Will be null in FREE mode
               });
             },
             style: ElevatedButton.styleFrom(
@@ -535,12 +490,12 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   String _getInstructionText() {
     if (kIsWeb) {
-      return 'Click the button below to access your camera\nand capture your face\n(Web-compatible mode)';
+      return 'Click the button below to access your camera\nand capture your face\n(100% FREE - No storage costs)';
     }
     
     switch (widget.verificationType) {
       case 'booking':
-        return 'Position your face in the frame\nThis will be used for verification\n(No storage costs - Using Base64)';
+        return 'Position your face in the frame\nThis will be used for future verification\n(Features only - FREE)';
       case 'pickup':
         return 'Scan rentee\'s face to verify identity\nBefore handing over the item';
       case 'return':
@@ -569,7 +524,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                 style: const TextStyle(fontSize: 18),
               ),
               const Text(
-                'Web Mode - Free, No Storage Costs',
+                '100% FREE - Features Only',
                 style: TextStyle(fontSize: 10, color: Colors.greenAccent),
               ),
             ],
@@ -629,19 +584,19 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.blue.withOpacity(0.1),
+                    color: Colors.green.withOpacity(0.1),
                     borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.blue),
+                    border: Border.all(color: Colors.green),
                   ),
                   child: Row(
                     mainAxisSize: MainAxisSize.min,
                     children: const [
-                      Icon(Icons.info_outline, color: Colors.blue),
+                      Icon(Icons.savings, color: Colors.green),
                       SizedBox(width: 12),
                       Expanded(
                         child: Text(
-                          'Your browser will ask for camera permission. Please allow it to continue.',
-                          style: TextStyle(color: Colors.blue, fontSize: 14),
+                          'No image storage costs! Only facial features are saved for verification.',
+                          style: TextStyle(color: Colors.green, fontSize: 14),
                         ),
                       ),
                     ],
@@ -670,7 +625,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               style: const TextStyle(fontSize: 18),
             ),
             const Text(
-              'Free - No Storage Costs',
+              '100% FREE - Features Only',
               style: TextStyle(fontSize: 10, color: Colors.greenAccent),
             ),
           ],
@@ -678,10 +633,13 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       ),
       body: Stack(
         children: [
-          // Camera preview (mobile only)
+          // Camera preview
           if (_isCameraInitialized && _cameraController != null)
             Positioned.fill(
-              child: CameraPreview(_cameraController!),
+              child: AspectRatio(
+                aspectRatio: _cameraController!.value.aspectRatio,
+                child: CameraPreview(_cameraController!),
+              ),
             )
           else
             const Center(
