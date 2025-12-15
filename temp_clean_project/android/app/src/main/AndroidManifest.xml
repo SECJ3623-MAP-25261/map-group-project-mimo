@@ -1,4 +1,5 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<uses-permission android:name="android.permission.CAMERA" />
     <application
         android:label="temp_clean_project"
         android:name="${applicationName}"

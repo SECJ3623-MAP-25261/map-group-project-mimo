@@ -6,6 +6,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'package:permission_handler/permission_handler.dart';
+
 
 import '../../constants/app_colors.dart';
 
@@ -47,19 +49,80 @@ class _AddItemPageState extends State<AddItemPage> {
   String? selectedCategory;
   String? selectedSize;
 
-  Future<void> pickImages() async {
-    final picked = await picker.pickMultiImage(
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 70,
-    );
-    
-    if (picked.isNotEmpty) {
-      setState(() {
-        images.addAll(picked.map((xfile) => File(xfile.path)));
-      });
-    }
+  Future<void> _showImageSourceSheet() async {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Take Photo (Camera)"),
+              onTap: () async {
+                Navigator.pop(context);
+                await _pickImageFromCamera();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Choose From Gallery"),
+              onTap: () async {
+                Navigator.pop(context);
+                await _pickImagesFromGallery();
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _pickImagesFromGallery() async {
+  final picked = await picker.pickMultiImage(
+    maxWidth: 800,
+    maxHeight: 800,
+    imageQuality: 70,
+  );
+
+  if (picked.isNotEmpty) {
+    setState(() {
+      images.addAll(picked.map((x) => File(x.path)));
+    });
   }
+}
+
+Future<void> _pickImageFromCamera() async {
+  // Request camera permission
+  final status = await Permission.camera.request();
+  if (!status.isGranted) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Camera permission denied")),
+    );
+    return;
+  }
+
+  final XFile? photo = await picker.pickImage(
+    source: ImageSource.camera,
+    preferredCameraDevice: CameraDevice.rear, // good for product photos
+    maxWidth: 800,
+    maxHeight: 800,
+    imageQuality: 70,
+  );
+
+  if (photo != null) {
+    setState(() {
+      images.add(File(photo.path));
+    });
+  }
+}
+
 
   Future<List<String>> convertImagesToBase64() async {
     List<String> base64Images = [];
@@ -300,7 +363,7 @@ class _AddItemPageState extends State<AddItemPage> {
                   );
                 }),
                 GestureDetector(
-                  onTap: pickImages,
+                  onTap: _showImageSourceSheet,
                   child: Container(
                     width: 90,
                     height: 90,

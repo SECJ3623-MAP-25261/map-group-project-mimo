@@ -6,6 +6,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../constants/app_colors.dart';
 
@@ -68,19 +69,80 @@ class _EditItemPageState extends State<EditItemPage> {
     existingBase64Images = List<String>.from(widget.itemData["images"] ?? []);
   }
 
-  Future<void> pickImages() async {
-    final picked = await picker.pickMultiImage(
-      maxWidth: 800,
-      maxHeight: 800,
-      imageQuality: 70,
-    );
-    
-    if (picked.isNotEmpty) {
-      setState(() {
-        newImages.addAll(picked.map((xfile) => File(xfile.path)));
-      });
-    }
+  Future<void> _showImageSourceSheet() async {
+  showModalBottomSheet(
+    context: context,
+    shape: const RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const Icon(Icons.camera_alt),
+              title: const Text("Take Photo (Camera)"),
+              onTap: () async {
+                Navigator.pop(context);
+                await _pickImageFromCamera();
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.photo_library),
+              title: const Text("Choose From Gallery"),
+              onTap: () async {
+                Navigator.pop(context);
+                await _pickImagesFromGallery();
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
+
+Future<void> _pickImagesFromGallery() async {
+  final picked = await picker.pickMultiImage(
+    maxWidth: 800,
+    maxHeight: 800,
+    imageQuality: 70,
+  );
+
+  if (picked.isNotEmpty) {
+    setState(() {
+      newImages.addAll(picked.map((x) => File(x.path)));
+    });
   }
+}
+
+Future<void> _pickImageFromCamera() async {
+  // Request camera permission (important on Android)
+  final status = await Permission.camera.request();
+  if (!status.isGranted) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Camera permission denied")),
+    );
+    return;
+  }
+
+  final XFile? photo = await picker.pickImage(
+    source: ImageSource.camera,
+    preferredCameraDevice: CameraDevice.rear, // good for product photos
+    maxWidth: 800,
+    maxHeight: 800,
+    imageQuality: 70,
+  );
+
+  if (photo != null) {
+    setState(() {
+      newImages.add(File(photo.path));
+    });
+  }
+}
+
 
   Future<List<String>> convertNewImagesToBase64() async {
     List<String> base64Images = [];
@@ -340,7 +402,7 @@ class _EditItemPageState extends State<EditItemPage> {
                 
                 // Add photo button
                 GestureDetector(
-                  onTap: pickImages,
+                  onTap: _showImageSourceSheet,
                   child: Container(
                     width: 90,
                     height: 90,
