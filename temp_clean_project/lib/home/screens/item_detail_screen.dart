@@ -1,12 +1,15 @@
+// ItemDetailScreen.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import '../item_detail/widgets/image_carousel.dart';
 import '../item_detail/widgets/item_action_widget.dart';
 import '../item_detail/widgets/review_summary_widget.dart';
-//import 'package:profile_managemenr/services/auth_service.dart';
+import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
+import 'package:profile_managemenr/sprint2/Rentee/Booking Rentee/booking.dart'; // Booking screen
 
 class ItemDetailScreen extends StatelessWidget {
-  final Map item;
+  final Map<String, dynamic> item;
 
   const ItemDetailScreen({super.key, required this.item});
 
@@ -17,8 +20,9 @@ class ItemDetailScreen extends StatelessWidget {
     final isSmallScreen = screenWidth < 360;
     final isVerySmallScreen = screenWidth < 340;
 
-    // Responsive sizing
-    final horizontalPadding = isVerySmallScreen ? 12.0 : (isSmallScreen ? 14.0 : 16.0);
+    final horizontalPadding = isVerySmallScreen
+        ? 12.0
+        : (isSmallScreen ? 14.0 : 16.0);
     final verticalSpacing = isSmallScreen ? 12.0 : 16.0;
     final sectionSpacing = isSmallScreen ? 20.0 : 24.0;
 
@@ -33,41 +37,50 @@ class ItemDetailScreen extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                // Image Carousel
                 ImageCarousel(images: images),
                 SizedBox(height: verticalSpacing),
-
-                // Name & Price
                 _buildItemHeader(isSmallScreen, isVerySmallScreen),
                 SizedBox(height: verticalSpacing),
-
-                // Reviews Summary
                 ReviewSummaryWidget(
                   itemId: item['id'],
                   itemName: item['name'] ?? 'Item',
                 ),
                 SizedBox(height: verticalSpacing),
-
-                // Details (Category & Size)
                 if (item['category'] != null || item['size'] != null)
                   _buildDetailsSection(isSmallScreen, isVerySmallScreen),
-
                 if (item['category'] != null || item['size'] != null)
                   SizedBox(height: verticalSpacing),
-
-                // Description
                 if (item['description'] != null &&
                     item['description'].toString().isNotEmpty)
                   _buildDescriptionSection(isSmallScreen, isVerySmallScreen),
-
                 if (item['description'] != null &&
                     item['description'].toString().isNotEmpty)
                   SizedBox(height: sectionSpacing),
 
-                // Action Buttons
-                ItemActionsWidget(item: item),
-                
-                // Bottom spacing for comfortable scrolling
+                // ✅ Item Actions (Book, Message, etc.)
+                ItemActionsWidget(
+                  item: item,
+                  onBookPressed: () async {
+                    // 🔓 Force portrait for booking screen only
+                    await SystemChrome.setPreferredOrientations([
+                      DeviceOrientation.portraitUp,
+                    ]);
+
+                    // Navigate to original booking screen
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookingScreen(itemData: item),
+                      ),
+                    );
+
+                    // 🔒 Restore system default after returning
+                    await SystemChrome.setPreferredOrientations(
+                      DeviceOrientation.values,
+                    );
+                  },
+                ),
+
                 SizedBox(height: horizontalPadding),
               ],
             ),
@@ -91,22 +104,34 @@ class ItemDetailScreen extends StatelessWidget {
         maxLines: 1,
         overflow: TextOverflow.ellipsis,
       ),
-      foregroundColor: Colors.white,
       leading: IconButton(
-        icon: Icon(
-          Icons.arrow_back_ios_rounded,
-          size: isSmallScreen ? 20 : 24,
-        ),
+        icon: Icon(Icons.arrow_back_ios_rounded, size: isSmallScreen ? 20 : 24),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        IconButton(
+        // Compare button with text
+        TextButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) =>
+                    SearchPage(preSelectedItem: item, startCompareMode: true),
+              ),
+            );
+          },
           icon: Icon(
-            Icons.share_rounded,
+            Icons.compare_rounded,
+            color: Colors.white,
             size: isSmallScreen ? 22 : 24,
           ),
+          label: const Text("Compare", style: TextStyle(color: Colors.white)),
+        ),
+        // Share button
+        IconButton(
+          icon: Icon(Icons.share_rounded, size: isSmallScreen ? 22 : 24),
+          tooltip: 'Share',
           onPressed: () {
-            // Share functionality (optional)
             ScaffoldMessenger.of(context).showSnackBar(
               SnackBar(
                 content: const Text('Share feature coming soon'),
@@ -117,15 +142,18 @@ class ItemDetailScreen extends StatelessWidget {
               ),
             );
           },
-          tooltip: 'Share',
         ),
       ],
     );
   }
 
   Widget _buildItemHeader(bool isSmallScreen, bool isVerySmallScreen) {
-    final nameFontSize = isVerySmallScreen ? 20.0 : (isSmallScreen ? 22.0 : 24.0);
-    final priceFontSize = isVerySmallScreen ? 18.0 : (isSmallScreen ? 19.0 : 20.0);
+    final nameFontSize = isVerySmallScreen
+        ? 20.0
+        : (isSmallScreen ? 22.0 : 24.0);
+    final priceFontSize = isVerySmallScreen
+        ? 18.0
+        : (isSmallScreen ? 19.0 : 20.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -136,7 +164,6 @@ class ItemDetailScreen extends StatelessWidget {
             fontSize: nameFontSize,
             fontWeight: FontWeight.bold,
             color: AppColors.lightTextColor,
-            height: 1.2,
           ),
           maxLines: 3,
           overflow: TextOverflow.ellipsis,
@@ -152,22 +179,16 @@ class ItemDetailScreen extends StatelessWidget {
               decoration: BoxDecoration(
                 color: AppColors.accentColor.withOpacity(0.1),
                 borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.accentColor.withOpacity(0.3),
-                  width: 1,
-                ),
               ),
               child: Row(
-                mainAxisSize: MainAxisSize.min,
                 children: [
                   Icon(
                     Icons.currency_exchange_rounded,
                     color: AppColors.accentColor,
-                    size: isVerySmallScreen ? 18 : 20,
                   ),
-                  SizedBox(width: isVerySmallScreen ? 4 : 6),
+                  const SizedBox(width: 6),
                   Text(
-                    "RM${(item['pricePerDay'] ?? 0).toStringAsFixed(2)}/day",
+                    "RM${((item['pricePerDay'] ?? 0) as num).toDouble().toStringAsFixed(2)}/day",
                     style: TextStyle(
                       color: AppColors.accentColor,
                       fontSize: priceFontSize,
@@ -184,119 +205,45 @@ class ItemDetailScreen extends StatelessWidget {
   }
 
   Widget _buildDetailsSection(bool isSmallScreen, bool isVerySmallScreen) {
-    final iconSize = isVerySmallScreen ? 14.0 : 16.0;
-    final textSize = isVerySmallScreen ? 13.0 : 14.0;
-    final containerPadding = isVerySmallScreen ? 10.0 : 12.0;
-    final itemSpacing = isVerySmallScreen ? 12.0 : 16.0;
-
     return Container(
-      padding: EdgeInsets.all(containerPadding),
+      padding: EdgeInsets.all(isVerySmallScreen ? 10 : 12),
       decoration: BoxDecoration(
         color: AppColors.lightCardBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.lightHintColor.withOpacity(0.2),
-          width: 1,
-        ),
       ),
       child: Wrap(
-        spacing: itemSpacing,
-        runSpacing: 8,
+        spacing: 16,
         children: [
           if (item['category'] != null)
-            _buildDetailChip(
-              icon: Icons.category_rounded,
-              label: item['category'],
-              iconSize: iconSize,
-              textSize: textSize,
-            ),
+            _buildDetailChip(Icons.category_rounded, item['category']),
           if (item['size'] != null)
-            _buildDetailChip(
-              icon: Icons.straighten_rounded,
-              label: item['size'],
-              iconSize: iconSize,
-              textSize: textSize,
-            ),
+            _buildDetailChip(Icons.straighten_rounded, item['size']),
         ],
       ),
     );
   }
 
-  Widget _buildDetailChip({
-    required IconData icon,
-    required String label,
-    required double iconSize,
-    required double textSize,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.accentColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(6),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: iconSize, color: AppColors.accentColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.lightTextColor,
-              fontSize: textSize,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
+  Widget _buildDetailChip(IconData icon, String label) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Icon(icon, size: 16, color: AppColors.accentColor),
+        const SizedBox(width: 6),
+        Text(label),
+      ],
     );
   }
 
   Widget _buildDescriptionSection(bool isSmallScreen, bool isVerySmallScreen) {
-    final titleFontSize = isVerySmallScreen ? 15.0 : 16.0;
-    final descriptionFontSize = isVerySmallScreen ? 13.0 : 14.0;
-
     return Container(
-      padding: EdgeInsets.all(isVerySmallScreen ? 12.0 : 14.0),
+      padding: EdgeInsets.all(isVerySmallScreen ? 12 : 14),
       decoration: BoxDecoration(
         color: AppColors.lightCardBackground,
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.lightHintColor.withOpacity(0.2),
-          width: 1,
-        ),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Icon(
-                Icons.description_rounded,
-                size: isVerySmallScreen ? 18 : 20,
-                color: AppColors.accentColor,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'Description',
-                style: TextStyle(
-                  fontSize: titleFontSize,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.lightTextColor,
-                ),
-              ),
-            ],
-          ),
-          SizedBox(height: isSmallScreen ? 8 : 10),
-          Text(
-            item['description'],
-            style: TextStyle(
-              color: AppColors.lightTextColor,
-              fontSize: descriptionFontSize,
-              height: 1.5,
-            ),
-          ),
-        ],
+      child: Text(
+        item['description'] ?? '',
+        style: TextStyle(color: AppColors.lightTextColor),
       ),
     );
   }

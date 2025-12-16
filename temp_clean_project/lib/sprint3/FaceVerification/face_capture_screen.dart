@@ -16,7 +16,7 @@ class FaceCaptureScreen extends StatefulWidget {
   final String bookingId;
   final String userId;
   final String verificationType; // 'booking', 'pickup', 'return'
-  
+
   const FaceCaptureScreen({
     super.key,
     required this.bookingId,
@@ -32,7 +32,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   CameraController? _cameraController;
   bool _isCameraInitialized = false;
   bool _isProcessing = false;
-  
+
   late final FaceCaptureHelper _captureHelper;
   late final DialogHelper _dialogHelper;
 
@@ -45,7 +45,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       verificationType: widget.verificationType,
     );
     _dialogHelper = DialogHelper(context: context);
-    
+
     if (!kIsWeb) {
       _initializeCamera();
     }
@@ -54,13 +54,16 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   Future<void> _initializeCamera() async {
     try {
       final cameras = await availableCameras();
-      
+
       if (cameras.isEmpty) {
         _showError('No camera found on this device');
         return;
       }
 
-      final selectedCamera = _captureHelper.selectCamera(cameras, widget.verificationType);
+      final selectedCamera = _captureHelper.selectCamera(
+        cameras,
+        widget.verificationType,
+      );
 
       _cameraController = CameraController(
         selectedCamera,
@@ -104,7 +107,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       _dialogHelper.showLoading('Detecting face...');
 
       final faces = await _captureHelper.detectFaces(File(imageFile.path));
-      
+
       if (!mounted) return;
       Navigator.pop(context);
 
@@ -115,7 +118,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       }
 
       if (faces.length > 1) {
-        _showError('Multiple faces detected. Please ensure only one person is in the frame.');
+        _showError(
+          'Multiple faces detected. Please ensure only one person is in the frame.',
+        );
         setState(() => _isProcessing = false);
         return;
       }
@@ -149,7 +154,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
     try {
       final result = await _captureHelper.processFaceVerification(imageFile);
-      
+
       if (!mounted) return;
       Navigator.pop(context);
 

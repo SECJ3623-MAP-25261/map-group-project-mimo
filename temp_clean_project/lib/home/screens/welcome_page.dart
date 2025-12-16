@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import 'package:profile_managemenr/main.dart';
-import '../../../constants/app_colors.dart';
+import '../../constants/app_colors.dart';
 import '../../firebase_options.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'campus_closet_screen.dart';
@@ -26,7 +26,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late AnimationController _textController;
   late AnimationController _mainController;
   late AnimationController _shimmerController;
-  
+
   late Animation<double> _logoScale;
   late Animation<double> _logoRotation;
   late Animation<double> _logoOpacity;
@@ -35,7 +35,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   late Animation<double> _mainOpacity;
   late Animation<Offset> _mainSlide;
   late Animation<double> _shimmerAnimation;
-  
+
   bool _showWelcome = true;
 
   final String logoUrl = "lib/widgets/CampusClosetLogo.png";
@@ -46,93 +46,101 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   @override
   void initState() {
     super.initState();
-    
+
     _logoController = AnimationController(
       duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
-    
+
     _logoScale = TweenSequence<double>([
       TweenSequenceItem(
-        tween: Tween<double>(begin: 0.0, end: 1.1)
-            .chain(CurveTween(curve: Curves.easeOut)),
+        tween: Tween<double>(
+          begin: 0.0,
+          end: 1.1,
+        ).chain(CurveTween(curve: Curves.easeOut)),
         weight: 50,
       ),
       TweenSequenceItem(
-        tween: Tween<double>(begin: 1.1, end: 1.0)
-            .chain(CurveTween(curve: Curves.easeInOut)),
+        tween: Tween<double>(
+          begin: 1.1,
+          end: 1.0,
+        ).chain(CurveTween(curve: Curves.easeInOut)),
         weight: 50,
       ),
     ]).animate(_logoController);
-    
-    _logoRotation = Tween<double>(begin: -0.5, end: 0.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
-    );
-    
-    _logoOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _logoController, curve: Curves.easeOut),
-    );
-    
+
+    _logoRotation = Tween<double>(
+      begin: -0.5,
+      end: 0.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeOut));
+
+    _logoOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _logoController, curve: Curves.easeOut));
+
     _textController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
-    _textOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _textController, curve: Curves.easeOut),
-    );
-    
+
+    _textOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
+
     _textSlide = Tween<Offset>(
       begin: const Offset(0, 0.5),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _textController, curve: Curves.easeOut));
-    
+
     _mainController = AnimationController(
       duration: const Duration(milliseconds: 1000),
       vsync: this,
     );
-    
-    _mainOpacity = Tween<double>(begin: 0.0, end: 1.0).animate(
-      CurvedAnimation(parent: _mainController, curve: Curves.easeOut),
-    );
-    
+
+    _mainOpacity = Tween<double>(
+      begin: 0.0,
+      end: 1.0,
+    ).animate(CurvedAnimation(parent: _mainController, curve: Curves.easeOut));
+
     _mainSlide = Tween<Offset>(
       begin: const Offset(0, 0.3),
       end: Offset.zero,
     ).animate(CurvedAnimation(parent: _mainController, curve: Curves.easeOut));
-    
+
     _shimmerController = AnimationController(
       duration: const Duration(milliseconds: 3000),
       vsync: this,
     );
-    
+
     _shimmerAnimation = TweenSequence<double>([
       TweenSequenceItem(tween: Tween<double>(begin: 0.2, end: 0.4), weight: 50),
       TweenSequenceItem(tween: Tween<double>(begin: 0.4, end: 0.2), weight: 50),
     ]).animate(_shimmerController);
-    
+
     _startAnimations();
   }
 
   // 🔥 CRITICAL FIX: Add mounted checks before setState and async operations
   Future<void> _startAnimations() async {
     if (!mounted) return;
-    
+
     _logoController.forward();
     _shimmerController.repeat();
-    
+
     await Future.delayed(const Duration(milliseconds: 1000));
     if (!mounted) return;
     _textController.forward();
-    
+
     await Future.delayed(const Duration(milliseconds: 2000));
     if (!mounted) return;
-    
+
     // 🔥 Only call setState if widget is still mounted
     setState(() {
       _showWelcome = false;
     });
-    
+
     if (!mounted) return;
     _mainController.forward();
   }
@@ -141,7 +149,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
   void dispose() {
     // 🔥 Stop repeating animations before dispose
     _shimmerController.stop();
-    
+
     _logoController.dispose();
     _textController.dispose();
     _mainController.dispose();
@@ -157,10 +165,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           gradient: LinearGradient(
             begin: Alignment.topLeft,
             end: Alignment.bottomRight,
-            colors: [
-              AppColors.accentColor,
-              Color(0xFF1e8079),
-            ],
+            colors: [AppColors.accentColor, Color(0xFF1e8079)],
           ),
         ),
         child: Stack(
@@ -174,7 +179,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 ),
               ),
             ),
-            
+
             if (_showWelcome)
               AnimatedOpacity(
                 opacity: _showWelcome ? 1.0 : 0.0,
@@ -231,13 +236,19 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                             width: 72,
                             height: 72,
                             decoration: BoxDecoration(
-                              color: Colors.white.withOpacity(_shimmerAnimation.value),
+                              color: Colors.white.withOpacity(
+                                _shimmerAnimation.value,
+                              ),
                               shape: BoxShape.circle,
                             ),
                           ),
                         ),
                         logoUrl.isEmpty
-                            ? const Icon(Icons.shopping_bag, size: 56, color: AppColors.accentColor)
+                            ? const Icon(
+                                Icons.shopping_bag,
+                                size: 56,
+                                color: AppColors.accentColor,
+                              )
                             : ClipRRect(
                                 borderRadius: BorderRadius.circular(8),
                                 child: Image.asset(
@@ -246,7 +257,11 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                                   height: 80,
                                   fit: BoxFit.contain,
                                   errorBuilder: (context, error, stackTrace) =>
-                                      const Icon(Icons.shopping_bag, size: 56, color: AppColors.accentColor),
+                                      const Icon(
+                                        Icons.shopping_bag,
+                                        size: 56,
+                                        color: AppColors.accentColor,
+                                      ),
                                 ),
                               ),
                       ],
@@ -258,7 +273,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           },
         ),
         const SizedBox(height: 32),
-        
+
         SlideTransition(
           position: _textSlide,
           child: FadeTransition(
@@ -274,17 +289,14 @@ class _WelcomeScreenState extends State<WelcomeScreen>
           ),
         ),
         const SizedBox(height: 8),
-        
+
         SlideTransition(
           position: _textSlide,
           child: FadeTransition(
             opacity: _textOpacity,
             child: Text(
               tagline,
-              style: const TextStyle(
-                fontSize: 18,
-                color: Colors.white70,
-              ),
+              style: const TextStyle(fontSize: 18, color: Colors.white70),
             ),
           ),
         ),
@@ -330,7 +342,7 @@ class _WelcomeScreenState extends State<WelcomeScreen>
             ],
           ),
           const SizedBox(height: 48),
-          
+
           Column(
             children: [
               _buildAuthButton(
@@ -353,7 +365,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const RegistrationApp()),
+                    MaterialPageRoute(
+                      builder: (context) => const RegistrationApp(),
+                    ),
                   );
                 },
               ),
@@ -366,7 +380,9 @@ class _WelcomeScreenState extends State<WelcomeScreen>
                 onPressed: () {
                   Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const CampusClosetScreen()),
+                    MaterialPageRoute(
+                      builder: (context) => const CampusClosetScreen(),
+                    ),
                   );
                 },
               ),

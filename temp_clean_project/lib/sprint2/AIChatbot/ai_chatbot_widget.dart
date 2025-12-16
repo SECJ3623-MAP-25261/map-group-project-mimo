@@ -11,10 +11,7 @@ import 'package:http/http.dart' as http;
 class AIChatbotWidget extends StatefulWidget {
   final Function(ItemModel) onItemSelected;
 
-  const AIChatbotWidget({
-    super.key,
-    required this.onItemSelected,
-  });
+  const AIChatbotWidget({super.key, required this.onItemSelected});
 
   @override
   State<AIChatbotWidget> createState() => _AIChatbotWidgetState();
@@ -25,7 +22,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
   final ScrollController _scrollController = ScrollController();
   final ItemService _itemService = ItemService();
   final stt.SpeechToText _speech = stt.SpeechToText();
-  
+
   List<ChatMessage> _messages = [];
   bool _isListening = false;
   bool _isProcessing = false;
@@ -42,7 +39,7 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
 
   Future<void> _initializeEverything() async {
     debugPrint('🚀 ========== GROQ AI INITIALIZATION ==========');
-    
+
     // 1. Check API Key
     _apiKey = dotenv.env['GROQ_API_KEY'];
     if (_apiKey == null || _apiKey!.isEmpty) {
@@ -52,30 +49,30 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
         "⚠️ Setup Required:\n\n"
         "1. Get FREE API key from: https://console.groq.com\n"
         "2. Add to .env file: GROQ_API_KEY=your_key_here\n"
-        "3. Restart the app"
+        "3. Restart the app",
       );
       return;
     }
-    
+
     debugPrint('✅ Groq API key found');
     setState(() => _debugInfo = '✅ Groq Connected');
-    
+
     // 2. Initialize Speech
     await _initializeSpeech();
-    
+
     // 3. Load items
     await _loadItems();
-    
+
     // 4. Welcome message
     if (_allItems.isNotEmpty) {
       _addBotMessage(
         "Hi! I'm your Campus Closet AI assistant powered by Groq. "
-        "I have ${_allItems.length} items ready. Try: 'formal outfit', 'casual wear', or 'traditional clothes'."
+        "I have ${_allItems.length} items ready. Try: 'formal outfit', 'casual wear', or 'traditional clothes'.",
       );
     } else {
       _addBotMessage("⚠️ No items in database. Please add some items first.");
     }
-    
+
     debugPrint('🚀 ========== INITIALIZATION COMPLETE ==========');
   }
 
@@ -84,11 +81,17 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
       debugPrint('📦 Loading items...');
       _allItems = await _itemService.getItemsStream().first;
       debugPrint('✅ Loaded ${_allItems.length} items');
-      
+
       if (_allItems.isNotEmpty) {
         debugPrint('📦 Sample items:');
-        for (var i = 0; i < (_allItems.length > 3 ? 3 : _allItems.length); i++) {
-          debugPrint('  ${i + 1}. ${_allItems[i].name} (${_allItems[i].category})');
+        for (
+          var i = 0;
+          i < (_allItems.length > 3 ? 3 : _allItems.length);
+          i++
+        ) {
+          debugPrint(
+            '  ${i + 1}. ${_allItems[i].name} (${_allItems[i].category})',
+          );
         }
       }
     } catch (e) {
@@ -136,23 +139,23 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
 
   void _addBotMessage(String text, {List<ItemModel>? suggestedItems}) {
     setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isUser: false,
-        timestamp: DateTime.now(),
-        suggestedItems: suggestedItems,
-      ));
+      _messages.add(
+        ChatMessage(
+          text: text,
+          isUser: false,
+          timestamp: DateTime.now(),
+          suggestedItems: suggestedItems,
+        ),
+      );
     });
     _scrollToBottom();
   }
 
   void _addUserMessage(String text) {
     setState(() {
-      _messages.add(ChatMessage(
-        text: text,
-        isUser: true,
-        timestamp: DateTime.now(),
-      ));
+      _messages.add(
+        ChatMessage(text: text, isUser: true, timestamp: DateTime.now()),
+      );
     });
     _scrollToBottom();
   }
@@ -204,15 +207,20 @@ class _AIChatbotWidgetState extends State<AIChatbotWidget> {
       debugPrint('💬 User: "$userMessage"');
 
       // Prepare item catalog
-      final itemSummaries = _allItems.map((item) => {
-        'id': item.id,
-        'name': item.name,
-        'category': item.category,
-        'pricePerDay': item.pricePerDay,
-        'description': item.description,
-      }).toList();
+      final itemSummaries = _allItems
+          .map(
+            (item) => {
+              'id': item.id,
+              'name': item.name,
+              'category': item.category,
+              'pricePerDay': item.pricePerDay,
+              'description': item.description,
+            },
+          )
+          .toList();
 
-      final systemPrompt = '''You are a fashion assistant for Campus Closet in Malaysia. Help users find outfits.
+      final systemPrompt =
+          '''You are a fashion assistant for Campus Closet in Malaysia. Help users find outfits.
 
 Available items:
 ${const JsonEncoder.withIndent('  ').convert(itemSummaries)}
@@ -257,7 +265,7 @@ Examples:
 
       final data = jsonDecode(response.body);
       final aiResponse = data['choices'][0]['message']['content'] as String;
-      
+
       debugPrint('📥 AI Response: $aiResponse');
 
       // Extract JSON
@@ -287,12 +295,12 @@ Examples:
         message: reply,
         items: suggestedItems.take(6).toList(),
       );
-
     } catch (e, stack) {
       debugPrint('🔥 Error: $e');
       debugPrint('Stack: $stack');
       return ChatbotResponse(
-        message: "Oops! Try asking: 'formal outfit', 'casual wear', or 'traditional clothes'.",
+        message:
+            "Oops! Try asking: 'formal outfit', 'casual wear', or 'traditional clothes'.",
         items: [],
       );
     }
@@ -300,25 +308,27 @@ Examples:
 
   String _extractJSON(String text) {
     String cleaned = text.trim();
-    
+
     // Remove markdown
-    final markdownMatch = RegExp(r'```(?:json)?\s*([\s\S]*?)\s*```').firstMatch(cleaned);
+    final markdownMatch = RegExp(
+      r'```(?:json)?\s*([\s\S]*?)\s*```',
+    ).firstMatch(cleaned);
     if (markdownMatch != null) {
       cleaned = markdownMatch.group(1)!.trim();
     }
-    
+
     // Extract { ... }
     final start = cleaned.indexOf('{');
     final end = cleaned.lastIndexOf('}');
-    
+
     if (start != -1 && end > start) {
       cleaned = cleaned.substring(start, end + 1);
     }
-    
+
     if (!cleaned.startsWith('{') || !cleaned.endsWith('}')) {
       throw Exception('Invalid JSON: $cleaned');
     }
-    
+
     return cleaned;
   }
 
@@ -349,7 +359,7 @@ Examples:
 
   Widget _buildHeader() {
     final isReady = _apiKey != null && _allItems.isNotEmpty;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -364,7 +374,11 @@ Examples:
               color: Colors.white.withOpacity(0.2),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.smart_toy_rounded, color: Colors.white, size: 24),
+            child: const Icon(
+              Icons.smart_toy_rounded,
+              color: Colors.white,
+              size: 24,
+            ),
           ),
           const SizedBox(width: 12),
           Expanded(
@@ -373,10 +387,16 @@ Examples:
               children: [
                 const Text(
                   'Groq AI Assistant',
-                  style: TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.bold),
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
                 Text(
-                  isReady ? 'Online • ${_allItems.length} items • $_debugInfo' : _debugInfo,
+                  isReady
+                      ? 'Online • ${_allItems.length} items • $_debugInfo'
+                      : _debugInfo,
                   style: const TextStyle(color: Colors.white70, fontSize: 12),
                 ),
               ],
@@ -404,7 +424,9 @@ Examples:
     return Align(
       alignment: message.isUser ? Alignment.centerRight : Alignment.centerLeft,
       child: Column(
-        crossAxisAlignment: message.isUser ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+        crossAxisAlignment: message.isUser
+            ? CrossAxisAlignment.end
+            : CrossAxisAlignment.start,
         children: [
           Container(
             margin: const EdgeInsets.only(bottom: 8),
@@ -424,7 +446,8 @@ Examples:
               ),
             ),
           ),
-          if (message.suggestedItems != null && message.suggestedItems!.isNotEmpty)
+          if (message.suggestedItems != null &&
+              message.suggestedItems!.isNotEmpty)
             _buildSuggestedItems(message.suggestedItems!),
           const SizedBox(height: 12),
         ],
@@ -444,7 +467,7 @@ Examples:
           return GestureDetector(
             onTap: () {
               debugPrint('🔗 Item tapped: ${item.name}');
-              
+
               try {
                 // Convert ItemModel to Map for ItemDetailScreen
                 final itemMap = {
@@ -458,10 +481,10 @@ Examples:
                   'renterId': item.renterId,
                   //'availability': item.availability,
                 };
-                
+
                 // Close the chatbot widget first
                 Navigator.pop(context);
-                
+
                 // Then navigate to item detail
                 Navigator.push(
                   context,
@@ -481,7 +504,9 @@ Examples:
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: AppColors.accentColor.withOpacity(0.3)),
+                border: Border.all(
+                  color: AppColors.accentColor.withOpacity(0.3),
+                ),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withOpacity(0.1),
@@ -494,7 +519,9 @@ Examples:
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   ClipRRect(
-                    borderRadius: const BorderRadius.vertical(top: Radius.circular(12)),
+                    borderRadius: const BorderRadius.vertical(
+                      top: Radius.circular(12),
+                    ),
                     child: item.images.isNotEmpty
                         ? Image.network(
                             item.images[0],
@@ -522,7 +549,10 @@ Examples:
                           item.name,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
-                          style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+                          style: const TextStyle(
+                            fontSize: 12,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Row(
@@ -572,7 +602,11 @@ Examples:
           const SizedBox(width: 8),
           const Text(
             'Thinking...',
-            style: TextStyle(color: Colors.grey, fontSize: 12, fontStyle: FontStyle.italic),
+            style: TextStyle(
+              color: Colors.grey,
+              fontSize: 12,
+              fontStyle: FontStyle.italic,
+            ),
           ),
         ],
       ),
@@ -581,7 +615,7 @@ Examples:
 
   Widget _buildInputArea() {
     final isReady = _apiKey != null && _allItems.isNotEmpty;
-    
+
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
@@ -602,7 +636,9 @@ Examples:
                   controller: _messageController,
                   enabled: isReady,
                   decoration: InputDecoration(
-                    hintText: isReady ? 'Try: formal outfit...' : 'Setup required...',
+                    hintText: isReady
+                        ? 'Try: formal outfit...'
+                        : 'Setup required...',
                     border: InputBorder.none,
                     hintStyle: const TextStyle(fontSize: 14),
                   ),
@@ -612,11 +648,17 @@ Examples:
             ),
             const SizedBox(width: 8),
             GestureDetector(
-              onTap: isReady ? (_isListening ? _stopListening : _startListening) : null,
+              onTap: isReady
+                  ? (_isListening ? _stopListening : _startListening)
+                  : null,
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: !isReady ? Colors.grey : _isListening ? Colors.red : AppColors.accentColor,
+                  color: !isReady
+                      ? Colors.grey
+                      : _isListening
+                      ? Colors.red
+                      : AppColors.accentColor,
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
@@ -632,10 +674,16 @@ Examples:
               child: Container(
                 padding: const EdgeInsets.all(12),
                 decoration: BoxDecoration(
-                  color: (_isProcessing || !isReady) ? Colors.grey : AppColors.accentColor,
+                  color: (_isProcessing || !isReady)
+                      ? Colors.grey
+                      : AppColors.accentColor,
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(Icons.send_rounded, color: Colors.white, size: 24),
+                child: const Icon(
+                  Icons.send_rounded,
+                  color: Colors.white,
+                  size: 24,
+                ),
               ),
             ),
           ],

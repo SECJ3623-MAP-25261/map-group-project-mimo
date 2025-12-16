@@ -180,17 +180,15 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
         ),
         // Example: Add to your AppBar actions or as FAB
         IconButton(
-           icon: const Icon(Icons.smart_toy_rounded, color: Colors.white),
-            onPressed: () {
-              Navigator.push(
-               context,
-              MaterialPageRoute(
-              builder: (context) => const AIChatbotScreen(),
-          ),
-    );
-  },
-  tooltip: 'AI Assistant',
-)
+          icon: const Icon(Icons.smart_toy_rounded, color: Colors.white),
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const AIChatbotScreen()),
+            );
+          },
+          tooltip: 'AI Assistant',
+        ),
       ],
     );
   }
