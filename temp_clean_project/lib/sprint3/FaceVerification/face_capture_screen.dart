@@ -5,7 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
-import 'package:profile_managemenr/services/face_verification_service.dart'; // ✅ Unified service
+import 'package:profile_managemenr/services/face_verification_service.dart';
 
 class FaceCaptureScreen extends StatefulWidget {
   final String bookingId;
@@ -33,10 +33,9 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   bool _isProcessing = false;
   final ImagePicker _picker = ImagePicker();
   
-  // ✅ Using unified service with FREE mode
   final FaceVerificationService _faceService = FaceVerificationService(
-    storeDisplayImage: false, // FREE mode - no images stored
-    similarityThreshold: 75.0, // 75% match required (more secure)
+    storeDisplayImage: true, // Store actual images
+    similarityThreshold: 75.0, // 75% match required
   );
 
   @override
@@ -57,14 +56,26 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         return;
       }
 
-      // Use front camera
-      final frontCamera = _cameras!.firstWhere(
-        (camera) => camera.lensDirection == CameraLensDirection.front,
-        orElse: () => _cameras!.first,
-      );
+      // Use back camera for pickup/return (renter scanning rentee)
+      // Use front camera for booking (self-registration)
+      CameraDescription selectedCamera;
+      
+      if (widget.verificationType == 'booking') {
+        // Front camera for self-registration
+        selectedCamera = _cameras!.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.front,
+          orElse: () => _cameras!.first,
+        );
+      } else {
+        // Back camera for pickup/return (scanning rentee)
+        selectedCamera = _cameras!.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.back,
+          orElse: () => _cameras!.first,
+        );
+      }
 
       _cameraController = CameraController(
-        frontCamera,
+        selectedCamera,
         ResolutionPreset.high,
         enableAudio: false,
       );
@@ -88,10 +99,14 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     try {
       setState(() => _isProcessing = true);
 
-      // Use ImagePicker for web - it will use the browser's camera API
+      // Use back camera for pickup/return, front camera for booking
+      final cameraDevice = widget.verificationType == 'booking' 
+          ? CameraDevice.front 
+          : CameraDevice.rear;
+
       final XFile? pickedFile = await _picker.pickImage(
         source: ImageSource.camera,
-        preferredCameraDevice: CameraDevice.front,
+        preferredCameraDevice: cameraDevice,
         maxWidth: 1920,
         maxHeight: 1080,
         imageQuality: 85,
@@ -198,8 +213,6 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[700]),
             ),
-            const SizedBox(height: 8),
-            _buildFreeInfoContainer(),
           ],
         ),
         shape: RoundedRectangleBorder(
@@ -263,8 +276,6 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               textAlign: TextAlign.center,
               style: TextStyle(color: Colors.grey[700]),
             ),
-            const SizedBox(height: 8),
-            _buildFreeInfoContainer(),
           ],
         ),
         shape: RoundedRectangleBorder(
@@ -288,35 +299,6 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               backgroundColor: AppColors.accentColor,
             ),
             child: const Text('Confirm'),
-          ),
-        ],
-      ),
-    );
-  }
-  
-  // ✅ Updated info widget for FREE mode
-  Widget _buildFreeInfoContainer() {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.green.withOpacity(0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.green),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: const [
-          Icon(Icons.savings, color: Colors.green, size: 16),
-          SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              '100% FREE - Only face features used (no image stored)',
-              style: TextStyle(
-                color: Colors.green,
-                fontSize: 12,
-                fontWeight: FontWeight.w600,
-              ),
-            ),
           ),
         ],
       ),
@@ -366,7 +348,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         print('✅ Verification successful!');
         _showSuccessDialog(
           result['message'],
-          result['imageBase64'], // Will be null in FREE mode
+          result['imageBase64'],
         );
       } else {
         print('❌ Verification failed: ${result['message']}');
@@ -420,38 +402,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
             Expanded(child: Text('Success')),
           ],
         ),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(message),
-            const SizedBox(height: 12),
-            Container(
-              padding: const EdgeInsets.all(8),
-              decoration: BoxDecoration(
-                color: Colors.green.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.green),
-              ),
-              child: Row(
-                children: const [
-                  Icon(Icons.savings, color: Colors.green, size: 16),
-                  SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      '100% FREE - Only features stored for verification!',
-                      style: TextStyle(
-                        color: Colors.green,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
+        content: Text(message),
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(16),
         ),
@@ -461,7 +412,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
               Navigator.pop(context);
               Navigator.pop(context, {
                 'success': true,
-                'imageBase64': imageBase64, // Will be null in FREE mode
+                'imageBase64': imageBase64,
               });
             },
             style: ElevatedButton.styleFrom(
@@ -490,12 +441,12 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   String _getInstructionText() {
     if (kIsWeb) {
-      return 'Click the button below to access your camera\nand capture your face\n(100% FREE - No storage costs)';
+      return 'Click the button below to access your camera\nand capture your face';
     }
     
     switch (widget.verificationType) {
       case 'booking':
-        return 'Position your face in the frame\nThis will be used for future verification\n(Features only - FREE)';
+        return 'Position your face in the frame\nThis will be used for future verification';
       case 'pickup':
         return 'Scan rentee\'s face to verify identity\nBefore handing over the item';
       case 'return':
@@ -514,20 +465,11 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
         appBar: AppBar(
           backgroundColor: AppColors.accentColor,
           foregroundColor: Colors.white,
-          title: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                widget.verificationType == 'booking'
-                    ? 'Register Your Face'
-                    : 'Verify Identity',
-                style: const TextStyle(fontSize: 18),
-              ),
-              const Text(
-                '100% FREE - Features Only',
-                style: TextStyle(fontSize: 10, color: Colors.greenAccent),
-              ),
-            ],
+          title: Text(
+            widget.verificationType == 'booking'
+                ? 'Register Your Face'
+                : 'Verify Identity',
+            style: const TextStyle(fontSize: 18),
           ),
         ),
         body: Center(
@@ -580,28 +522,6 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
                     ),
                   ),
                 ),
-                const SizedBox(height: 24),
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: Colors.green.withOpacity(0.1),
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.green),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: const [
-                      Icon(Icons.savings, color: Colors.green),
-                      SizedBox(width: 12),
-                      Expanded(
-                        child: Text(
-                          'No image storage costs! Only facial features are saved for verification.',
-                          style: TextStyle(color: Colors.green, fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
               ],
             ),
           ),
@@ -615,20 +535,11 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       appBar: AppBar(
         backgroundColor: Colors.black,
         foregroundColor: Colors.white,
-        title: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.verificationType == 'booking'
-                  ? 'Register Your Face'
-                  : 'Verify Identity',
-              style: const TextStyle(fontSize: 18),
-            ),
-            const Text(
-              '100% FREE - Features Only',
-              style: TextStyle(fontSize: 10, color: Colors.greenAccent),
-            ),
-          ],
+        title: Text(
+          widget.verificationType == 'booking'
+              ? 'Register Your Face'
+              : 'Verify Identity',
+          style: const TextStyle(fontSize: 18),
         ),
       ),
       body: Stack(

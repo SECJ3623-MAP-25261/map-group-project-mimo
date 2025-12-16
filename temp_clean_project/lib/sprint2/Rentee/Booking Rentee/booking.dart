@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/services/booking_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
-import 'package:profile_managemenr/services/face_verification_service.dart'; // ✅ Unified service
+import 'package:profile_managemenr/services/face_verification_service.dart';
 import '../../../constants/app_colors.dart';
 import 'item_details_card.dart';
 import 'date_selection_field.dart';
@@ -23,19 +23,15 @@ class _BookingScreenState extends State<BookingScreen> {
   final BookingService _bookingService = BookingService();
   final AuthService _authService = AuthService();
   
-  // ✅ Using unified service with FREE mode (no image storage)
   final FaceVerificationService _faceService = FaceVerificationService(
-    storeDisplayImage: false, // FREE mode - features only
-    similarityThreshold: 75.0, // 75% match required (more secure)
+    storeDisplayImage: true,
+    similarityThreshold: 75.0,
   );
   
   DateTime? _startDate;
   DateTime? _endDate;
   String _selectedPaymentMethod = 'Credit/Debit Card';
   bool _isSubmitting = false;
-  bool _isFaceVerified = false;
-  String? _faceImageBase64; // Will be null in FREE mode
-  List<double>? _faceFeatures;
   
   Set<DateTime> _unavailableDates = {};
   bool _isLoadingBookings = true;
@@ -205,71 +201,9 @@ class _BookingScreenState extends State<BookingScreen> {
     return true;
   }
 
-  Future<void> _verifyFace() async {
-    final userId = _authService.userId;
-    if (userId == null) {
-      _showSnackBar('Please log in first', Colors.red);
-      return;
-    }
-
-    final tempBookingId = 'temp_${userId}_${DateTime.now().millisecondsSinceEpoch}';
-
-    final result = await Navigator.push<Map<String, dynamic>>(
-      context,
-      MaterialPageRoute(
-        builder: (context) => FaceCaptureScreen(
-          bookingId: tempBookingId,
-          userId: userId,
-          verificationType: 'booking',
-        ),
-      ),
-    );
-
-    if (result != null && result['success'] == true) {
-      try {
-        print('✅ Face capture successful, retrieving stored data...');
-        final tempData = await _faceService.getStoredFaceData(tempBookingId);
-        
-        if (tempData == null || tempData['features'] == null) {
-          print('❌ No features found in temp booking');
-          _showSnackBar('Face data not saved properly. Please try again.', Colors.red);
-          return;
-        }
-        
-        print('✅ Features retrieved: ${(tempData['features'] as List).length} values');
-        
-        setState(() {
-          _isFaceVerified = true;
-          _faceImageBase64 = null; // Always null in FREE mode
-          _faceFeatures = tempData['features'] as List<double>?;
-        });
-
-        _showSnackBar('Face verified successfully!', Colors.green);
-
-        // Clean up temporary booking
-        try {
-          await FirebaseFirestore.instance.collection('bookings').doc(tempBookingId).delete();
-          print('✅ Temp booking cleaned up');
-        } catch (e) {
-          print('⚠️ Failed to clean up temp booking: $e');
-        }
-      } catch (e) {
-        print('❌ Error retrieving face data: $e');
-        _showSnackBar('Error storing face data: ${e.toString()}', Colors.red);
-      }
-    } else {
-      print('❌ Face capture failed or cancelled');
-      if (result != null) {
-        print('   Result: $result');
-      }
-    }
-  }
-
-  Future<void> _submitBooking() async {
-    if (!_isFaceVerified) {
-      _showSnackBar('Please verify your face before booking', Colors.orange);
-      return;
-    }
+  // New method: Verify face THEN submit booking
+  Future<void> _verifyAndSubmitBooking() async {
+    // Validate booking details first
     if (_rentalDays <= 0) {
       _showSnackBar('Please select valid rental dates', Colors.red);
       return;
@@ -284,6 +218,57 @@ class _BookingScreenState extends State<BookingScreen> {
       return;
     }
 
+    final userId = _authService.userId;
+    if (userId == null) {
+      _showSnackBar('Please log in first', Colors.red);
+      return;
+    }
+
+    // Step 1: Open face verification screen
+    final tempBookingId = 'temp_${userId}_${DateTime.now().millisecondsSinceEpoch}';
+
+    final faceResult = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FaceCaptureScreen(
+          bookingId: tempBookingId,
+          userId: userId,
+          verificationType: 'booking',
+        ),
+      ),
+    );
+
+    // Step 2: Check if face verification was successful
+    if (faceResult == null || faceResult['success'] != true) {
+      _showSnackBar('Face verification cancelled or failed', Colors.orange);
+      return;
+    }
+
+    // Step 3: Retrieve face features
+    List<double>? faceFeatures;
+    try {
+      print('✅ Face capture successful, retrieving stored data...');
+      final tempData = await _faceService.getStoredFaceData(tempBookingId);
+      
+      if (tempData == null || tempData['features'] == null) {
+        print('❌ No features found in temp booking');
+        _showSnackBar('Face data not saved properly. Please try again.', Colors.red);
+        return;
+      }
+      
+      faceFeatures = tempData['features'] as List<double>?;
+      print('✅ Features retrieved: ${faceFeatures?.length} values');
+    } catch (e) {
+      print('❌ Error retrieving face data: $e');
+      _showSnackBar('Error storing face data: ${e.toString()}', Colors.red);
+      return;
+    }
+
+    // Step 4: Submit the booking
+    await _submitBookingWithFaceData(faceFeatures, tempBookingId);
+  }
+
+  Future<void> _submitBookingWithFaceData(List<double>? faceFeatures, String tempBookingId) async {
     setState(() => _isSubmitting = true);
 
     try {
@@ -330,13 +315,13 @@ class _BookingScreenState extends State<BookingScreen> {
       }
 
       if (bookingId != null) {
-        // ✅ Attach face features (using unified service)
-        if (_isFaceVerified && _faceFeatures != null) {
+        // Attach face features to the real booking
+        if (faceFeatures != null) {
           try {
             final verificationDoc = await FirebaseFirestore.instance.collection('face_verifications').add({
               'bookingId': bookingId,
               'userId': userId,
-              'faceFeatures': _faceFeatures,
+              'faceFeatures': faceFeatures,
               'verificationType': 'booking',
               'timestamp': FieldValue.serverTimestamp(),
               'verified': true,
@@ -345,13 +330,22 @@ class _BookingScreenState extends State<BookingScreen> {
             await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
               'faceVerified': true,
               'faceVerificationId': verificationDoc.id,
-              'faceFeatures': _faceFeatures,
+              'faceFeatures': faceFeatures,
               'faceVerificationDate': FieldValue.serverTimestamp(),
             });
+
+            print('✅ Face features attached to booking: $bookingId');
           } catch (e) {
             print('❌ Error attaching face features: $e');
-            // Proceed anyway — booking is valid
           }
+        }
+
+        // Clean up temporary booking
+        try {
+          await FirebaseFirestore.instance.collection('bookings').doc(tempBookingId).delete();
+          print('✅ Temp booking cleaned up');
+        } catch (e) {
+          print('⚠️ Failed to clean up temp booking: $e');
         }
 
         _showSnackBar('Booking successful! ID: ${bookingId.substring(0, 8)}', Colors.green);
@@ -361,7 +355,13 @@ class _BookingScreenState extends State<BookingScreen> {
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
-                title: const Text('Booking Confirmed!'),
+                title: Row(
+                  children: const [
+                    Icon(Icons.check_circle, color: Colors.green, size: 32),
+                    SizedBox(width: 12),
+                    Expanded(child: Text('Booking Confirmed!')),
+                  ],
+                ),
                 content: Column(
                   mainAxisSize: MainAxisSize.min,
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -475,80 +475,6 @@ class _BookingScreenState extends State<BookingScreen> {
 
                     const SizedBox(height: 24),
 
-                    // Face Verification Section
-                    Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(
-                        color: _isFaceVerified 
-                            ? Colors.green.withOpacity(0.1)
-                            : Colors.orange.withOpacity(0.1),
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(
-                          color: _isFaceVerified ? Colors.green : Colors.orange,
-                          width: 2,
-                        ),
-                      ),
-                      child: Column(
-                        children: [
-                          Row(
-                            children: [
-                              Icon(
-                                _isFaceVerified 
-                                    ? Icons.verified_user 
-                                    : Icons.face_retouching_natural,
-                                color: _isFaceVerified ? Colors.green : Colors.orange,
-                                size: 32,
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      _isFaceVerified 
-                                          ? 'Face Verified ✓'
-                                          : 'Face Verification Required',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 16,
-                                        color: _isFaceVerified ? Colors.green : Colors.orange,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      _isFaceVerified
-                                          ? 'Your identity has been verified (100% FREE)'
-                                          : 'Verify your face to proceed with booking',
-                                      style: TextStyle(fontSize: 12, color: Colors.grey[700]),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (!_isFaceVerified) ...[
-                            const SizedBox(height: 12),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                onPressed: _verifyFace,
-                                icon: const Icon(Icons.camera_alt),
-                                label: const Text('Verify Face (FREE)'),
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: AppColors.accentColor,
-                                  foregroundColor: Colors.white,
-                                  padding: const EdgeInsets.symmetric(vertical: 12),
-                                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ],
-                      ),
-                    ),
-
-                    const SizedBox(height: 24),
-
                     DateSelectionField(
                       label: 'Rental Start Date (Pickup)',
                       date: _startDate,
@@ -587,6 +513,31 @@ class _BookingScreenState extends State<BookingScreen> {
                     
                     const SizedBox(height: 32),
 
+                    // Info box about face verification
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withOpacity(0.1),
+                        borderRadius: BorderRadius.circular(12),
+                        border: Border.all(color: Colors.blue, width: 1),
+                      ),
+                      child: Row(
+                        children: const [
+                          Icon(Icons.info_outline, color: Colors.blue, size: 24),
+                          SizedBox(width: 12),
+                          Expanded(
+                            child: Text(
+                              'You will be asked to verify your face before completing the booking',
+                              style: TextStyle(color: Colors.blue, fontSize: 13),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Bottom buttons
                     Padding(
                       padding: const EdgeInsets.only(bottom: 8.0),
                       child: Row(
@@ -609,9 +560,8 @@ class _BookingScreenState extends State<BookingScreen> {
                               onPressed: (_rentalDays > 0 &&
                                       _renterId.isNotEmpty &&
                                       _itemId.isNotEmpty &&
-                                      _isFaceVerified &&
                                       !_isSubmitting)
-                                  ? _submitBooking
+                                  ? _verifyAndSubmitBooking
                                   : null,
                               style: ElevatedButton.styleFrom(
                                 backgroundColor: AppColors.accentColor,
@@ -629,7 +579,7 @@ class _BookingScreenState extends State<BookingScreen> {
                                         valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
                                       ),
                                     )
-                                  : const Text('BOOKING & PAY', style: TextStyle(fontWeight: FontWeight.bold)),
+                                  : const Text('CONFIRM & VERIFY', style: TextStyle(fontWeight: FontWeight.bold)),
                             ),
                           ),
                         ],
