@@ -36,10 +36,10 @@ class RenterDashboard extends StatelessWidget {
         .snapshots()
         .map((snapshot) {
           double total = 0.0;
-          /*for (var doc in snapshot.docs) {
+          for (var doc in snapshot.docs) {
             final data = doc.data() as Map<String, dynamic>;
             total += (data['finalFee'] as num?)?.toDouble() ?? 0.0;
-          }*/
+          }
           return total;
         });
   }
