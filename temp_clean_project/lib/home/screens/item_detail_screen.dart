@@ -102,9 +102,32 @@ class ItemDetailScreen extends StatelessWidget {
         // Compare button
         TextButton.icon(
           onPressed: () {
+            // Prepare item data with proper structure
+            final itemData = Map<String, dynamic>.from(item);
+
+            // Ensure 'id' field exists
+            if (!itemData.containsKey('id')) {
+              itemData['id'] = item['itemId'] ?? item['id'] ?? '';
+            }
+
+            // Ensure price field exists
+            if (!itemData.containsKey('pricePerDay') &&
+                !itemData.containsKey('price')) {
+              itemData['pricePerDay'] = 0.0;
+            }
+
+            print(
+              '📦 Passing item to compare: ${itemData['id']} - ${itemData['name']}',
+            );
+
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (_) => SearchPage()),
+              MaterialPageRoute(
+                builder: (_) => SearchPage(
+                  preSelectedItem: itemData,
+                  startCompareMode: true,
+                ),
+              ),
             );
           },
           icon: Icon(
