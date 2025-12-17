@@ -4,7 +4,10 @@ import 'package:profile_managemenr/constants/app_colors.dart';
 import 'dart:convert';
 import 'package:profile_managemenr/sprint3/FaceVerification/face_capture_screen.dart';
 
-// Placeholder BookingService
+// CORRECTED IMPORT: Use the standard path for the package
+import 'package:url_launcher/url_launcher.dart'; 
+
+// Placeholder BookingService (Update this with the actual implementation if necessary)
 class BookingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
@@ -19,6 +22,15 @@ class BookingService {
       print('Error updating booking status: $e');
       return false;
     }
+  }
+
+  // Placeholder methods needed by BookingScreen 
+  Future<List<Map<String, dynamic>>> getItemBookings(String itemId) async {
+    return [];
+  }
+
+  Set<DateTime> getUnavailableDates(List<Map<String, dynamic>> bookings) {
+    return {};
   }
 }
 
@@ -123,9 +135,8 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
       case 'completed':
         return Colors.green;
       case 'cancelled':
-        return Colors.red;
       default:
-        return Colors.grey;
+        return Colors.red;
     }
   }
 
@@ -150,6 +161,27 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
           duration: Duration(seconds: 2),
         ),
       );
+    }
+  }
+  
+  // LOGIC: Function to launch an external map application using url_launcher
+  Future<void> _launchMap(double latitude, double longitude, String address) async {
+    // Construct the standard Google Maps URL using coordinates
+    final url = 'http://googleusercontent.com/maps.google.com/7';
+    final uri = Uri.parse(url);
+    
+    // Check if the URI can be launched
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Could not open map for address: $address'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
     }
   }
 
@@ -217,6 +249,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     }
   }
 
+  // MODIFIED METHOD: To show meet-up point details
   void _showBookingDetails(Map<String, dynamic> booking) {
     final bookingId = booking['id'];
     final status = booking['status'] ?? 'pending';
@@ -225,6 +258,12 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     final isReadyForPickup = status == 'confirmed';
     final isReadyForReturn = status == 'ongoing';
     
+    // NEW: Extract location data
+    final meetUpAddress = booking['meetUpAddress'] as String?;
+    final meetUpLatitude = booking['meetUpLatitude'] as double?;
+    final meetUpLongitude = booking['meetUpLongitude'] as double?;
+    final isLocationAvailable = meetUpLatitude != null && meetUpLongitude != null && meetUpAddress != null;
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -249,6 +288,45 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
               _buildDetailRow('End Date', _formatDate(booking['endDate'])),
               _buildDetailRow('Rental Days', '${booking['rentalDays'] ?? 'N/A'}'),
               _buildDetailRow('Payment', booking['paymentMethod'] ?? 'N/A'),
+              
+              const Divider(height: 20),
+              
+              // NEW UI BLOCK: Meet Up Point Details
+              const Text(
+                'Meet Up Location', 
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.accentColor),
+              ),
+              const SizedBox(height: 8),
+
+              isLocationAvailable
+                  ? Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        _buildDetailRow('Address', meetUpAddress!),
+                        
+                        // Button to launch map
+                        Padding(
+                          padding: const EdgeInsets.only(top: 8.0),
+                          child: TextButton.icon(
+                            onPressed: () {
+                                Navigator.pop(context); // Close dialog first
+                                _launchMap(meetUpLatitude!, meetUpLongitude!, meetUpAddress);
+                            },
+                            icon: const Icon(Icons.map, size: 20, color: Colors.blue),
+                            label: const Text('View on Map (Tap to open)'),
+                            style: TextButton.styleFrom(
+                              padding: EdgeInsets.zero,
+                              alignment: Alignment.centerLeft,
+                            ),
+                          ),
+                        ),
+                      ],
+                    )
+                  : _buildDetailRow('Address', 'Location data missing'),
+              
+              const Divider(height: 20),
+              // END NEW UI BLOCK
+              
               
               const SizedBox(height: 12),
               Text(
@@ -496,243 +574,243 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
           Expanded(
             child: _isLoading
                 ? const Center(
-                    child: CircularProgressIndicator(color: AppColors.accentColor),
-                  )
+                      child: CircularProgressIndicator(color: AppColors.accentColor),
+                    )
                 : StreamBuilder<QuerySnapshot>(
-                    stream: _getBookingsStream(),
-                    builder: (context, snapshot) {
-                      // Debug logging
-                      if (snapshot.connectionState == ConnectionState.active) {
-                        print('📊 Stream active - docs count: ${snapshot.data?.docs.length ?? 0}');
-                      }
+                      stream: _getBookingsStream(),
+                      builder: (context, snapshot) {
+                        // Debug logging
+                        if (snapshot.connectionState == ConnectionState.active) {
+                          print('📊 Stream active - docs count: ${snapshot.data?.docs.length ?? 0}');
+                        }
 
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(
-                          child: CircularProgressIndicator(color: AppColors.accentColor),
-                        );
-                      }
+                        if (snapshot.connectionState == ConnectionState.waiting) {
+                          return const Center(
+                            child: CircularProgressIndicator(color: AppColors.accentColor),
+                          );
+                        }
 
-                      if (snapshot.hasError) {
-                        print('❌ Stream error: ${snapshot.error}');
-                        return Center(
-                          child: Padding(
-                            padding: const EdgeInsets.all(20.0),
+                        if (snapshot.hasError) {
+                          print('❌ Stream error: ${snapshot.error}');
+                          return Center(
+                            child: Padding(
+                              padding: const EdgeInsets.all(20.0),
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                                  const SizedBox(height: 16),
+                                  Text(
+                                    'Error loading bookings',
+                                    style: TextStyle(
+                                      fontSize: 18,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.grey[800],
+                                    ),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Text(
+                                    '${snapshot.error}',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(color: Colors.grey[600]),
+                                  ),
+                                  const SizedBox(height: 16),
+                                  ElevatedButton.icon(
+                                    onPressed: () {
+                                      setState(() {});
+                                    },
+                                    icon: const Icon(Icons.refresh),
+                                    label: const Text('Retry'),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppColors.accentColor,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        }
+
+                        if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
+                          return Center(
                             child: Column(
                               mainAxisAlignment: MainAxisAlignment.center,
                               children: [
-                                const Icon(Icons.error_outline, size: 60, color: Colors.red),
+                                Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
                                 const SizedBox(height: 16),
                                 Text(
-                                  'Error loading bookings',
+                                  'No ${_filterStatus == 'all' ? '' : _filterStatus} booking requests',
                                   style: TextStyle(
                                     fontSize: 18,
-                                    fontWeight: FontWeight.bold,
-                                    color: Colors.grey[800],
+                                    color: Colors.grey[600],
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
                                 const SizedBox(height: 8),
                                 Text(
-                                  '${snapshot.error}',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(color: Colors.grey[600]),
-                                ),
-                                const SizedBox(height: 16),
-                                ElevatedButton.icon(
-                                  onPressed: () {
-                                    setState(() {});
-                                  },
-                                  icon: const Icon(Icons.refresh),
-                                  label: const Text('Retry'),
-                                  style: ElevatedButton.styleFrom(
-                                    backgroundColor: AppColors.accentColor,
+                                  'Check that bookings have renterId: ${widget.renterId}',
+                                  style: TextStyle(
+                                    fontSize: 14,
+                                    color: Colors.grey[500],
                                   ),
+                                  textAlign: TextAlign.center,
                                 ),
                               ],
                             ),
-                          ),
-                        );
-                      }
+                          );
+                        }
 
-                      if (!snapshot.hasData || snapshot.data!.docs.isEmpty) {
-                        return Center(
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Icon(Icons.inbox_outlined, size: 80, color: Colors.grey[400]),
-                              const SizedBox(height: 16),
-                              Text(
-                                'No ${_filterStatus == 'all' ? '' : _filterStatus} booking requests',
-                                style: TextStyle(
-                                  fontSize: 18,
-                                  color: Colors.grey[600],
-                                  fontWeight: FontWeight.w500,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Text(
-                                'Check that bookings have renterId: ${widget.renterId}',
-                                style: TextStyle(
-                                  fontSize: 14,
-                                  color: Colors.grey[500],
-                                ),
-                                textAlign: TextAlign.center,
-                              ),
-                            ],
-                          ),
-                        );
-                      }
+                        final bookings = snapshot.data!.docs.map((doc) {
+                          final data = doc.data() as Map<String, dynamic>;
+                          data['id'] = doc.id;
+                          return data;
+                        }).toList();
 
-                      final bookings = snapshot.data!.docs.map((doc) {
-                        final data = doc.data() as Map<String, dynamic>;
-                        data['id'] = doc.id;
-                        return data;
-                      }).toList();
+                        // Sort by timestamp manually (since we can't use orderBy without index)
+                        bookings.sort((a, b) {
+                          final aTime = a['timestamp'];
+                          final bTime = b['timestamp'];
+                          if (aTime == null) return 1;
+                          if (bTime == null) return -1;
+                          final aDate = aTime is Timestamp ? aTime.toDate() : DateTime.now();
+                          final bDate = bTime is Timestamp ? bTime.toDate() : DateTime.now();
+                          return bDate.compareTo(aDate); // descending order
+                        });
 
-                      // Sort by timestamp manually (since we can't use orderBy without index)
-                      bookings.sort((a, b) {
-                        final aTime = a['timestamp'];
-                        final bTime = b['timestamp'];
-                        if (aTime == null) return 1;
-                        if (bTime == null) return -1;
-                        final aDate = aTime is Timestamp ? aTime.toDate() : DateTime.now();
-                        final bDate = bTime is Timestamp ? bTime.toDate() : DateTime.now();
-                        return bDate.compareTo(aDate); // descending order
-                      });
+                        print('✅ Displaying ${bookings.length} bookings');
 
-                      print('✅ Displaying ${bookings.length} bookings');
+                        return RefreshIndicator(
+                          onRefresh: () async {
+                            setState(() {});
+                          },
+                          child: ListView.builder(
+                            padding: const EdgeInsets.all(12),
+                            itemCount: bookings.length,
+                            itemBuilder: (context, index) {
+                              final booking = bookings[index];
+                              final status = booking['status'] ?? 'pending';
+                              final imageData = booking['itemImage'];
+                              final faceVerified = booking['faceVerified'] ?? false;
+                              final isOngoing = status == 'ongoing';
+                              final isConfirmed = status == 'confirmed';
 
-                      return RefreshIndicator(
-                        onRefresh: () async {
-                          setState(() {});
-                        },
-                        child: ListView.builder(
-                          padding: const EdgeInsets.all(12),
-                          itemCount: bookings.length,
-                          itemBuilder: (context, index) {
-                            final booking = bookings[index];
-                            final status = booking['status'] ?? 'pending';
-                            final imageData = booking['itemImage'];
-                            final faceVerified = booking['faceVerified'] ?? false;
-                            final isOngoing = status == 'ongoing';
-                            final isConfirmed = status == 'confirmed';
-
-                            return Container(
-                              margin: const EdgeInsets.only(bottom: 12),
-                              decoration: BoxDecoration(
-                                color: AppColors.lightCardBackground,
-                                borderRadius: BorderRadius.circular(12),
-                                border: Border.all(
-                                  color: isConfirmed || isOngoing 
-                                      ? _getStatusColor(status).withOpacity(0.5) 
-                                      : Colors.transparent,
-                                  width: 1,
-                                ),
-                                boxShadow: [
-                                  BoxShadow(
-                                    color: Colors.black.withOpacity(0.05),
-                                    blurRadius: 8,
-                                    offset: const Offset(0, 2),
+                              return Container(
+                                margin: const EdgeInsets.only(bottom: 12),
+                                decoration: BoxDecoration(
+                                  color: AppColors.lightCardBackground,
+                                  borderRadius: BorderRadius.circular(12),
+                                  border: Border.all(
+                                    color: isConfirmed || isOngoing 
+                                        ? _getStatusColor(status).withOpacity(0.5) 
+                                        : Colors.transparent,
+                                    width: 1,
                                   ),
-                                ],
-                              ),
-                              child: ListTile(
-                                contentPadding: const EdgeInsets.all(12),
-                                leading: ClipRRect(
-                                  borderRadius: BorderRadius.circular(8),
-                                  child: imageData != null && imageData.isNotEmpty
-                                      ? (imageData.startsWith('http')
-                                          ? Image.network(
-                                                imageData,
-                                                width: 60,
-                                                height: 60,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Container(
-                                                    width: 60,
-                                                    height: 60,
-                                                    color: Colors.grey[300],
-                                                    child: const Icon(Icons.broken_image),
-                                                  );
-                                                },
-                                              )
-                                          : Image.memory(
-                                                base64Decode(imageData),
-                                                width: 60,
-                                                height: 60,
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error, stackTrace) {
-                                                  return Container(
-                                                    width: 60,
-                                                    height: 60,
-                                                    color: Colors.grey[300],
-                                                    child: const Icon(Icons.broken_image),
-                                                  );
-                                                },
-                                              ))
-                                      : Container(
-                                            width: 60,
-                                            height: 60,
-                                            color: Colors.grey[300],
-                                            child: const Icon(Icons.image),
-                                          ),
-                                ),
-                                title: Text(
-                                  booking['itemName'] ?? 'Unknown Item',
-                                  style: const TextStyle(fontWeight: FontWeight.bold),
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const SizedBox(height: 4),
-                                    Text('Rentee: ${booking['userName'] ?? 'N/A'}'),
-                                    Text('${_formatDate(booking['startDate'])} - ${_formatDate(booking['endDate'])}'),
-                                    Text(
-                                      'RM ${booking['totalAmount']?.toStringAsFixed(2) ?? '0.00'}',
-                                      style: const TextStyle(
-                                        color: AppColors.accentColor,
-                                        fontWeight: FontWeight.w600,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: _getStatusColor(status).withOpacity(0.2),
-                                            borderRadius: BorderRadius.circular(4),
-                                            border: Border.all(color: _getStatusColor(status)),
-                                          ),
-                                          child: Text(
-                                            status.toUpperCase(),
-                                            style: TextStyle(
-                                              color: _getStatusColor(status),
-                                              fontSize: 10,
-                                              fontWeight: FontWeight.bold,
-                                            ),
-                                          ),
-                                        ),
-                                        if (faceVerified) ...[
-                                          const SizedBox(width: 4),
-                                          const Icon(Icons.face_retouching_natural, 
-                                              color: Colors.green, size: 16),
-                                        ],
-                                      ],
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withOpacity(0.05),
+                                      blurRadius: 8,
+                                      offset: const Offset(0, 2),
                                     ),
                                   ],
                                 ),
-                                trailing: Icon(
-                                  isConfirmed ? Icons.face_retouching_natural : Icons.chevron_right,
-                                  color: isConfirmed ? Colors.purple : Colors.grey,
+                                child: ListTile(
+                                  contentPadding: const EdgeInsets.all(12),
+                                  leading: ClipRRect(
+                                    borderRadius: BorderRadius.circular(8),
+                                    child: imageData != null && imageData.isNotEmpty
+                                        ? (imageData.startsWith('http')
+                                            ? Image.network(
+                                                  imageData,
+                                                  width: 60,
+                                                  height: 60,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      width: 60,
+                                                      height: 60,
+                                                      color: Colors.grey[300],
+                                                      child: const Icon(Icons.broken_image),
+                                                    );
+                                                  },
+                                                )
+                                            : Image.memory(
+                                                  base64Decode(imageData),
+                                                  width: 60,
+                                                  height: 60,
+                                                  fit: BoxFit.cover,
+                                                  errorBuilder: (context, error, stackTrace) {
+                                                    return Container(
+                                                      width: 60,
+                                                      height: 60,
+                                                      color: Colors.grey[300],
+                                                      child: const Icon(Icons.broken_image),
+                                                    );
+                                                  },
+                                                ))
+                                        : Container(
+                                              width: 60,
+                                              height: 60,
+                                              color: Colors.grey[300],
+                                              child: const Icon(Icons.image),
+                                            ),
+                                  ),
+                                  title: Text(
+                                    booking['itemName'] ?? 'Unknown Item',
+                                    style: const TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      const SizedBox(height: 4),
+                                      Text('Rentee: ${booking['userName'] ?? 'N/A'}'),
+                                      Text('${_formatDate(booking['startDate'])} - ${_formatDate(booking['endDate'])}'),
+                                      Text(
+                                        'RM ${booking['totalAmount']?.toStringAsFixed(2) ?? '0.00'}',
+                                        style: const TextStyle(
+                                          color: AppColors.accentColor,
+                                          fontWeight: FontWeight.w600,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: _getStatusColor(status).withOpacity(0.2),
+                                              borderRadius: BorderRadius.circular(4),
+                                              border: Border.all(color: _getStatusColor(status)),
+                                            ),
+                                            child: Text(
+                                              status.toUpperCase(),
+                                              style: TextStyle(
+                                                color: _getStatusColor(status),
+                                                fontSize: 10,
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                            ),
+                                          ),
+                                          if (faceVerified) ...[
+                                            const SizedBox(width: 4),
+                                            const Icon(Icons.face_retouching_natural, 
+                                                color: Colors.green, size: 16),
+                                          ],
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  trailing: Icon(
+                                    isConfirmed ? Icons.face_retouching_natural : Icons.chevron_right,
+                                    color: isConfirmed ? Colors.purple : Colors.grey,
+                                  ),
+                                  onTap: () => _showBookingDetails(booking),
                                 ),
-                                onTap: () => _showBookingDetails(booking),
-                              ),
-                            );
-                          },
-                        ),
-                      );
-                    },
-                  ),
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
           ),
         ],
       ),

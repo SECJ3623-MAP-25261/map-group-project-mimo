@@ -124,6 +124,9 @@ class BookingService {
         'hasReview': false,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
+        'meetUpAddress': meetUpAddress,
+        'meetUpLatitude': meetUpLatitude,
+        'meetUpLongitude': meetUpLongitude,
       });
 
       return docRef.id; // Return booking ID

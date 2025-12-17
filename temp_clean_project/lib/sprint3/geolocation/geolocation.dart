@@ -1,10 +1,10 @@
-
 import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:geocoding/geocoding.dart';
-
+// Note: Assuming AppColors is imported from your constants file
+// import '../../../constants/app_colors.dart'; 
 
 class MapLocationPickerScreen extends StatefulWidget {
   const MapLocationPickerScreen({super.key});
@@ -15,7 +15,9 @@ class MapLocationPickerScreen extends StatefulWidget {
 
 class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
   final Completer<GoogleMapController> _controller = Completer();
-  // Default center (can be set to a campus center or general area)
+  final TextEditingController _searchController = TextEditingController();
+  
+  // Default center (e.g., a major city or campus area)
   static const CameraPosition _kInitialPosition = CameraPosition(
     target: LatLng(3.1390, 101.6869), // Example: Kuala Lumpur (Fallback)
     zoom: 14.0,
@@ -24,6 +26,7 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
   String _currentAddress = "Loading address...";
   LatLng? _selectedLocation;
   bool _isLoading = true;
+  String? _searchError;
 
   @override
   void initState() {
@@ -32,6 +35,12 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
     _determineInitialPosition();
   }
 
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+  
   // Helper function to check permissions and get location
   Future<Position> _determinePosition() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
@@ -77,6 +86,7 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
     setState(() {
       _isLoading = true;
       _selectedLocation = position;
+      _searchError = null;
     });
     try {
       // Use geocoding package to convert coordinates to an address
@@ -87,13 +97,54 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
           : "Unknown Location";
 
       setState(() {
-        // Clean up the address string
         _currentAddress = address.trim().isEmpty ? "Unnamed Location" : address;
       });
     } catch (e) {
       setState(() {
         _currentAddress = "Failed to fetch address";
       });
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
+  }
+
+  // Search function using geocoding to find coordinates from an address
+  Future<void> _searchAndMoveCamera() async {
+    final query = _searchController.text.trim();
+    if (query.isEmpty) {
+      setState(() => _searchError = 'Please enter an address or landmark.');
+      return;
+    }
+
+    setState(() {
+      _isLoading = true;
+      _searchError = null;
+    });
+
+    try {
+      List<Location> locations = await locationFromAddress(query);
+
+      if (locations.isNotEmpty) {
+        final LatLng newLocation = LatLng(locations.first.latitude, locations.first.longitude);
+        final GoogleMapController controller = await _controller.future;
+        
+        // Move the camera to the search result
+        controller.animateCamera(
+          CameraUpdate.newCameraPosition(
+            CameraPosition(
+              target: newLocation,
+              zoom: 16.0,
+            ),
+          ),
+        );
+        // The address will be updated automatically by _onCameraIdle
+      } else {
+        setState(() => _searchError = 'Address not found. Try a broader search.');
+      }
+    } catch (e) {
+      setState(() => _searchError = 'Search failed: ${e.toString()}');
     } finally {
       setState(() {
         _isLoading = false;
@@ -114,6 +165,8 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
     _updateAddress(center);
   }
 
+  // --- UI ---
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -132,7 +185,34 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
             onCameraIdle: _onCameraIdle, // Update address when map stops moving
           ),
 
-          // 2. Center Pin Icon (Image Overlaid on the map)
+          // 2. Search Bar Overlay (NEW)
+          Positioned(
+            top: 10,
+            left: 10,
+            right: 10,
+            child: Card(
+              elevation: 8,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: InputDecoration(
+                    hintText: 'Search for address or landmark...',
+                    border: InputBorder.none,
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.search, color: Colors.blue),
+                      onPressed: _searchAndMoveCamera,
+                    ),
+                    errorText: _searchError,
+                  ),
+                  onSubmitted: (_) => _searchAndMoveCamera(),
+                ),
+              ),
+            ),
+          ),
+
+          // 3. Center Pin Icon (Image Overlaid on the map)
           const Center(
             child: Padding(
               padding: EdgeInsets.only(bottom: 40), // Offset for pin's height
@@ -144,14 +224,14 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
             ),
           ),
           
-          // 3. Address and Confirmation Card (Bottom Overlay)
+          // 4. Address and Confirmation Card (Bottom Overlay)
           Align(
             alignment: Alignment.bottomCenter,
             child: Container(
               padding: const EdgeInsets.all(20.0),
-              decoration: const BoxDecoration(
+              decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.only(
+                borderRadius: const BorderRadius.only(
                   topLeft: Radius.circular(20),
                   topRight: Radius.circular(20),
                 ),
@@ -162,7 +242,7 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: <Widget>[
                   const Text(
-                    'Pickup Location',
+                    'Confirm Pickup Location',
                     style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600),
                   ),
                   const SizedBox(height: 8),
@@ -203,7 +283,7 @@ class _MapLocationPickerScreenState extends State<MapLocationPickerScreen> {
                         onPressed: _selectedLocation == null || _isLoading
                             ? null
                             : () {
-                                // Return the selected data to the previous screen (BookingScreen)
+                                // Return the selected data to the previous screen
                                 Navigator.of(context).pop({
                                   'latitude': _selectedLocation!.latitude,
                                   'longitude': _selectedLocation!.longitude,
