@@ -92,6 +92,9 @@ class BookingService {
     required int rentalDays,
     required double totalAmount,
     required String paymentMethod,
+    required String meetUpAddress,
+    required double meetUpLatitude,
+    required double meetUpLongitude,
   }) async {
     try {
       // ✅ Check for overlapping bookings before creating

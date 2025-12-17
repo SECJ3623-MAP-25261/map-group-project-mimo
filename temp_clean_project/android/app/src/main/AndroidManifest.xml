@@ -4,6 +4,12 @@
         android:label="temp_clean_project"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+
+        <meta-data
+        android:name="com.google.android.geo.API_KEY"
+        android:value="AIzaSyBkvwuXh3_Pd8lbhQ7inEoHEyxHCdqiUGw" />
+        <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
+        <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
         <activity
             android:name=".MainActivity"
             android:exported="true"

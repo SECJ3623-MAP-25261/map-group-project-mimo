@@ -9,6 +9,7 @@ import 'date_selection_field.dart';
 import 'rental_summary_card.dart';
 import 'payment_method_selector.dart';
 import 'package:profile_managemenr/sprint3/FaceVerification/face_capture_screen.dart';
+import 'package:profile_managemenr/sprint3/geolocation/geolocation.dart';
 
 class BookingScreen extends StatefulWidget {
   final Map<String, dynamic>? itemData;
@@ -36,6 +37,11 @@ class _BookingScreenState extends State<BookingScreen> {
   Set<DateTime> _unavailableDates = {};
   bool _isLoadingBookings = true;
   String _debugMessage = '';
+  
+  // 2. NEW STATE: Variables to store the selected Meet Up Point
+  String _meetUpAddress = 'Select the Meet Up Point';
+  double? _meetUpLatitude;
+  double? _meetUpLongitude;
   
   final List<String> _paymentMethods = [
     'Credit/Debit Card',
@@ -201,6 +207,24 @@ class _BookingScreenState extends State<BookingScreen> {
     return true;
   }
 
+  
+  Future<void> _selectMeetUpPoint() async {
+    final result = await Navigator.push<Map<String, dynamic>>(
+      context,
+      MaterialPageRoute(builder: (context) => const MapLocationPickerScreen()),
+    );
+
+    if (result != null && mounted) {
+      setState(() {
+        _meetUpAddress = result['address'] as String? ?? 'Error fetching address';
+        _meetUpLatitude = result['latitude'] as double?;
+        _meetUpLongitude = result['longitude'] as double?;
+      });
+      _showSnackBar('Meet Up Point Selected: $_meetUpAddress', AppColors.accentColor);
+    }
+  }
+
+
   // New method: Verify face THEN submit booking
   Future<void> _verifyAndSubmitBooking() async {
     // Validate booking details first
@@ -208,6 +232,13 @@ class _BookingScreenState extends State<BookingScreen> {
       _showSnackBar('Please select valid rental dates', Colors.red);
       return;
     }
+    
+    // NEW VALIDATION: Check for Meet Up Point
+    if (_meetUpLatitude == null || _meetUpLongitude == null) {
+      _showSnackBar('Please select a Meet Up Point on the map', Colors.red);
+      return;
+    }
+    
     if (_renterId.isEmpty || _itemId.isEmpty) {
       _showSnackBar('Item or owner info missing. Cannot book.', Colors.red);
       return;
@@ -289,6 +320,7 @@ class _BookingScreenState extends State<BookingScreen> {
         userName = userEmail.split('@')[0];
       }
 
+      
       final bookingId = await _bookingService.createBooking(
         userId: userId,
         userEmail: userEmail,
@@ -303,6 +335,9 @@ class _BookingScreenState extends State<BookingScreen> {
         rentalDays: _rentalDays,
         totalAmount: _estimatedTotal,
         paymentMethod: _selectedPaymentMethod,
+        meetUpAddress: _meetUpAddress,     
+        meetUpLatitude: _meetUpLatitude!,    
+        meetUpLongitude: _meetUpLongitude!,  
       );
 
       if (!mounted) return;
@@ -373,6 +408,15 @@ class _BookingScreenState extends State<BookingScreen> {
                     Text('Total: RM ${_estimatedTotal.toStringAsFixed(2)}'),
                     const SizedBox(height: 8),
                     Text('Payment: $_selectedPaymentMethod'),
+                    const SizedBox(height: 8),
+                    // Display the selected Meet Up Point in the confirmation dialog
+                    Row(
+                      children: [
+                        const Icon(Icons.location_pin, color: AppColors.accentColor, size: 16),
+                        const SizedBox(width: 4),
+                        Expanded(child: Text('Meetup: $_meetUpAddress', style: const TextStyle(fontWeight: FontWeight.w600))),
+                      ],
+                    ),
                     const SizedBox(height: 8),
                     Row(
                       children: const [
@@ -493,6 +537,54 @@ class _BookingScreenState extends State<BookingScreen> {
 
                     const SizedBox(height: 32),
 
+                    // 5. NEW UI: Meet Up Point Selection Field
+                    const Text(
+                      'Select the Meet Up Point',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: AppColors.lightTextColor,
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    GestureDetector(
+                      onTap: _selectMeetUpPoint, // Launch the map screen
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(vertical: 16, horizontal: 16),
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: _meetUpLatitude == null ? Colors.red.withOpacity(0.5) : AppColors.lightBorderColor,
+                            width: 2
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              _meetUpLatitude == null ? Icons.location_on_outlined : Icons.location_on,
+                              color: _meetUpLatitude == null ? Colors.red : AppColors.accentColor,
+                            ),
+                            const SizedBox(width: 12),
+                            Expanded(
+                              child: Text(
+                                _meetUpAddress,
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: _meetUpLatitude == null ? Colors.red : AppColors.lightTextColor,
+                                  fontWeight: FontWeight.w500,
+                                ),
+                                overflow: TextOverflow.ellipsis,
+                              ),
+                            ),
+                            const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.lightHintColor),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 32),
+                    // End of NEW UI block
+
                     RentalSummaryCard(
                       ratePerDay: _ratePerDay,
                       rentalDays: _rentalDays,
@@ -558,9 +650,10 @@ class _BookingScreenState extends State<BookingScreen> {
                           Expanded(
                             child: ElevatedButton(
                               onPressed: (_rentalDays > 0 &&
-                                      _renterId.isNotEmpty &&
-                                      _itemId.isNotEmpty &&
-                                      !_isSubmitting)
+                                    _renterId.isNotEmpty &&
+                                    _itemId.isNotEmpty &&
+                                    _meetUpLatitude != null && // Ensure location is selected
+                                    !_isSubmitting)
                                   ? _verifyAndSubmitBooking
                                   : null,
                               style: ElevatedButton.styleFrom(
