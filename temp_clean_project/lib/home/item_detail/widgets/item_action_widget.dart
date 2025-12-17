@@ -1,5 +1,6 @@
 // lib/sprint2/Booking Rentee/item_action_widget.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/sprint2/Rentee/Booking%20Rentee/booking.dart';
@@ -8,8 +9,13 @@ import 'package:profile_managemenr/services/user_service.dart';
 
 class ItemActionsWidget extends StatelessWidget {
   final Map item; // masih Map (dynamic) — tak apa
+  final VoidCallback? onBookPressed; // ← added optional callback
 
-  const ItemActionsWidget({Key? key, required this.item}) : super(key: key);
+  const ItemActionsWidget({
+    Key? key,
+    required this.item,
+    this.onBookPressed, // ← accept callback
+  }) : super(key: key);
 
   @override
   Widget build(BuildContext context) {
@@ -26,15 +32,25 @@ class ItemActionsWidget extends StatelessWidget {
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
-              onPressed: () {
-                // ✅ Hantar safeItem (Map<String, dynamic>)
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (_) => BookingScreen(itemData: safeItem),
-                  ),
-                );
-              },
+              onPressed:
+                  onBookPressed ??
+                  () async {
+                    // 🔓 Force portrait for booking screen
+                    await SystemChrome.setPreferredOrientations([
+                      DeviceOrientation.portraitUp,
+                    ]);
+
+                    // ✅ Navigate to BookingScreen
+                    await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => BookingScreen(itemData: safeItem),
+                      ),
+                    );
+
+                    // 🔒 DO NOT restore orientations here
+                    // Previous screen will handle its own orientation (e.g., Compare mode)
+                  },
               icon: const Icon(Icons.calendar_today),
               label: const Text('Book Now'),
               style: ElevatedButton.styleFrom(
