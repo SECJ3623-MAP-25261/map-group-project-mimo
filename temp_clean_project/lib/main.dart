@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_dotenv/flutter_dotenv.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
-
+import 'package:profile_managemenr/sprint4/offline_support.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
 import 'package:profile_managemenr/home/core/routes/app_routes.dart';
 import 'package:profile_managemenr/home/core/widgets/auth_wrapper.dart';
@@ -43,6 +43,8 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(
           create: (_) => AuthService(),
         ),
+          ChangeNotifierProvider(create: (_) => AuthService()),
+          ChangeNotifierProvider(create: (_) => OfflineSupport()),
         // Add more providers here if needed (e.g., ItemProvider, CartProvider)
       ],
       child: MaterialApp(
