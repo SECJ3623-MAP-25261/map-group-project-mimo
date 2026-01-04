@@ -1,22 +1,17 @@
 import 'dart:io';
+import 'dart:typed_data';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:camera/camera.dart';
 import 'package:image_picker/image_picker.dart';
-//import 'package:profile_managemenr/constants/app_colors.dart';
-//import 'package:profile_managemenr/services/face_verification_service.dart';
-
-// Import the separate components
-import 'camera_preview_widget.dart';
-import 'web_camera_widget.dart';
-import 'face_capture_helper.dart';
-import 'dialog_helper.dart';
+import 'package:profile_managemenr/constants/app_colors.dart';
+import 'package:profile_managemenr/services/face_verification_service.dart';
 
 class FaceCaptureScreen extends StatefulWidget {
   final String bookingId;
   final String userId;
   final String verificationType; // 'booking', 'pickup', 'return'
-
+  
   const FaceCaptureScreen({
     super.key,
     required this.bookingId,
@@ -29,23 +24,26 @@ class FaceCaptureScreen extends StatefulWidget {
 }
 
 class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
+  // Mobile camera
   CameraController? _cameraController;
+  List<CameraDescription>? _cameras;
   bool _isCameraInitialized = false;
+  
+  // Common
   bool _isProcessing = false;
-
-  late final FaceCaptureHelper _captureHelper;
-  late final DialogHelper _dialogHelper;
+  final ImagePicker _picker = ImagePicker();
+  
+  // Store extracted features for booking flow
+  List<double>? _extractedFeatures;
+  
+  final FaceVerificationService _faceService = FaceVerificationService(
+    storeDisplayImage: true, // Store actual images
+    similarityThreshold: 75.0, // 75% match required
+  );
 
   @override
   void initState() {
     super.initState();
-    _captureHelper = FaceCaptureHelper(
-      bookingId: widget.bookingId,
-      userId: widget.userId,
-      verificationType: widget.verificationType,
-    );
-    _dialogHelper = DialogHelper(context: context);
-
     if (!kIsWeb) {
       _initializeCamera();
     }
@@ -53,17 +51,25 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
 
   Future<void> _initializeCamera() async {
     try {
-      final cameras = await availableCameras();
-
-      if (cameras.isEmpty) {
+      _cameras = await availableCameras();
+      
+      if (_cameras == null || _cameras!.isEmpty) {
         _showError('No camera found on this device');
         return;
       }
 
-      final selectedCamera = _captureHelper.selectCamera(
-        cameras,
-        widget.verificationType,
-      );
+      CameraDescription selectedCamera;
+      if (widget.verificationType == 'booking') {
+        selectedCamera = _cameras!.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.front,
+          orElse: () => _cameras!.first,
+        );
+      } else {
+        selectedCamera = _cameras!.firstWhere(
+          (camera) => camera.lensDirection == CameraLensDirection.back,
+          orElse: () => _cameras!.first,
+        );
+      }
 
       _cameraController = CameraController(
         selectedCamera,
@@ -74,40 +80,77 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       await _cameraController!.initialize();
 
       if (mounted) {
-        setState(() => _isCameraInitialized = true);
+        setState(() {
+          _isCameraInitialized = true;
+        });
       }
     } catch (e) {
+      print('❌ Error initializing camera: $e');
       _showError('Failed to initialize camera: ${e.toString()}');
     }
   }
 
-  Future<void> _handleCapture() async {
+  Future<void> _captureFromWebCamera() async {
     if (_isProcessing) return;
-    setState(() => _isProcessing = true);
-
     try {
-      final imageFile = kIsWeb
-          ? await _captureHelper.captureFromWeb(widget.verificationType)
-          : await _captureHelper.captureFromMobile(_cameraController);
+      setState(() => _isProcessing = true);
 
-      if (imageFile == null) {
+      final cameraDevice = widget.verificationType == 'booking' 
+          ? CameraDevice.front 
+          : CameraDevice.rear;
+
+      final XFile? pickedFile = await _picker.pickImage(
+        source: ImageSource.camera,
+        preferredCameraDevice: cameraDevice,
+        maxWidth: 1920,
+        maxHeight: 1080,
+        imageQuality: 85,
+      );
+
+      if (pickedFile == null) {
         setState(() => _isProcessing = false);
         return;
       }
 
-      await _processImage(imageFile);
+      await _processImageAndDetectFace(pickedFile);
+
     } catch (e) {
-      _showError('Error capturing image: ${e.toString()}');
+      print('❌ Error capturing from web camera: $e');
+      _showError('Error accessing camera: ${e.toString()}');
       setState(() => _isProcessing = false);
     }
   }
 
-  Future<void> _processImage(XFile imageFile) async {
+  Future<void> _captureFromMobileCamera() async {
+    if (_cameraController == null || !_cameraController!.value.isInitialized) {
+      _showError('Camera not ready');
+      return;
+    }
+
+    if (_isProcessing) return;
+
+    setState(() => _isProcessing = true);
+
     try {
-      _dialogHelper.showLoading('Detecting face...');
+      final XFile imageFile = await _cameraController!.takePicture();
+      await _processImageAndDetectFace(imageFile);
 
-      final faces = await _captureHelper.detectFaces(File(imageFile.path));
+    } catch (e) {
+      if (mounted) {
+        Navigator.pop(context);
+        _showError('Error capturing image: ${e.toString()}');
+      }
+      setState(() => _isProcessing = false);
+    }
+  }
 
+  Future<void> _processImageAndDetectFace(XFile imageFile) async {
+    try {
+      _showLoadingDialog('Detecting face...');
+
+      final capturedFile = File(imageFile.path); 
+      final faces = await _faceService.detectFaces(capturedFile);
+      
       if (!mounted) return;
       Navigator.pop(context);
 
@@ -118,68 +161,267 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
       }
 
       if (faces.length > 1) {
-        _showError(
-          'Multiple faces detected. Please ensure only one person is in the frame.',
-        );
+        _showError('Multiple faces detected. Please ensure only one person is in the frame.');
         setState(() => _isProcessing = false);
         return;
       }
 
-      _showPreview(imageFile);
+      if (kIsWeb) {
+        _showWebPreviewDialog(imageFile);
+      } else {
+        _showPreviewDialog(capturedFile);
+      }
+
     } catch (e) {
       if (mounted) {
-        Navigator.pop(context);
+        if (Navigator.of(context).canPop()) Navigator.pop(context); 
         _showError('Error processing image: ${e.toString()}');
       }
       setState(() => _isProcessing = false);
     }
   }
 
-  void _showPreview(XFile imageFile) {
-    _dialogHelper.showImagePreview(
-      imageFile: imageFile,
-      onRetake: () {
-        Navigator.pop(context);
-        setState(() => _isProcessing = false);
-      },
-      onConfirm: () async {
-        Navigator.pop(context);
-        await _verifyFace(File(imageFile.path));
-      },
+  void _showPreviewDialog(File imageFile) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Verify Your Face'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: Image.file(
+                imageFile,
+                height: 300,
+                fit: BoxFit.cover,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Is this image clear and shows your face properly?',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+          ],
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() => _isProcessing = false);
+            },
+            child: const Text('Retake'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              await _processFaceVerification(imageFile);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentColor),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
     );
   }
 
-  Future<void> _verifyFace(File imageFile) async {
-    _dialogHelper.showLoading('Processing...');
+  void _showWebPreviewDialog(XFile imageFile) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text('Verify Your Face'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ClipRRect(
+              borderRadius: BorderRadius.circular(12),
+              child: FutureBuilder<Uint8List>(
+                future: imageFile.readAsBytes(),
+                builder: (context, snapshot) {
+                  if (snapshot.hasData) {
+                    return Image.memory(
+                      snapshot.data!,
+                      height: 300,
+                      fit: BoxFit.cover,
+                    );
+                  }
+                  return const SizedBox(
+                    height: 300,
+                    child: Center(child: CircularProgressIndicator()),
+                  );
+                },
+              ),
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Is this image clear and shows your face properly?',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: Colors.grey[700]),
+            ),
+          ],
+        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              setState(() => _isProcessing = false);
+            },
+            child: const Text('Retake'),
+          ),
+          ElevatedButton(
+            onPressed: () async {
+              Navigator.pop(context);
+              final file = File(imageFile.path); 
+              await _processFaceVerification(file);
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentColor),
+            child: const Text('Confirm'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // ✅ CORRECTED: Local storage for 'booking', Firestore for 'pickup'/'return'
+  Future<void> _processFaceVerification(File imageFile) async {
+    _showLoadingDialog('Processing...');
 
     try {
-      final result = await _captureHelper.processFaceVerification(imageFile);
+      Map<String, dynamic> result;
+
+      if (widget.verificationType == 'booking') {
+        // 🔥 BOOKING: Extract + Store LOCALLY (NO FIRESTORE)
+        final faces = await _faceService.detectFaces(imageFile);
+        if (faces.isEmpty) {
+          result = {'success': false, 'message': 'No face detected. Please try again.'};
+        } else if (faces.length > 1) {
+          result = {'success': false, 'message': 'Multiple faces detected. Please ensure only one person is in the frame.'};
+        } else {
+          final features = await _faceService.extractFaceFeatures(imageFile, faces.first);
+          if (features == null || features.isEmpty) {
+            result = {'success': false, 'message': 'Failed to analyze face. Use good lighting and face the camera directly.'};
+          } else {
+            // Store features for return to booking screen
+            _extractedFeatures = features;
+            
+            String? imageBase64;
+            if (_faceService.storeDisplayImage) {
+              imageBase64 = await _faceService.imageToBase64(imageFile: imageFile);
+              if (imageBase64 == null) {
+                result = {'success': false, 'message': 'Failed to compress image. Try again with better lighting.'};
+              } else {
+                _faceService.storeTempFaceData(widget.bookingId, features, imageBase64: imageBase64);
+                result = {
+                  'success': true,
+                  'message': 'Face captured successfully',
+                  'imageBase64': imageBase64,
+                };
+              }
+            } else {
+              _faceService.storeTempFaceData(widget.bookingId, features);
+              result = {
+                'success': true,
+                'message': 'Face captured successfully',
+              };
+            }
+          }
+        }
+      } 
+      else if (widget.verificationType == 'pickup') {
+        // 🔍 PICKUP: Verify against REAL booking in Firestore
+        result = await _faceService.verifyFaceForPickup(
+          bookingId: widget.bookingId,
+          scannedImageFile: imageFile,
+          renterId: widget.userId,
+        );
+      } 
+      else if (widget.verificationType == 'return') {
+        // 🔍 RETURN: Verify against REAL booking in Firestore
+        result = await _faceService.verifyFaceForReturn(
+          bookingId: widget.bookingId,
+          scannedImageFile: imageFile,
+          renterId: widget.userId,
+        );
+      } 
+      else {
+        result = {'success': false, 'message': 'Invalid verification type'};
+      }
 
       if (!mounted) return;
       Navigator.pop(context);
 
       if (result['success'] == true) {
-        _dialogHelper.showSuccess(
-          message: result['message'],
-          onDone: () {
-            Navigator.pop(context);
-            Navigator.pop(context, {
-              'success': true,
-              'imageBase64': result['imageBase64'],
-            });
-          },
-        );
+        _showSuccessDialog(result['message'], result['imageBase64'], _extractedFeatures);
       } else {
         _showError(result['message'] ?? 'Verification failed');
         setState(() => _isProcessing = false);
       }
-    } catch (e) {
+
+    } catch (e, stackTrace) {
+      print('❌ EXCEPTION in _processFaceVerification: $e\n$stackTrace');
       if (mounted) {
-        Navigator.pop(context);
+        if (Navigator.of(context).canPop()) Navigator.pop(context);
         _showError('Verification error: ${e.toString()}');
         setState(() => _isProcessing = false);
       }
     }
+  }
+
+  void _showLoadingDialog(String message) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => WillPopScope(
+        onWillPop: () async => false,
+        child: AlertDialog(
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const CircularProgressIndicator(color: AppColors.accentColor),
+              const SizedBox(height: 16),
+              Text(message),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  void _showSuccessDialog(String message, String? imageBase64, List<double>? features) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Row(
+          children: const [
+            Icon(Icons.check_circle, color: Colors.green, size: 32),
+            SizedBox(width: 12),
+            Expanded(child: Text('Success')),
+          ],
+        ),
+        content: Text(message),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        actions: [
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(context);
+              Navigator.pop(context, {
+                'success': true,
+                'imageBase64': imageBase64,
+                'features': features, // Pass features directly
+              });
+            },
+            style: ElevatedButton.styleFrom(backgroundColor: AppColors.accentColor),
+            child: const Text('Done'),
+          ),
+        ],
+      ),
+    );
   }
 
   void _showError(String message) {
@@ -194,29 +436,194 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
     );
   }
 
+  String _getInstructionText() {
+    if (kIsWeb) {
+      return 'Click the button below to access your camera\nand capture your face';
+    }
+    
+    switch (widget.verificationType) {
+      case 'booking':
+        return 'Position your face in the frame\nThis will be used for future verification';
+      case 'pickup':
+        return 'Scan rentee\'s face to verify identity\nBefore handing over the item';
+      case 'return':
+        return 'Scan rentee\'s face to verify identity\nBefore accepting the return';
+      default:
+        return 'Position face in the frame';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     if (kIsWeb) {
-      return WebCameraWidget(
-        verificationType: widget.verificationType,
-        isProcessing: _isProcessing,
-        onCapture: _handleCapture,
+      return Scaffold(
+        backgroundColor: AppColors.lightBackground,
+        appBar: AppBar(
+          backgroundColor: AppColors.accentColor,
+          foregroundColor: Colors.white,
+          title: Text(
+            widget.verificationType == 'booking'
+                ? 'Register Your Face'
+                : 'Verify Identity',
+            style: const TextStyle(fontSize: 18),
+          ),
+        ),
+        body: Center(
+          child: Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(
+                  Icons.camera_alt,
+                  size: 120,
+                  color: AppColors.accentColor.withOpacity(0.5),
+                ),
+                const SizedBox(height: 32),
+                Text(
+                  _getInstructionText(),
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 16, color: Colors.grey[700]),
+                ),
+                const SizedBox(height: 48),
+                SizedBox(
+                  width: 300,
+                  height: 60,
+                  child: ElevatedButton.icon(
+                    onPressed: _isProcessing ? null : _captureFromWebCamera,
+                    icon: _isProcessing
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                              color: Colors.white,
+                            ),
+                          )
+                        : const Icon(Icons.camera_alt, size: 32),
+                    label: Text(
+                      _isProcessing ? 'Processing...' : 'Open Camera',
+                      style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: AppColors.accentColor,
+                      foregroundColor: Colors.white,
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      elevation: 4,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
       );
     }
 
-    return CameraPreviewWidget(
-      verificationType: widget.verificationType,
-      cameraController: _cameraController,
-      isCameraInitialized: _isCameraInitialized,
-      isProcessing: _isProcessing,
-      onCapture: _handleCapture,
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.black,
+        foregroundColor: Colors.white,
+        title: Text(
+          widget.verificationType == 'booking'
+              ? 'Register Your Face'
+              : 'Verify Identity',
+          style: const TextStyle(fontSize: 18),
+        ),
+      ),
+      body: Stack(
+        children: [
+          if (_isCameraInitialized && _cameraController != null)
+            Positioned.fill(
+              child: AspectRatio(
+                aspectRatio: _cameraController!.value.aspectRatio,
+                child: CameraPreview(_cameraController!),
+              ),
+            )
+          else
+            const Center(child: CircularProgressIndicator(color: AppColors.accentColor)),
+
+          if (_isCameraInitialized)
+            Center(
+              child: Container(
+                width: 280,
+                height: 350,
+                decoration: BoxDecoration(
+                  border: Border.all(
+                    color: _isProcessing ? Colors.green : Colors.white,
+                    width: 3,
+                  ),
+                  borderRadius: BorderRadius.circular(200),
+                ),
+              ),
+            ),
+
+          Positioned(
+            top: 40,
+            left: 20,
+            right: 20,
+            child: Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.7),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                _getInstructionText(),
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 16,
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            bottom: 40,
+            left: 0,
+            right: 0,
+            child: Center(
+              child: GestureDetector(
+                onTap: _isProcessing ? null : _captureFromMobileCamera,
+                child: Container(
+                  width: 80,
+                  height: 80,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    color: _isProcessing ? Colors.grey : AppColors.accentColor,
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.3),
+                        blurRadius: 10,
+                        spreadRadius: 2,
+                      ),
+                    ],
+                  ),
+                  child: _isProcessing
+                      ? const Padding(
+                          padding: EdgeInsets.all(20),
+                          child: CircularProgressIndicator(
+                            color: Colors.white,
+                            strokeWidth: 3,
+                          ),
+                        )
+                      : const Icon(Icons.camera_alt, color: Colors.white, size: 40),
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
     );
   }
 
   @override
   void dispose() {
     _cameraController?.dispose();
-    _captureHelper.dispose();
+    _faceService.dispose();
     super.dispose();
   }
 }

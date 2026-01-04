@@ -31,7 +31,7 @@ class AuthService with ChangeNotifier {
     });
   }
 
-  // ✅ NEW: Check if current user is an admin
+  // ✅ Check if current user is an admin
   Future<bool> isAdmin() async {
     final uid = userId;
     if (uid == null) return false;
@@ -46,13 +46,20 @@ class AuthService with ChangeNotifier {
     }
   }
 
-  // Check if email exists
+  // ✅ FIXED: Check if email exists in Firestore (not via Auth)
   Future<bool> checkEmailExists(String email) async {
     try {
-      List<String> methods = await _auth.fetchSignInMethodsForEmail(email);
-      return methods.isNotEmpty;
+      final snapshot = await _firestore
+          .collection('users')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+
+      return snapshot.docs.isNotEmpty;
     } catch (e) {
-      throw Exception('Failed to check email: $e');
+      print('⚠️ Error checking email in Firestore: $e');
+      // Optionally return false or rethrow
+      return false; // Safe default: assume email doesn't exist on error
     }
   }
 
@@ -64,6 +71,12 @@ class AuthService with ChangeNotifier {
     required String phone,
   }) async {
     try {
+      // First, check if email already exists (optional but recommended)
+      final emailExists = await checkEmailExists(email);
+      if (emailExists) {
+        throw Exception('Email already in use');
+      }
+
       UserCredential credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
@@ -82,6 +95,7 @@ class AuthService with ChangeNotifier {
 
       return credential.user;
     } catch (e) {
+      print('❌ Registration error: $e');
       throw Exception('Registration failed: $e');
     }
   }
@@ -99,6 +113,7 @@ class AuthService with ChangeNotifier {
 
       return credential.user;
     } catch (e) {
+      print('❌ Sign-in error: $e');
       throw Exception('Sign in failed: $e');
     }
   }
@@ -108,15 +123,16 @@ class AuthService with ChangeNotifier {
     try {
       DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
-        return doc.data() as Map<String, dynamic>;
+        return doc.data() as Map<String, dynamic>?;
       }
       return null;
     } catch (e) {
+      print('⚠️ Failed to get user data: $e');
       throw Exception('Failed to get user data: $e');
     }
   }
 
-  // Manual user change notification (for external auth changes)
+  // Manual user change notification
   void notifyUserChange() {
     print('🔄 Manual user change notification');
     notifyListeners();
@@ -146,7 +162,6 @@ class AuthService with ChangeNotifier {
                   print('✅ User logged out');
                   notifyListeners();
 
-                  // Navigate to login screen and clear all routes
                   if (context.mounted) {
                     Navigator.of(context).pushNamedAndRemoveUntil(
                       '/login',
@@ -175,7 +190,7 @@ class AuthService with ChangeNotifier {
     );
   }
 
-  // Direct logout without confirmation (if needed)
+  // Direct logout without confirmation
   Future<void> logoutDirect(BuildContext context) async {
     try {
       _previousUserId = userId;

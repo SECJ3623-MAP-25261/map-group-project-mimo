@@ -12,12 +12,14 @@ class BookingService {
   /// Fetch all existing bookings for a specific item
   Future<List<Map<String, dynamic>>> getItemBookings(String itemId) async {
     try {
+      print('🔍 Fetching bookings for itemId: $itemId');
       final snapshot = await _firestore
           .collection(_bookingsCollection)
           .where('itemId', isEqualTo: itemId)
           .where('status', whereIn: ['pending', 'confirmed', 'ongoing'])
           .get();
 
+      print('✅ Found ${snapshot.docs.length} existing bookings');
       return snapshot.docs.map((doc) {
         final data = doc.data();
         return {
@@ -27,9 +29,11 @@ class BookingService {
           'status': data['status'],
         };
       }).toList();
-    } catch (e) {
-      print('Error fetching item bookings: $e');
-      return [];
+    } catch (e, stackTrace) {
+      print('❌ Error fetching item bookings: $e');
+      print('❌ Stack trace: $stackTrace');
+      // Re-throw the error so createBooking can handle it
+      rethrow;
     }
   }
 
@@ -78,6 +82,7 @@ class BookingService {
   // ========== EXISTING METHODS (UPDATED) ==========
 
   /// Create a new booking with overlap check
+  /// Returns booking ID on success, error message string on failure
   Future<String?> createBooking({
     required String userId,
     required String userEmail,
@@ -92,16 +97,29 @@ class BookingService {
     required int rentalDays,
     required double totalAmount,
     required String paymentMethod,
+    required String meetUpAddress,
+    required double meetUpLatitude,
+    required double meetUpLongitude,
   }) async {
     try {
+      print('🔍 Checking for existing bookings for item: $itemId');
       // ✅ Check for overlapping bookings before creating
-      final existingBookings = await getItemBookings(itemId);
+      List<Map<String, dynamic>> existingBookings = [];
+      try {
+        existingBookings = await getItemBookings(itemId);
+        print('🔍 Found ${existingBookings.length} existing bookings');
+      } catch (e) {
+        print('⚠️ Could not check for existing bookings, proceeding anyway: $e');
+        // Continue with booking creation even if overlap check fails
+      }
       
-      if (!isDateRangeAvailable(startDate, endDate, existingBookings)) {
+      if (existingBookings.isNotEmpty && !isDateRangeAvailable(startDate, endDate, existingBookings)) {
+        print('⚠️ Date range overlaps with existing booking');
         return 'ABORTED: OVERLAP';
       }
 
-      final docRef = await _firestore.collection(_bookingsCollection).add({
+      print('✅ Date range is available, creating booking...');
+      final bookingData = {
         'userId': userId,
         'userEmail': userEmail,
         'userName': userName,
@@ -121,12 +139,31 @@ class BookingService {
         'hasReview': false,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
-      });
-
+        'meetUpAddress': meetUpAddress,
+        'meetUpLatitude': meetUpLatitude,
+        'meetUpLongitude': meetUpLongitude,
+      };
+      
+      print('📝 Booking data: $bookingData');
+      
+      final docRef = await _firestore.collection(_bookingsCollection).add(bookingData);
+      print('✅ Booking created successfully with ID: ${docRef.id}');
       return docRef.id; // Return booking ID
-    } catch (e) {
-      print('Error creating booking: $e');
-      return null;
+    } catch (e, stackTrace) {
+      print('❌ Error creating booking: $e');
+      print('❌ Error type: ${e.runtimeType}');
+      print('❌ Stack trace: $stackTrace');
+      
+      // Return error message as string (prefixed with ERROR: to distinguish from booking ID)
+      String errorMsg = e.toString();
+      if (errorMsg.contains('PERMISSION_DENIED')) {
+        errorMsg = 'Permission denied. Check Firebase security rules.';
+      } else if (errorMsg.contains('UNAVAILABLE') || errorMsg.contains('network')) {
+        errorMsg = 'Network error. Please check your connection.';
+      } else if (errorMsg.contains('INVALID_ARGUMENT')) {
+        errorMsg = 'Invalid data. Please check all fields are filled correctly.';
+      }
+      return 'ERROR: $errorMsg';
     }
   }
 

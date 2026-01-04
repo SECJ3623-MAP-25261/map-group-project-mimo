@@ -3,7 +3,7 @@ import 'package:profile_managemenr/constants/app_colors.dart';
 import '../item_detail/widgets/image_carousel.dart';
 import '../item_detail/widgets/item_action_widget.dart';
 import '../item_detail/widgets/review_summary_widget.dart';
-//import 'package:profile_managemenr/services/auth_service.dart';
+import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
 
 class ItemDetailScreen extends StatelessWidget {
   final Map item;
@@ -18,7 +18,9 @@ class ItemDetailScreen extends StatelessWidget {
     final isVerySmallScreen = screenWidth < 340;
 
     // Responsive sizing
-    final horizontalPadding = isVerySmallScreen ? 12.0 : (isSmallScreen ? 14.0 : 16.0);
+    final horizontalPadding = isVerySmallScreen
+        ? 12.0
+        : (isSmallScreen ? 14.0 : 16.0);
     final verticalSpacing = isSmallScreen ? 12.0 : 16.0;
     final sectionSpacing = isSmallScreen ? 20.0 : 24.0;
 
@@ -66,7 +68,7 @@ class ItemDetailScreen extends StatelessWidget {
 
                 // Action Buttons
                 ItemActionsWidget(item: item),
-                
+
                 // Bottom spacing for comfortable scrolling
                 SizedBox(height: horizontalPadding),
               ],
@@ -93,18 +95,52 @@ class ItemDetailScreen extends StatelessWidget {
       ),
       foregroundColor: Colors.white,
       leading: IconButton(
-        icon: Icon(
-          Icons.arrow_back_ios_rounded,
-          size: isSmallScreen ? 20 : 24,
-        ),
+        icon: Icon(Icons.arrow_back_ios_rounded, size: isSmallScreen ? 20 : 24),
         onPressed: () => Navigator.pop(context),
       ),
       actions: [
-        IconButton(
+        // Compare button
+        TextButton.icon(
+          onPressed: () {
+            // Prepare item data with proper structure
+            final itemData = Map<String, dynamic>.from(item);
+
+            // Ensure 'id' field exists
+            if (!itemData.containsKey('id')) {
+              itemData['id'] = item['itemId'] ?? item['id'] ?? '';
+            }
+
+            // Ensure price field exists
+            if (!itemData.containsKey('pricePerDay') &&
+                !itemData.containsKey('price')) {
+              itemData['pricePerDay'] = 0.0;
+            }
+
+            print(
+              '📦 Passing item to compare: ${itemData['id']} - ${itemData['name']}',
+            );
+
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SearchPage(
+                  preSelectedItem: itemData,
+                  startCompareMode: true,
+                ),
+              ),
+            );
+          },
           icon: Icon(
-            Icons.share_rounded,
+            Icons.compare_rounded,
+            color: Colors.white,
             size: isSmallScreen ? 22 : 24,
           ),
+          label: const Text("Compare", style: TextStyle(color: Colors.white)),
+        ),
+
+        // Share button
+        IconButton(
+          icon: Icon(Icons.share_rounded, size: isSmallScreen ? 22 : 24),
           onPressed: () {
             // Share functionality (optional)
             ScaffoldMessenger.of(context).showSnackBar(
@@ -124,8 +160,12 @@ class ItemDetailScreen extends StatelessWidget {
   }
 
   Widget _buildItemHeader(bool isSmallScreen, bool isVerySmallScreen) {
-    final nameFontSize = isVerySmallScreen ? 20.0 : (isSmallScreen ? 22.0 : 24.0);
-    final priceFontSize = isVerySmallScreen ? 18.0 : (isSmallScreen ? 19.0 : 20.0);
+    final nameFontSize = isVerySmallScreen
+        ? 20.0
+        : (isSmallScreen ? 22.0 : 24.0);
+    final priceFontSize = isVerySmallScreen
+        ? 18.0
+        : (isSmallScreen ? 19.0 : 20.0);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,

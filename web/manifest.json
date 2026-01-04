@@ -1,6 +1,6 @@
 {
-    "name": "profile_managemenr",
-    "short_name": "profile_managemenr",
+    "name": "temp_clean_project",
+    "short_name": "temp_clean_project",
     "start_url": ".",
     "display": "standalone",
     "background_color": "#0175C2",

@@ -1,1 +1,47 @@
-{"flutter":{"platforms":{"android":{"default":{"projectId":"campuscloset-8c8f5","appId":"1:594908184850:android:4cd13c9a7271b6cb29b3cb","fileOutput":"android/app/google-services.json"}},"dart":{"lib/firebase_options.dart":{"projectId":"campuscloset-8c8f5","configurations":{"android":"1:594908184850:android:4cd13c9a7271b6cb29b3cb","ios":"1:594908184850:ios:bc81334557f5a24c29b3cb","web":"1:594908184850:web:27e809290b54a83229b3cb"}}}}}}
+{
+  "flutter": {
+    "platforms": {
+      "android": {
+        "default": {
+          "projectId": "campuscloset-8c8f5",
+          "appId": "1:594908184850:android:4cd13c9a7271b6cb29b3cb",
+          "fileOutput": "android/app/google-services.json"
+        }
+      },
+      "dart": {
+        "lib/firebase_options.dart": {
+          "projectId": "campuscloset-8c8f5",
+          "configurations": {
+            "android": "1:594908184850:android:4cd13c9a7271b6cb29b3cb",
+            "ios": "1:594908184850:ios:bc81334557f5a24c29b3cb",
+            "web": "1:594908184850:web:27e809290b54a83229b3cb"
+          }
+        }
+      }
+    }
+  },
+  "functions": [
+    {
+      "codebase": "default",
+      "disallowLegacyRuntimeConfig": true,
+      "ignore": [
+        "node_modules",
+        ".git",
+        "firebase-debug.log",
+        "firebase-debug.*.log",
+        "*.local"
+      ],
+      "source": "functions",
+      "runtime": "nodejs20"
+    }
+  ],
+  "emulators": {
+    "functions": {
+      "port": 5001
+    },
+    "ui": {
+      "enabled": true
+    },
+    "singleProjectMode": true
+  }
+}

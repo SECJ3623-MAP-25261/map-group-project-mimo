@@ -1,0 +1,5 @@
+connectorId: example
+generate:
+  dartSdk:
+    - outputDir: ..\..\temp_clean_project\lib\dataconnect_generated
+      package: dataconnect_generated/generated.dart

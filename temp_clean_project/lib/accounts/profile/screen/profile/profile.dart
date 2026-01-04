@@ -1,16 +1,17 @@
+// lib/accounts/profile/screen/profile_screen.dart
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/edit_profile.dart';
 import 'package:profile_managemenr/accounts/personalization/personalization.dart';
 import 'package:profile_managemenr/sprint2/IssueReport/MyReports/my_reports.dart';
-import 'change_password.dart';
-//import 'update_contact.dart';
-import 'notification.dart';
-import 'delete_account.dart';
-//import 'package:profile_managemenr/sprint2/ReportCenter/report_center.dart'; 
+import '../profile/change_password.dart';
+import '../profile/notification.dart';
+import '../profile/delete_account.dart';
+import 'package:profile_managemenr/sprint2/Rentee/HistoryRentee/history_rentee.dart';
+import 'package:profile_managemenr/sprint4/report_analysis.dart';
+
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
 import 'dart:convert';
-import 'package:profile_managemenr/sprint2/Rentee/HistoryRentee/history_rentee.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({Key? key}) : super(key: key);
@@ -21,41 +22,39 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   Widget _buildProfileAvatar(String userName) {
-  ImageProvider? imageProvider;
-  
-  // Try to load base64 image from Firestore
-  final base64String = _userData?['profilePictureBase64'];
-  if (base64String != null && base64String.isNotEmpty) {
-    try {
-      final bytes = base64Decode(base64String);
-      imageProvider = MemoryImage(bytes);
-    } catch (e) {
-      print('Error decoding profile image: $e');
+    ImageProvider? imageProvider;
+
+    final base64String = _userData?['profilePictureBase64'];
+    if (base64String != null && base64String.isNotEmpty) {
+      try {
+        final bytes = base64Decode(base64String);
+        imageProvider = MemoryImage(bytes);
+      } catch (e) {
+        print('Error decoding profile image: $e');
+      }
     }
+
+    return CircleAvatar(
+      radius: 50,
+      backgroundColor: AppColors.accentColor.withOpacity(0.2),
+      child: CircleAvatar(
+        radius: 47,
+        backgroundColor: Colors.grey[200],
+        backgroundImage: imageProvider,
+        child: imageProvider == null
+            ? Text(
+                userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
+                style: TextStyle(
+                  fontSize: 40,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.accentColor,
+                ),
+              )
+            : null,
+      ),
+    );
   }
 
-  const Color primaryColor = AppColors.accentColor;
-
-  return CircleAvatar(
-    radius: 50,
-    backgroundColor: primaryColor.withOpacity(0.2),
-    child: CircleAvatar(
-      radius: 47,
-      backgroundColor: Colors.grey[200],
-      backgroundImage: imageProvider,
-      child: imageProvider == null
-          ? Text(
-              userName.isNotEmpty ? userName[0].toUpperCase() : 'U',
-              style: TextStyle(
-                fontSize: 40,
-                fontWeight: FontWeight.bold,
-                color: primaryColor,
-              ),
-            )
-          : null,
-    ),
-  );
-}
   final AuthService _authService = AuthService();
   Map<String, dynamic>? _userData;
   bool _isLoading = true;
@@ -99,7 +98,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     const Color textColor = AppColors.lightTextColor;
     const Color textSecondary = AppColors.lightHintColor;
 
-    // Get data from Firebase or use defaults
     final String userName = _userData?['fullName'] ?? 'User';
     final String userEmail = _authService.userEmail ?? 'email@example.com';
     final String userPhone = _userData?['phone'] ?? 'Not provided';
@@ -136,9 +134,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     mainAxisSize: MainAxisSize.min,
                     crossAxisAlignment: CrossAxisAlignment.stretch,
                     children: [
-                      // Profile Picture with Base64 support
                       _buildProfileAvatar(userName),
-
                       const SizedBox(height: 20),
 
                       Text(
@@ -153,7 +149,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 8),
 
-                      // User Name from Firebase
                       Text(
                         userName,
                         textAlign: TextAlign.center,
@@ -163,15 +158,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           fontWeight: FontWeight.bold,
                         ),
                       ),
-                      
-                      // User Email from Firebase
                       Text(
                         userEmail,
                         textAlign: TextAlign.center,
                         style: TextStyle(color: textSecondary, fontSize: 16),
                       ),
-                      
-                      // User Phone from Firebase
                       if (userPhone != 'Not provided')
                         Padding(
                           padding: const EdgeInsets.only(top: 4),
@@ -181,10 +172,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             style: TextStyle(color: textSecondary, fontSize: 14),
                           ),
                         ),
-                      
                       const SizedBox(height: 25),
 
-                      // Edit Profile Button
                       ElevatedButton.icon(
                         icon: const Icon(Icons.edit, size: 20),
                         label: const Text("Edit Profile", style: TextStyle(fontSize: 16)),
@@ -201,7 +190,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               builder: (context) => EditProfileScreen(userData: _userData),
                             ),
                           );
-                          // Reload data if profile was updated
                           if (result == true) {
                             _loadUserData();
                           }
@@ -209,7 +197,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                       const SizedBox(height: 12),
 
-                      // Delete Account Button
                       ElevatedButton.icon(
                         icon: const Icon(Icons.delete_forever, size: 20),
                         label: const Text("Delete Account", style: TextStyle(fontSize: 16)),
@@ -229,7 +216,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const Divider(height: 40, thickness: 1, color: Colors.grey),
 
-                      // Menu Items
                       _buildProfileOption(
                         "Change Password",
                         Icons.lock_outline,
@@ -270,10 +256,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         textColor,
                         textSecondary,
                       ),
-                      // ADD THIS: Report Center Option
                       _buildProfileOption(
-                        "Report Center",
+                        "Issue Report",
                         Icons.flag_outlined,
+                        context,
+                        primaryColor,
+                        textColor,
+                        textSecondary,
+                      ),
+                      // ✅ NEW OPTION
+                      _buildProfileOption(
+                        "Report Analysis",
+                        Icons.bar_chart_outlined,
                         context,
                         primaryColor,
                         textColor,
@@ -282,7 +276,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                       const SizedBox(height: 30),
 
-                      // LOGOUT BUTTON
                       OutlinedButton.icon(
                         icon: const Icon(Icons.logout, size: 20),
                         label: const Text("Logout", style: TextStyle(fontSize: 16)),
@@ -320,7 +313,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return InkWell(
       onTap: () async {
         if (text == "Personalization Settings") {
-          // Ensure _userData is available
           if (_userData != null) {
             Navigator.push(
               context,
@@ -346,7 +338,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ),
           );
           if (result == true) {
-            _loadUserData(); // Reload if updated
+            _loadUserData();
           }
         } else if (text == "Manage Notifications") {
           Navigator.push(
@@ -358,11 +350,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             context,
             MaterialPageRoute(builder: (context) => HistoryRenteeScreen()),
           );
-        } else if (text == "Report Center") {
-          
+        } else if (text == "Issue Report") {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => MyReportsScreen()),
+          );
+        }
+        // ✅ NEW HANDLER
+        else if (text == "Report Analysis") {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ReportAnalysisScreen()),
           );
         }
       },

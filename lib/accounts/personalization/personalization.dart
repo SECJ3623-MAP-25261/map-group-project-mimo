@@ -1,9 +1,9 @@
 // lib/accounts/profile/screen/personalization.dart
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/accounts/profile/screen/profile/profile.dart';
-import '../../../../constants/app_colors.dart';
-import '../../../../sprint2/renter_dashboard/add_items.dart';
-import '../../../../sprint2/renter_dashboard/items_listed.dart';
+import '../../constants/app_colors.dart';
+import '../../sprint2/renter_dashboard/add_items.dart';
+import '../../sprint2/renter_dashboard/items_listed.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/sprint2/renter_dashboard/booking_request.dart';
@@ -36,10 +36,10 @@ class RenterDashboard extends StatelessWidget {
         .snapshots()
         .map((snapshot) {
           double total = 0.0;
-          /*for (var doc in snapshot.docs) {
+          for (var doc in snapshot.docs) {
             final data = doc.data() as Map<String, dynamic>;
             total += (data['finalFee'] as num?)?.toDouble() ?? 0.0;
-          }*/
+          }
           return total;
         });
   }
@@ -60,10 +60,14 @@ class RenterDashboard extends StatelessWidget {
     final isVerySmallScreen = screenWidth < 340;
 
     // Adaptive sizing
-    final containerPadding = isVerySmallScreen ? 16.0 : (isSmallScreen ? 20.0 : 24.0);
+    final containerPadding = isVerySmallScreen
+        ? 16.0
+        : (isSmallScreen ? 20.0 : 24.0);
     final outerPadding = isSmallScreen ? 12.0 : 16.0;
     final verticalSpacing = isSmallScreen ? 16.0 : 20.0;
-    final titleFontSize = isVerySmallScreen ? 18.0 : (isSmallScreen ? 20.0 : 22.0);
+    final titleFontSize = isVerySmallScreen
+        ? 18.0
+        : (isSmallScreen ? 20.0 : 22.0);
     final subtitleFontSize = isSmallScreen ? 12.0 : 14.0;
 
     return Scaffold(
@@ -118,7 +122,12 @@ class RenterDashboard extends StatelessWidget {
                   SizedBox(height: verticalSpacing),
 
                   // Stats Row
-                  _buildStatsRow(context, currentUserId, isSmallScreen, isVerySmallScreen),
+                  _buildStatsRow(
+                    context,
+                    currentUserId,
+                    isSmallScreen,
+                    isVerySmallScreen,
+                  ),
                   SizedBox(height: isSmallScreen ? 20 : 30),
 
                   // Action buttons
@@ -165,7 +174,9 @@ class RenterDashboard extends StatelessWidget {
                     onPressed: () {
                       Navigator.pushReplacement(
                         context,
-                        MaterialPageRoute(builder: (_) => const ProfileScreen()),
+                        MaterialPageRoute(
+                          builder: (_) => const ProfileScreen(),
+                        ),
                       );
                     },
                     style: ElevatedButton.styleFrom(
@@ -189,7 +200,7 @@ class RenterDashboard extends StatelessWidget {
                     ),
                   ),
                   SizedBox(height: isSmallScreen ? 12 : 20),
-                  
+
                   // Footer
                   Text(
                     'Campus Closet © 2025',
@@ -333,7 +344,9 @@ class RenterDashboard extends StatelessWidget {
     required bool isSmallScreen,
     required bool isVerySmallScreen,
   }) {
-    final valueFontSize = isVerySmallScreen ? 14.0 : (isSmallScreen ? 16.0 : 18.0);
+    final valueFontSize = isVerySmallScreen
+        ? 14.0
+        : (isSmallScreen ? 16.0 : 18.0);
     final labelFontSize = isVerySmallScreen ? 10.0 : 11.0;
     final verticalPadding = isSmallScreen ? 10.0 : 12.0;
 
@@ -437,10 +450,7 @@ class RenterDashboard extends StatelessWidget {
         icon: Icon(icon, color: AppColors.lightTextColor, size: iconSize),
         label: Text(
           title,
-          style: TextStyle(
-            color: AppColors.lightTextColor,
-            fontSize: textSize,
-          ),
+          style: TextStyle(color: AppColors.lightTextColor, fontSize: textSize),
         ),
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.lightInputFillColor,
@@ -471,10 +481,7 @@ class PlaceholderPage extends StatelessWidget {
       appBar: AppBar(
         backgroundColor: AppColors.lightCardBackground,
         foregroundColor: AppColors.lightTextColor,
-        title: Text(
-          title,
-          style: TextStyle(fontSize: isSmallScreen ? 16 : 18),
-        ),
+        title: Text(title, style: TextStyle(fontSize: isSmallScreen ? 16 : 18)),
         elevation: isDark ? 0 : 1,
         leading: IconButton(
           icon: Icon(
