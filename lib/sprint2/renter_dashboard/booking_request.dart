@@ -3,6 +3,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'dart:convert';
 import 'package:profile_managemenr/sprint3/FaceVerification/face_capture_screen.dart';
+import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
+
 
 // CORRECTED IMPORT: Use the standard path for the package
 import 'package:url_launcher/url_launcher.dart'; 
@@ -163,6 +165,89 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
       );
     }
   }
+
+  Future<void> _updateBookingStatusWithSummary(String bookingId, String newStatus) async {
+    try {
+      // 1) Read booking BEFORE updating so we can capture oldStatus and needed fields
+      final bookingSnap = await FirebaseFirestore.instance
+          .collection('bookings')
+          .doc(bookingId)
+          .get();
+
+      if (!bookingSnap.exists) {
+        // fallback: still update booking status normally
+        await _updateBookingStatus(bookingId, newStatus);
+        return;
+      }
+
+      final booking = bookingSnap.data() as Map<String, dynamic>;
+
+      final String oldStatus = (booking['status'] ?? 'pending').toString();
+
+      // Support different field naming just in case
+      final String itemId = (booking['itemId'] ??
+              booking['itemID'] ??
+              booking['item_id'] ??
+              '')
+          .toString();
+
+      final num finalFee = (() {
+        final v = booking['finalFee'] ?? booking['totalAmount'] ?? 0;
+        if (v is num) return v;
+        return num.tryParse(v.toString()) ?? 0;
+      })();
+
+      final int rentalDays = (() {
+        final v = booking['rentalDays'] ?? booking['days'] ?? 0;
+        if (v is int) return v;
+        return int.tryParse(v.toString()) ?? 0;
+      })();
+
+      // 2) Update booking status in Firestore (your existing logic)
+      final success = await _bookingService.updateBookingStatus(bookingId, newStatus);
+
+      if (!mounted) return;
+
+      if (success) {
+        // 3) Update item summary AFTER booking status updated successfully
+        if (itemId.isNotEmpty) {
+          await ItemSummaryService().recordBookingStatusChange(
+            itemId: itemId,
+            oldStatus: oldStatus,
+            newStatus: newStatus,
+            finalFee: finalFee,
+            rentalDays: rentalDays,
+          );
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Booking status set to ${newStatus.toUpperCase()}!'),
+            backgroundColor: Colors.green,
+            duration: const Duration(seconds: 2),
+          ),
+        );
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to update booking status'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      print('Error in _updateBookingStatusWithSummary: $e');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Error updating status: $e'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
   
   // LOGIC: Function to launch an external map application using url_launcher
   Future<void> _launchMap(double latitude, double longitude, String address) async {
@@ -198,7 +283,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     );
 
     if (result != null && result['success'] == true) {
-      await _updateBookingStatus(bookingId, 'ongoing');
+      await _updateBookingStatusWithSummary(bookingId.toString(), 'ongoing');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -230,7 +315,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     );
 
     if (result != null && result['success'] == true) {
-      await _updateBookingStatus(bookingId, 'completed');
+      await _updateBookingStatusWithSummary(bookingId.toString(), 'completed');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -393,14 +478,14 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
             TextButton(
               onPressed: () {
                 Navigator.pop(context);
-                _updateBookingStatus(bookingId, 'cancelled');
+                _updateBookingStatusWithSummary(bookingId.toString(), 'cancelled');
               },
               child: const Text('Reject', style: TextStyle(color: Colors.red)),
             ),
             ElevatedButton(
               onPressed: () {
                 Navigator.pop(context);
-                _updateBookingStatus(bookingId, 'confirmed');
+                _updateBookingStatusWithSummary(bookingId.toString(), 'confirmed');
               },
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
               child: const Text('Approve'),

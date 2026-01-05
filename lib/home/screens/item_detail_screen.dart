@@ -4,23 +4,50 @@ import '../item_detail/widgets/image_carousel.dart';
 import '../item_detail/widgets/item_action_widget.dart';
 import '../item_detail/widgets/review_summary_widget.dart';
 import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
+import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 
-class ItemDetailScreen extends StatelessWidget {
+class ItemDetailScreen extends StatefulWidget {
   final Map item;
 
   const ItemDetailScreen({super.key, required this.item});
 
   @override
+  State<ItemDetailScreen> createState() => _ItemDetailScreenState();
+}
+
+class _ItemDetailScreenState extends State<ItemDetailScreen> {
+  final ItemSummaryService _summaryService = ItemSummaryService();
+
+  Map get item => widget.item;
+
+  @override
+  void initState() {
+    super.initState();
+
+    // Increment view count as soon as this page is opened.
+    final dynamic rawId = item['id'] ?? item['itemId'];
+    final String itemId = (rawId ?? '').toString();
+
+    if (itemId.isNotEmpty) {
+      _summaryService.recordView(
+        itemId: itemId,
+        itemDataForInit: Map<String, dynamic>.from(item),
+      );
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final images = item['images'] as List? ?? [];
     final screenWidth = MediaQuery.of(context).size.width;
-    final isSmallScreen = screenWidth < 360;
-    final isVerySmallScreen = screenWidth < 340;
+
+    // Responsive breakpoints
+    final isVerySmallScreen = screenWidth < 350;
+    final isSmallScreen = screenWidth < 400;
 
     // Responsive sizing
-    final horizontalPadding = isVerySmallScreen
-        ? 12.0
-        : (isSmallScreen ? 14.0 : 16.0);
+    final horizontalPadding =
+        isVerySmallScreen ? 12.0 : (isSmallScreen ? 14.0 : 16.0);
     final verticalSpacing = isSmallScreen ? 12.0 : 16.0;
     final sectionSpacing = isSmallScreen ? 20.0 : 24.0;
 
@@ -33,7 +60,7 @@ class ItemDetailScreen extends StatelessWidget {
           child: Padding(
             padding: EdgeInsets.all(horizontalPadding),
             child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 // Image Carousel
                 ImageCarousel(images: images),
@@ -66,11 +93,9 @@ class ItemDetailScreen extends StatelessWidget {
                     item['description'].toString().isNotEmpty)
                   SizedBox(height: sectionSpacing),
 
-                // Action Buttons
+                // Action Widget (Rent/Book)
                 ItemActionsWidget(item: item),
-
-                // Bottom spacing for comfortable scrolling
-                SizedBox(height: horizontalPadding),
+                SizedBox(height: sectionSpacing),
               ],
             ),
           ),
@@ -84,15 +109,13 @@ class ItemDetailScreen extends StatelessWidget {
       backgroundColor: AppColors.accentColor,
       elevation: 0,
       title: Text(
-        item['name'] ?? 'Item',
+        'Item Details',
         style: TextStyle(
-          color: Colors.white,
           fontSize: isSmallScreen ? 18 : 20,
-          fontWeight: FontWeight.w600,
+          fontWeight: FontWeight.bold,
         ),
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
       ),
+      centerTitle: true,
       foregroundColor: Colors.white,
       leading: IconButton(
         icon: Icon(Icons.arrow_back_ios_rounded, size: isSmallScreen ? 20 : 24),
@@ -123,103 +146,73 @@ class ItemDetailScreen extends StatelessWidget {
             Navigator.push(
               context,
               MaterialPageRoute(
-                builder: (_) => SearchPage(
+                builder: (context) => SearchPage(
                   preSelectedItem: itemData,
                   startCompareMode: true,
                 ),
               ),
             );
           },
-          icon: Icon(
-            Icons.compare_rounded,
-            color: Colors.white,
-            size: isSmallScreen ? 22 : 24,
-          ),
-          label: const Text("Compare", style: TextStyle(color: Colors.white)),
-        ),
-
-        // Share button
-        IconButton(
-          icon: Icon(Icons.share_rounded, size: isSmallScreen ? 22 : 24),
-          onPressed: () {
-            // Share functionality (optional)
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text('Share feature coming soon'),
-                behavior: SnackBarBehavior.floating,
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
-              ),
-            );
-          },
-          tooltip: 'Share',
+          icon: const Icon(Icons.compare_arrows, color: Colors.white),
+          label: const Text('Compare', style: TextStyle(color: Colors.white)),
         ),
       ],
     );
   }
 
   Widget _buildItemHeader(bool isSmallScreen, bool isVerySmallScreen) {
-    final nameFontSize = isVerySmallScreen
-        ? 20.0
-        : (isSmallScreen ? 22.0 : 24.0);
-    final priceFontSize = isVerySmallScreen
-        ? 18.0
-        : (isSmallScreen ? 19.0 : 20.0);
+    final titleSize = isVerySmallScreen ? 18.0 : (isSmallScreen ? 20.0 : 24.0);
+    final priceSize = isVerySmallScreen ? 16.0 : (isSmallScreen ? 18.0 : 20.0);
 
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(
-          item['name'] ?? 'Unnamed Item',
-          style: TextStyle(
-            fontSize: nameFontSize,
-            fontWeight: FontWeight.bold,
-            color: AppColors.lightTextColor,
-            height: 1.2,
+    return Container(
+      padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
-          maxLines: 3,
-          overflow: TextOverflow.ellipsis,
-        ),
-        SizedBox(height: isSmallScreen ? 6 : 8),
-        Row(
-          children: [
-            Container(
-              padding: EdgeInsets.symmetric(
-                horizontal: isVerySmallScreen ? 10 : 12,
-                vertical: isVerySmallScreen ? 6 : 8,
-              ),
-              decoration: BoxDecoration(
-                color: AppColors.accentColor.withOpacity(0.1),
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(
-                  color: AppColors.accentColor.withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(
-                    Icons.currency_exchange_rounded,
-                    color: AppColors.accentColor,
-                    size: isVerySmallScreen ? 18 : 20,
-                  ),
-                  SizedBox(width: isVerySmallScreen ? 4 : 6),
-                  Text(
-                    "RM${(item['pricePerDay'] ?? 0).toStringAsFixed(2)}/day",
-                    style: TextStyle(
-                      color: AppColors.accentColor,
-                      fontSize: priceFontSize,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
+        ],
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Text(
+              item['name'] ?? 'Item Name',
+              style: TextStyle(
+                fontSize: titleSize,
+                fontWeight: FontWeight.bold,
+                color: AppColors.lightTextColor,
               ),
             ),
-          ],
-        ),
-      ],
+          ),
+          const SizedBox(width: 12),
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Text(
+                'RM ${item['pricePerDay'] ?? item['price'] ?? '0'}',
+                style: TextStyle(
+                  fontSize: priceSize,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.accentColor,
+                ),
+              ),
+              Text(
+                '/day',
+                style: TextStyle(
+                  fontSize: isVerySmallScreen ? 12 : 13,
+                  color: Colors.grey[600],
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
     );
   }
 
@@ -232,61 +225,68 @@ class ItemDetailScreen extends StatelessWidget {
     return Container(
       padding: EdgeInsets.all(containerPadding),
       decoration: BoxDecoration(
-        color: AppColors.lightCardBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.lightHintColor.withOpacity(0.2),
-          width: 1,
-        ),
-      ),
-      child: Wrap(
-        spacing: itemSpacing,
-        runSpacing: 8,
-        children: [
-          if (item['category'] != null)
-            _buildDetailChip(
-              icon: Icons.category_rounded,
-              label: item['category'],
-              iconSize: iconSize,
-              textSize: textSize,
-            ),
-          if (item['size'] != null)
-            _buildDetailChip(
-              icon: Icons.straighten_rounded,
-              label: item['size'],
-              iconSize: iconSize,
-              textSize: textSize,
-            ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
         ],
       ),
-    );
-  }
-
-  Widget _buildDetailChip({
-    required IconData icon,
-    required String label,
-    required double iconSize,
-    required double textSize,
-  }) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-      decoration: BoxDecoration(
-        color: AppColors.accentColor.withOpacity(0.05),
-        borderRadius: BorderRadius.circular(6),
-      ),
       child: Row(
-        mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: iconSize, color: AppColors.accentColor),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              color: AppColors.lightTextColor,
-              fontSize: textSize,
-              fontWeight: FontWeight.w500,
+          if (item['category'] != null)
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.category_rounded,
+                    size: iconSize,
+                    color: AppColors.accentColor,
+                  ),
+                  SizedBox(width: isVerySmallScreen ? 6 : 8),
+                  Expanded(
+                    child: Text(
+                      item['category'].toString(),
+                      style: TextStyle(
+                        fontSize: textSize,
+                        color: AppColors.lightTextColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
             ),
-          ),
+          if (item['category'] != null && item['size'] != null)
+            SizedBox(width: itemSpacing),
+          if (item['size'] != null)
+            Expanded(
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.straighten_rounded,
+                    size: iconSize,
+                    color: AppColors.accentColor,
+                  ),
+                  SizedBox(width: isVerySmallScreen ? 6 : 8),
+                  Expanded(
+                    child: Text(
+                      'Size ${item['size']}',
+                      style: TextStyle(
+                        fontSize: textSize,
+                        color: AppColors.lightTextColor,
+                        fontWeight: FontWeight.w600,
+                      ),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
         ],
       ),
     );
@@ -297,14 +297,17 @@ class ItemDetailScreen extends StatelessWidget {
     final descriptionFontSize = isVerySmallScreen ? 13.0 : 14.0;
 
     return Container(
-      padding: EdgeInsets.all(isVerySmallScreen ? 12.0 : 14.0),
+      padding: EdgeInsets.all(isSmallScreen ? 14 : 16),
       decoration: BoxDecoration(
-        color: AppColors.lightCardBackground,
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(
-          color: AppColors.lightHintColor.withOpacity(0.2),
-          width: 1,
-        ),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
+          ),
+        ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,

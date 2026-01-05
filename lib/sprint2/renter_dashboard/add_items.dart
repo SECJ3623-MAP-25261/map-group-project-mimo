@@ -12,6 +12,7 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../constants/app_colors.dart';
 import '../../sprint4/offline_support.dart';
+import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 
 class AddItemPage extends StatefulWidget {
   const AddItemPage({super.key});
@@ -328,11 +329,17 @@ class _AddItemPageState extends State<AddItemPage> {
       } else {
         // Save online
         print('Saving item to Firestore...');
-        await FirebaseFirestore.instance.collection("items").add({
+        final docRef = await FirebaseFirestore.instance.collection("items").add({
           ...itemData,
           "createdAt": FieldValue.serverTimestamp(),
           "updatedAt": FieldValue.serverTimestamp(),
         });
+
+        await ItemSummaryService().initializeSummaryIfNeeded(
+          itemId: docRef.id,
+          itemData: itemData,
+        );
+
 
         if (!mounted) return;
 

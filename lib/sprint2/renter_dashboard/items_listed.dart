@@ -5,6 +5,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../constants/app_colors.dart';
 import 'dart:convert';
 import 'edit_item.dart';
+import 'package:profile_managemenr/sprint4/item_summary/item_summary_view.dart';
 
 class YourItemsPage extends StatefulWidget {
   final String renterId;
@@ -280,9 +281,21 @@ class _YourItemsPageState extends State<YourItemsPage> {
                                 IconButton(
                                   icon: const Icon(
                                     Icons.delete,
-                                    color: Colors.red,
+                                    color: Color.fromARGB(255, 84, 179, 123),
                                   ),
                                   onPressed: () => confirmDelete(doc),
+                                ),
+                                IconButton(
+                                  icon: const Icon(Icons.bar_chart),
+                                  color: AppColors.accentColor,
+                                  onPressed: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (_) => ItemSummaryScreen(itemId: doc.id),
+                                      ),
+                                    );
+                                  },
                                 ),
                               ],
                             ),

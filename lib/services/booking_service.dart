@@ -1,6 +1,7 @@
 // lib/services/booking_service.dart
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 
 class BookingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -147,6 +148,11 @@ class BookingService {
       print('📝 Booking data: $bookingData');
       
       final docRef = await _firestore.collection(_bookingsCollection).add(bookingData);
+
+      await ItemSummaryService().recordBookingCreated(
+        itemId: itemId,
+        status: (bookingData['status'] ?? 'pending').toString(),
+      );
       print('✅ Booking created successfully with ID: ${docRef.id}');
       return docRef.id; // Return booking ID
     } catch (e, stackTrace) {
