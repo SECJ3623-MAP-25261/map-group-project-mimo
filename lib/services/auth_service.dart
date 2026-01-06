@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 
 class AuthService with ChangeNotifier {
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -20,7 +21,8 @@ class AuthService with ChangeNotifier {
   String? get userId => _auth.currentUser?.uid;
 
   // Check if user changed
-  bool get hasUserChanged => _previousUserId != null && _previousUserId != userId;
+  bool get hasUserChanged =>
+      _previousUserId != null && _previousUserId != userId;
 
   // Listen to auth state changes
   AuthService() {
@@ -31,7 +33,33 @@ class AuthService with ChangeNotifier {
     });
   }
 
-  // ✅ Check if current user is an admin
+  // 🔔 ===============================
+  // 🔔 FCM SETUP (NEW – REQUIRED)
+  // 🔔 ===============================
+  Future<void> setupFCM(String userId) async {
+    try {
+      FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+      // Ask permission (Android 13+ / iOS)
+      await messaging.requestPermission();
+
+      // Get device token
+      String? token = await messaging.getToken();
+
+      if (token != null) {
+        await _firestore.collection('users').doc(userId).set({
+          'fcmToken': token,
+          'updatedAt': FieldValue.serverTimestamp(),
+        }, SetOptions(merge: true));
+
+        print('✅ FCM Token saved: $token');
+      }
+    } catch (e) {
+      print('⚠️ Failed to setup FCM: $e');
+    }
+  }
+
+  // Check if current user is an admin
   Future<bool> isAdmin() async {
     final uid = userId;
     if (uid == null) return false;
@@ -46,23 +74,6 @@ class AuthService with ChangeNotifier {
     }
   }
 
-  // ✅ FIXED: Check if email exists in Firestore (not via Auth)
-  Future<bool> checkEmailExists(String email) async {
-    try {
-      final snapshot = await _firestore
-          .collection('users')
-          .where('email', isEqualTo: email)
-          .limit(1)
-          .get();
-
-      return snapshot.docs.isNotEmpty;
-    } catch (e) {
-      print('⚠️ Error checking email in Firestore: $e');
-      // Optionally return false or rethrow
-      return false; // Safe default: assume email doesn't exist on error
-    }
-  }
-
   // Register user + save extra info (name, phone)
   Future<User?> registerUser({
     required String email,
@@ -71,18 +82,11 @@ class AuthService with ChangeNotifier {
     required String phone,
   }) async {
     try {
-      // First, check if email already exists (optional but recommended)
-      final emailExists = await checkEmailExists(email);
-      if (emailExists) {
-        throw Exception('Email already in use');
-      }
-
       UserCredential credential = await _auth.createUserWithEmailAndPassword(
         email: email,
         password: password,
       );
 
-      // Save additional user data to Firestore
       await _firestore.collection('users').doc(credential.user!.uid).set({
         'email': email,
         'fullName': fullName,
@@ -90,13 +94,21 @@ class AuthService with ChangeNotifier {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
+      // 🔔 SAVE FCM TOKEN AFTER REGISTER
+      await setupFCM(credential.user!.uid);
+
       print('✅ User registered: ${credential.user!.uid}');
       notifyListeners();
-
       return credential.user;
-    } catch (e) {
-      print('❌ Registration error: $e');
-      throw Exception('Registration failed: $e');
+    } on FirebaseAuthException catch (e) {
+      if (e.code == 'email-already-in-use') {
+        throw Exception('Email already exists');
+      } else if (e.code == 'invalid-email') {
+        throw Exception('Invalid email');
+      } else if (e.code == 'weak-password') {
+        throw Exception('Weak password');
+      }
+      throw Exception(e.message);
     }
   }
 
@@ -108,12 +120,13 @@ class AuthService with ChangeNotifier {
         password: password,
       );
 
+      // 🔔 SAVE FCM TOKEN AFTER LOGIN
+      await setupFCM(credential.user!.uid);
+
       print('✅ User signed in: ${credential.user!.uid}');
       notifyListeners();
-
       return credential.user;
     } catch (e) {
-      print('❌ Sign-in error: $e');
       throw Exception('Sign in failed: $e');
     }
   }
@@ -121,13 +134,13 @@ class AuthService with ChangeNotifier {
   // Get user data from Firestore
   Future<Map<String, dynamic>?> getUserData(String uid) async {
     try {
-      DocumentSnapshot doc = await _firestore.collection('users').doc(uid).get();
+      DocumentSnapshot doc =
+          await _firestore.collection('users').doc(uid).get();
       if (doc.exists) {
-        return doc.data() as Map<String, dynamic>?;
+        return doc.data() as Map<String, dynamic>;
       }
       return null;
     } catch (e) {
-      print('⚠️ Failed to get user data: $e');
       throw Exception('Failed to get user data: $e');
     }
   }
@@ -144,7 +157,9 @@ class AuthService with ChangeNotifier {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text('Logout'),
           content: const Text('Are you sure you want to logout?'),
           actions: [
@@ -154,19 +169,15 @@ class AuthService with ChangeNotifier {
             ),
             TextButton(
               onPressed: () async {
-                Navigator.pop(context); // Close dialog
-
+                Navigator.pop(context);
                 try {
                   _previousUserId = userId;
                   await _auth.signOut();
-                  print('✅ User logged out');
                   notifyListeners();
 
                   if (context.mounted) {
-                    Navigator.of(context).pushNamedAndRemoveUntil(
-                      '/login',
-                      (route) => false,
-                    );
+                    Navigator.of(context)
+                        .pushNamedAndRemoveUntil('/login', (route) => false);
                   }
                 } catch (e) {
                   if (context.mounted) {
@@ -179,10 +190,8 @@ class AuthService with ChangeNotifier {
                   }
                 }
               },
-              child: const Text(
-                'Logout',
-                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
-              ),
+              child: const Text('Logout',
+                  style: TextStyle(color: Colors.red)),
             ),
           ],
         );
@@ -190,19 +199,16 @@ class AuthService with ChangeNotifier {
     );
   }
 
-  // Direct logout without confirmation
+  // Direct logout
   Future<void> logoutDirect(BuildContext context) async {
     try {
       _previousUserId = userId;
       await _auth.signOut();
-      print('✅ User logged out directly');
       notifyListeners();
 
       if (context.mounted) {
-        Navigator.of(context).pushNamedAndRemoveUntil(
-          '/login',
-          (route) => false,
-        );
+        Navigator.of(context)
+            .pushNamedAndRemoveUntil('/login', (route) => false);
       }
     } catch (e) {
       if (context.mounted) {

@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'dart:async';
 import 'package:profile_managemenr/accounts/authentication/login.dart';
-
 import 'package:profile_managemenr/home/screens/campus_closet_screen.dart';
 
 import '../../constants/app_colors.dart';
@@ -19,8 +17,9 @@ class RegistrationScreen extends StatefulWidget {
 }
 
 class _RegistrationScreenState extends State<RegistrationScreen> {
-  final _authService = AuthService(); // Instance variable
+  final _authService = AuthService();
   final _formKey = GlobalKey<FormState>();
+
   final _nameController = TextEditingController();
   final _emailController = TextEditingController();
   final _phoneController = TextEditingController();
@@ -30,18 +29,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
   bool _isGuestMode = false;
   bool _passwordVisible = false;
   bool _termsAccepted = false;
-  String _emailStatus = '';
+
   double _passwordStrength = 0.0;
   String _passwordStrengthLabel = 'Password strength';
   Color _passwordStrengthColor = Colors.transparent;
+
   String _successMessage = '';
   bool _isSubmitting = false;
-  Timer? _emailCheckTimer;
 
   @override
   void initState() {
     super.initState();
-    _emailController.addListener(_onEmailChanged);
     _passwordController.addListener(_onPasswordChanged);
   }
 
@@ -52,54 +50,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     _phoneController.dispose();
     _passwordController.dispose();
     _confirmPasswordController.dispose();
-    _emailCheckTimer?.cancel();
     super.dispose();
   }
 
-  void _onEmailChanged() {
-    _emailCheckTimer?.cancel();
-    final email = _emailController.text.trim();
-
-    if (email.isNotEmpty && Validators.isValidEmail(email)) {
-      setState(() {
-        _emailStatus = 'checking';
-      });
-
-      _emailCheckTimer = Timer(const Duration(milliseconds: 500), () {
-        _checkEmailAvailability(email);
-      });
-    } else {
-      setState(() {
-        _emailStatus = '';
-      });
-    }
-  }
-
   void _onPasswordChanged() {
-    final strengthData = PasswordStrengthCalculator.calculate(_passwordController.text);
+    final strengthData =
+        PasswordStrengthCalculator.calculate(_passwordController.text);
     setState(() {
       _passwordStrength = strengthData.strength;
       _passwordStrengthLabel = strengthData.label;
       _passwordStrengthColor = strengthData.color;
     });
-  }
-
-  // Updated to use Firebase
-  Future<void> _checkEmailAvailability(String email) async {
-    try {
-      final exists = await _authService.checkEmailExists(email);
-      if (mounted) {
-        setState(() {
-          _emailStatus = exists ? 'taken' : 'available';
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _emailStatus = '';
-        });
-      }
-    }
   }
 
   void _navigateToLogin() {
@@ -109,9 +70,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     );
   }
 
-  // Updated to use Firebase
   Future<void> _submitForm() async {
-    // Guest mode handling
     if (_isGuestMode) {
       Navigator.pushReplacement(
         context,
@@ -120,10 +79,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    // Validate form
-    if (!_formKey.currentState!.validate()) {
-      return;
-    }
+    if (!_formKey.currentState!.validate()) return;
 
     if (!_termsAccepted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -135,46 +91,44 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
       return;
     }
 
-    // Start registration
-    setState(() {
-      _isSubmitting = true;
-    });
+    setState(() => _isSubmitting = true);
 
     try {
-      // Register user with Firebase
       final user = await _authService.registerUser(
         email: _emailController.text.trim(),
         password: _passwordController.text,
         fullName: _nameController.text.trim(),
-        phone: _phoneController.text.trim(), // Add phone to auth service
+        phone: _phoneController.text.trim(),
       );
 
       if (user != null && mounted) {
         setState(() {
-          _successMessage = 'Registration successful! Welcome ${_nameController.text}. You can now login.';
+          _successMessage =
+              'Registration successful! Welcome ${_nameController.text}. You can now login.';
           _isSubmitting = false;
         });
 
-        // Optional: Auto-navigate to login after 2 seconds
         Future.delayed(const Duration(seconds: 2), () {
-          if (mounted) {
-            _navigateToLogin();
-          }
+          if (mounted) _navigateToLogin();
         });
       }
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          _isSubmitting = false;
-        });
+      if (!mounted) return;
 
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Registration failed: $e'),
-            backgroundColor: AppColors.errorColor,
-          ),
-        );
+      setState(() => _isSubmitting = false);
+
+      String message = 'Registration failed';
+
+      if (e.toString().contains('email-already-in-use')) {
+        message = 'This email is already registered';
       }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(message),
+          backgroundColor: AppColors.errorColor,
+        ),
+      );
     }
   }
 
@@ -198,6 +152,7 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
 
   Widget _buildRegistrationCard() {
     return Container(
+      padding: const EdgeInsets.all(30),
       decoration: BoxDecoration(
         color: AppColors.lightCardBackground,
         borderRadius: BorderRadius.circular(20),
@@ -209,7 +164,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
           ),
         ],
       ),
-      padding: const EdgeInsets.all(30),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
@@ -227,10 +181,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
             },
           ),
           const SizedBox(height: 20),
-          if (_successMessage.isNotEmpty) 
+          if (_successMessage.isNotEmpty) ...[
             SuccessMessage(message: _successMessage),
-          if (_successMessage.isNotEmpty) 
             const SizedBox(height: 20),
+          ],
           _buildForm(),
           const SizedBox(height: 20),
           _buildSubmitButton(),
@@ -249,7 +203,6 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
         child: Form(
           key: _formKey,
           child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               CustomTextField(
                 controller: _nameController,
@@ -260,11 +213,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               const SizedBox(height: 20),
               EmailField(
                 controller: _emailController,
-                emailStatus: _emailStatus,
-                validator: (value) => Validators.validateEmail(
-                  value,
-                  emailStatus: _emailStatus,
-                ),
+                emailStatus: '',
+                validator: Validators.validateEmail,
               ),
               const SizedBox(height: 20),
               CustomTextField(
@@ -278,11 +228,8 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
               PasswordField(
                 controller: _passwordController,
                 passwordVisible: _passwordVisible,
-                onToggleVisibility: () {
-                  setState(() {
-                    _passwordVisible = !_passwordVisible;
-                  });
-                },
+                onToggleVisibility: () =>
+                    setState(() => _passwordVisible = !_passwordVisible),
                 passwordStrength: _passwordStrength,
                 passwordStrengthLabel: _passwordStrengthLabel,
                 passwordStrengthColor: _passwordStrengthColor,
@@ -294,19 +241,15 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
                 label: 'Confirm Password',
                 hint: 'Confirm your password',
                 obscureText: true,
-                validator: (value) => Validators.validateConfirmPassword(
-                  value,
-                  _passwordController.text,
-                ),
+                validator: (value) =>
+                    Validators.validateConfirmPassword(
+                        value, _passwordController.text),
               ),
               const SizedBox(height: 25),
               TermsCheckbox(
                 termsAccepted: _termsAccepted,
-                onChanged: (value) {
-                  setState(() {
-                    _termsAccepted = value;
-                  });
-                },
+                onChanged: (value) =>
+                    setState(() => _termsAccepted = value),
               ),
             ],
           ),
@@ -319,35 +262,17 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return SizedBox(
       width: double.infinity,
       child: ElevatedButton(
-        onPressed: (_isSubmitting || (!_isGuestMode && !_termsAccepted))
-            ? null
-            : _submitForm,
+        onPressed:
+            (_isSubmitting || (!_isGuestMode && !_termsAccepted))
+                ? null
+                : _submitForm,
         style: ElevatedButton.styleFrom(
           backgroundColor: AppColors.accentColor,
-          foregroundColor: AppColors.lightTextColor,
           padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(12),
-          ),
-          elevation: 5,
-          disabledBackgroundColor: AppColors.lightBorderColor,
         ),
         child: _isSubmitting
-            ? const SizedBox(
-                width: 20,
-                height: 20,
-                child: CircularProgressIndicator(
-                  strokeWidth: 2,
-                  valueColor: AlwaysStoppedAnimation<Color>(AppColors.darkTextColor),
-                ),
-              )
-            : Text(
-                _isGuestMode ? 'Continue as Guest' : 'Create Account',
-                style: const TextStyle(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
+            ? const CircularProgressIndicator(strokeWidth: 2)
+            : Text(_isGuestMode ? 'Continue as Guest' : 'Create Account'),
       ),
     );
   }
@@ -356,27 +281,10 @@ class _RegistrationScreenState extends State<RegistrationScreen> {
     return Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text(
-          'Already have an account? ',
-          style: TextStyle(
-            color: AppColors.lightHintColor,
-            fontSize: 14,
-          ),
-        ),
+        const Text('Already have an account? '),
         TextButton(
           onPressed: _navigateToLogin,
-          style: TextButton.styleFrom(
-            padding: EdgeInsets.zero,
-            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-          ),
-          child: const Text(
-            'Login',
-            style: TextStyle(
-              color: AppColors.accentColor,
-              fontSize: 14,
-              fontWeight: FontWeight.w600,
-            ),
-          ),
+          child: const Text('Login'),
         ),
       ],
     );

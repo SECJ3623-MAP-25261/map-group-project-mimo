@@ -9,32 +9,50 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
-  firebase_core: ^4.2.1          # Updated from ^2.24.0
-  cloud_firestore: ^6.1.0        # Updated from ^4.14.0
-  firebase_auth: ^6.1.2           # Updated from ^4.16.0
-  firebase_storage: ^13.0.4       # Updated from ^11.6.0
-  image_picker: ^1.0.4        
-  permission_handler: ^12.0.1
-  provider: ^6.1.1
-  loading_animation_widget: ^1.3.0
-  speech_to_text: ^7.3.0
-  http: ^1.6.0 # or latest
-  flutter_dotenv: ^6.0.0 # to store API key securely (optional but recommended)
-  google_generative_ai: ^0.4.7
-  vibration: ^3.1.4
+  
+  # Firebase Core
+  firebase_core: ^4.2.1
+  cloud_firestore: ^6.1.0
+  firebase_auth: ^6.1.2
+  firebase_storage: ^13.0.4
+  firebase_messaging: ^16.1.0
+  cloud_functions: 6.0.5
+  
+  # Notifications
+  flutter_local_notifications: ^16.3.3
+  
+  # Media & Camera
+  image_picker: ^1.0.4
   camera: ^0.11.3
-  google_mlkit_face_detection: ^0.13.1
   image: ^4.1.3
-  google_maps_flutter: ^2.5.0 
+  
+  # ML & AI
+  google_mlkit_face_detection: ^0.13.1
+  google_generative_ai: ^0.4.7
+  speech_to_text: ^7.3.0
+  
+  # Maps & Location
+  google_maps_flutter: ^2.5.0
   geolocator: ^11.0.0
   geocoding: ^2.2.1
+  
+  # Utilities
+  provider: ^6.1.1
+  permission_handler: ^12.0.1
+  loading_animation_widget: ^1.3.0
+  vibration: ^3.1.4
   url_launcher: ^6.3.2
   shared_preferences: ^2.2.2
   connectivity_plus: ^5.0.2
-  cloud_functions: 6.0.5
-  syncfusion_flutter_charts: ^32.1.20 
-  #firebase_app_check: ^0.4.1+3
+  flutter_dotenv: ^6.0.0
+  
+  # Charts & UI
+  syncfusion_flutter_charts: ^32.1.20
   fl_chart: ^1.1.1
+  
+  # Networking & Data
+  http: ^1.6.0  # ✅ ONLY ONE http package
+  intl: ^0.18.1
 
 dev_dependencies:
   flutter_test:

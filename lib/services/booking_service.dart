@@ -2,13 +2,15 @@
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
+import 'notification_service.dart';
 
 class BookingService {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  final NotificationService _notificationService = NotificationService();
   final String _bookingsCollection = 'bookings';
   final String _reviewsCollection = 'reviews';
 
-  // ========== NEW: OVERLAP PREVENTION METHODS ==========
+  // ========== OVERLAP PREVENTION METHODS ==========
 
   /// Fetch all existing bookings for a specific item
   Future<List<Map<String, dynamic>>> getItemBookings(String itemId) async {
@@ -33,7 +35,6 @@ class BookingService {
     } catch (e, stackTrace) {
       print('❌ Error fetching item bookings: $e');
       print('❌ Stack trace: $stackTrace');
-      // Re-throw the error so createBooking can handle it
       rethrow;
     }
   }
@@ -48,15 +49,12 @@ class BookingService {
       final bookedStart = booking['startDate'] as DateTime;
       final bookedEnd = booking['endDate'] as DateTime;
 
-      // Check for overlap:
-      // New booking overlaps if it starts before existing ends
-      // AND ends after existing starts
       if (startDate.isBefore(bookedEnd.add(const Duration(days: 1))) &&
           endDate.isAfter(bookedStart.subtract(const Duration(days: 1)))) {
-        return false; // Overlap detected
+        return false;
       }
     }
-    return true; // No overlap
+    return true;
   }
 
   /// Get set of all unavailable dates for the item
@@ -67,7 +65,6 @@ class BookingService {
       final startDate = booking['startDate'] as DateTime;
       final endDate = booking['endDate'] as DateTime;
       
-      // Add all dates in the range (inclusive)
       DateTime current = DateTime(startDate.year, startDate.month, startDate.day);
       final end = DateTime(endDate.year, endDate.month, endDate.day);
       
@@ -80,9 +77,9 @@ class BookingService {
     return unavailableDates;
   }
 
-  // ========== EXISTING METHODS (UPDATED) ==========
+  // ========== CREATE BOOKING WITH NOTIFICATIONS ==========
 
-  /// Create a new booking with overlap check
+  /// Create a new booking with overlap check and notification
   /// Returns booking ID on success, error message string on failure
   Future<String?> createBooking({
     required String userId,
@@ -104,22 +101,24 @@ class BookingService {
   }) async {
     try {
       print('🔍 Checking for existing bookings for item: $itemId');
-      // ✅ Check for overlapping bookings before creating
+      
+      // Check for overlapping bookings
       List<Map<String, dynamic>> existingBookings = [];
       try {
         existingBookings = await getItemBookings(itemId);
         print('🔍 Found ${existingBookings.length} existing bookings');
       } catch (e) {
         print('⚠️ Could not check for existing bookings, proceeding anyway: $e');
-        // Continue with booking creation even if overlap check fails
       }
       
-      if (existingBookings.isNotEmpty && !isDateRangeAvailable(startDate, endDate, existingBookings)) {
+      if (existingBookings.isNotEmpty && 
+          !isDateRangeAvailable(startDate, endDate, existingBookings)) {
         print('⚠️ Date range overlaps with existing booking');
         return 'ABORTED: OVERLAP';
       }
 
       print('✅ Date range is available, creating booking...');
+      
       final bookingData = {
         'userId': userId,
         'userEmail': userEmail,
@@ -131,12 +130,12 @@ class BookingService {
         'itemPrice': itemPrice,
         'startDate': Timestamp.fromDate(startDate),
         'endDate': Timestamp.fromDate(endDate),
-        'actualReturnDate': null, // Set when item is returned
+        'actualReturnDate': null,
         'rentalDays': rentalDays,
         'totalAmount': totalAmount,
-        'finalFee': totalAmount, // Can be updated if there are late fees
+        'finalFee': totalAmount,
         'paymentMethod': paymentMethod,
-        'status': 'pending', // pending, confirmed, ongoing, completed, cancelled
+        'status': 'pending',
         'hasReview': false,
         'createdAt': FieldValue.serverTimestamp(),
         'updatedAt': FieldValue.serverTimestamp(),
@@ -148,19 +147,37 @@ class BookingService {
       print('📝 Booking data: $bookingData');
       
       final docRef = await _firestore.collection(_bookingsCollection).add(bookingData);
+      final bookingId = docRef.id;
 
+      // Record in item summary
       await ItemSummaryService().recordBookingCreated(
         itemId: itemId,
         status: (bookingData['status'] ?? 'pending').toString(),
       );
-      print('✅ Booking created successfully with ID: ${docRef.id}');
-      return docRef.id; // Return booking ID
+
+      // 🔔 SEND NOTIFICATION TO RENTER
+      try {
+        await _notificationService.notifyRenterOfBookingRequest(
+          renterId: renterId,
+          renteeId: userId,
+          renteeName: userName,
+          itemName: itemName,
+          bookingId: bookingId,
+        );
+        print('✅ Notification sent to renter');
+      } catch (e) {
+        print('⚠️ Failed to send notification (non-critical): $e');
+        // Don't fail the booking if notification fails
+      }
+
+      print('✅ Booking created successfully with ID: $bookingId');
+      return bookingId;
+      
     } catch (e, stackTrace) {
       print('❌ Error creating booking: $e');
       print('❌ Error type: ${e.runtimeType}');
       print('❌ Stack trace: $stackTrace');
       
-      // Return error message as string (prefixed with ERROR: to distinguish from booking ID)
       String errorMsg = e.toString();
       if (errorMsg.contains('PERMISSION_DENIED')) {
         errorMsg = 'Permission denied. Check Firebase security rules.';
@@ -172,6 +189,128 @@ class BookingService {
       return 'ERROR: $errorMsg';
     }
   }
+
+  // ========== UPDATE BOOKING STATUS WITH NOTIFICATIONS ==========
+
+  /// Update booking status with automatic notifications
+  Future<bool> updateBookingStatus(String bookingId, String newStatus) async {
+    try {
+      // Get booking details first for notifications
+      final bookingDoc = await _firestore
+          .collection(_bookingsCollection)
+          .doc(bookingId)
+          .get();
+      
+      if (!bookingDoc.exists) {
+        print('❌ Booking not found: $bookingId');
+        return false;
+      }
+
+      final booking = bookingDoc.data()!;
+      final renteeId = booking['userId'] as String;
+      final itemName = booking['itemName'] as String;
+      final meetUpAddress = booking['meetUpAddress'] as String? ?? 'Location TBD';
+      final startDate = (booking['startDate'] as Timestamp).toDate();
+      final endDate = (booking['endDate'] as Timestamp).toDate();
+
+      // Update status in Firestore
+      await _firestore.collection(_bookingsCollection).doc(bookingId).update({
+        'status': newStatus,
+        'updatedAt': FieldValue.serverTimestamp(),
+      });
+
+      print('✅ Booking status updated to: $newStatus');
+
+      // 🔔 SEND APPROPRIATE NOTIFICATIONS BASED ON STATUS
+      try {
+        switch (newStatus) {
+          case 'confirmed':
+            await _notificationService.notifyRenteeOfBookingApproval(
+              renteeId: renteeId,
+              itemName: itemName,
+              bookingId: bookingId,
+              meetUpAddress: meetUpAddress,
+              startDate: startDate,
+            );
+            print('✅ Approval notification sent to rentee');
+            break;
+
+          case 'cancelled':
+            await _notificationService.notifyRenteeOfBookingRejection(
+              renteeId: renteeId,
+              itemName: itemName,
+              bookingId: bookingId,
+            );
+            print('✅ Rejection notification sent to rentee');
+            break;
+
+          case 'ongoing':
+            await _notificationService.notifyRenteeOfPickupConfirmation(
+              renteeId: renteeId,
+              itemName: itemName,
+              bookingId: bookingId,
+              endDate: endDate,
+            );
+            
+            // Schedule return reminder
+            await _scheduleReturnReminder(
+              renteeId: renteeId,
+              itemName: itemName,
+              bookingId: bookingId,
+              endDate: endDate,
+            );
+            print('✅ Pickup confirmation sent to rentee');
+            break;
+
+          case 'completed':
+            await _notificationService.notifyRenteeOfReturnConfirmation(
+              renteeId: renteeId,
+              itemName: itemName,
+              bookingId: bookingId,
+            );
+            print('✅ Return confirmation sent to rentee');
+            break;
+        }
+      } catch (e) {
+        print('⚠️ Failed to send notification (non-critical): $e');
+        // Don't fail the status update if notification fails
+      }
+
+      return true;
+    } catch (e) {
+      print('❌ Error updating booking status: $e');
+      return false;
+    }
+  }
+
+  /// Schedule return reminder
+  Future<void> _scheduleReturnReminder({
+    required String renteeId,
+    required String itemName,
+    required String bookingId,
+    required DateTime endDate,
+  }) async {
+    try {
+      final reminderDate = endDate.subtract(const Duration(days: 1));
+      
+      await _firestore.collection('scheduled_notifications').add({
+        'userId': renteeId,
+        'type': 'return_reminder',
+        'bookingId': bookingId,
+        'itemName': itemName,
+        'endDate': Timestamp.fromDate(endDate),
+        'scheduledFor': Timestamp.fromDate(reminderDate),
+        'sent': false,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
+
+      print('✅ Return reminder scheduled for: $reminderDate');
+    } catch (e) {
+      print('⚠️ Error scheduling reminder: $e');
+    }
+  }
+
+  // ========== EXISTING METHODS ==========
 
   /// Get user's bookings (as RENTEE / borrower)
   Future<List<Map<String, dynamic>>> getUserBookings(String userId) async {
@@ -235,20 +374,6 @@ class BookingService {
     }
   }
 
-  /// Update booking status
-  Future<bool> updateBookingStatus(String bookingId, String status) async {
-    try {
-      await _firestore.collection(_bookingsCollection).doc(bookingId).update({
-        'status': status,
-        'updatedAt': FieldValue.serverTimestamp(),
-      });
-      return true;
-    } catch (e) {
-      print('Error updating booking status: $e');
-      return false;
-    }
-  }
-
   /// Update actual return date and final fee
   Future<bool> updateReturnInfo(
       String bookingId, DateTime returnDate, double finalFee) async {
@@ -279,7 +404,6 @@ class BookingService {
     required String comment,
   }) async {
     try {
-      // Create review document
       await _firestore.collection(_reviewsCollection).add({
         'bookingId': bookingId,
         'userId': userId,
@@ -293,7 +417,6 @@ class BookingService {
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      // Update booking to mark as reviewed
       await _firestore.collection(_bookingsCollection).doc(bookingId).update({
         'hasReview': true,
         'updatedAt': FieldValue.serverTimestamp(),

@@ -3,6 +3,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'forget_password.dart';
 import 'package:profile_managemenr/accounts/registration/registration_app.dart';
 import '../../constants/app_colors.dart';
+import 'package:profile_managemenr/services/fcm_service.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -47,10 +48,13 @@ class _LoginPageState extends State<LoginPage> {
 
     try {
       // Simple login without checking email existence first
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _emailController.text.trim(),
-        password: _passwordController.text.trim(),
-      );
+      UserCredential userCredential =
+    await FirebaseAuth.instance.signInWithEmailAndPassword(
+  email: _emailController.text.trim(),
+  password: _passwordController.text.trim(),
+);
+
+await setupFCM(userCredential.user!.uid);
 
       // Navigate to main app
       if (!mounted) return;

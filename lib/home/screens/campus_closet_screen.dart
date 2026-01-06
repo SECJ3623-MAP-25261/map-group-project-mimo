@@ -11,6 +11,8 @@ import '../screens/item_detail_screen.dart';
 import 'package:profile_managemenr/services/item_service.dart';
 import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
 import 'package:profile_managemenr/sprint2/AIChatbot/aichatbotscreen.dart';
+import '../../widgets/notification_badges.dart';
+
 
 class CampusClosetScreen extends StatefulWidget {
   const CampusClosetScreen({super.key});
@@ -189,6 +191,7 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
           },
           tooltip: 'AI Assistant',
         ),
+        const NotificationBadge(),
       ],
     );
   }

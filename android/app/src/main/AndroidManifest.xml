@@ -5,6 +5,9 @@
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-permission android:name="android.permission.INTERNET"/>
+    <uses-permission android:name="android.permission.VIBRATE"/>
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     
     <!-- Add any other permissions you need here -->
 
@@ -12,11 +15,17 @@
         android:label="temp_clean_project"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+            android:value="rental_channel" />
         
         <!-- Don't forget to mention your API key for the Google Maps SDK -->
         <meta-data
             android:name="com.google.android.geo.API_KEY"
             android:value="AIzaSyBkvwuXh3_Pd8lbhQ7inEoHEyxHCdqiUGw"/>
+
+        <meta-data
+        android:name="com.google.firebase.messaging.default_notification_channel_id"
+        android:value="high_importance_channel" />
 
         <activity
             android:name=".MainActivity"
