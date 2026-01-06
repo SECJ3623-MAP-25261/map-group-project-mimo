@@ -38,7 +38,7 @@ class _FaceCaptureScreenState extends State<FaceCaptureScreen> {
   
   final FaceVerificationService _faceService = FaceVerificationService(
     storeDisplayImage: true, // Store actual images
-    similarityThreshold: 75.0, // 75% match required
+    similarityThreshold: 40.0, // 75% match required
   );
 
   @override

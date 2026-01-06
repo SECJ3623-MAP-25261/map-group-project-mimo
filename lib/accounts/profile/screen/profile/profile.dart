@@ -360,7 +360,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         else if (text == "Report Analysis") {
           Navigator.push(
             context,
-            MaterialPageRoute(builder: (context) => const ReportAnalysisScreen()),
+            MaterialPageRoute(builder: (context) => const SpendingAnalysisScreen()),
           );
         }
       },

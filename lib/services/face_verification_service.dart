@@ -19,7 +19,7 @@ class FaceVerificationService {
 
   FaceVerificationService({
     this.storeDisplayImage = false,
-    this.similarityThreshold = 75.0,
+    this.similarityThreshold = 40.0,
   }) {
     _faceDetector = FaceDetector(
       options: FaceDetectorOptions(

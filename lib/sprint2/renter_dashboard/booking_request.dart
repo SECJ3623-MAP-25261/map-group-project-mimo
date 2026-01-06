@@ -203,7 +203,9 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
         return int.tryParse(v.toString()) ?? 0;
       })();
       
-      final completedAt = (booking['returnDate'] ?? booking['endDate']) as DateTime? ?? DateTime.now();
+      //final completedAt = (booking['returnDate'] ?? booking['endDate']) as DateTime? ?? DateTime.now();
+      final rawDate = booking['returnDate'] ?? booking['endDate'];
+      final DateTime completedAt = (rawDate as Timestamp?)?.toDate() ?? DateTime.now();
 
       // 2) Update booking status in Firestore (your existing logic)
       final success = await _bookingService.updateBookingStatus(bookingId, newStatus);
