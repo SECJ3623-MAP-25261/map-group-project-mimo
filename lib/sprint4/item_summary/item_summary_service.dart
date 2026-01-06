@@ -111,6 +111,7 @@ class ItemSummaryService {
     required String oldStatus,
     required String newStatus,
     required num finalFee,
+     required DateTime completedAt,
     required int rentalDays,
     Map<String, dynamic>? itemDataForInit,
   }) async {
@@ -122,6 +123,8 @@ class ItemSummaryService {
 
     final oldField = _statusToField(oldStatus);
     final newField = _statusToField(newStatus);
+    final monthKey ='${completedAt.year.toString().padLeft(4, '0')}-${completedAt.month.toString().padLeft(2, '0')}';
+
 
     await _firestore.runTransaction((tx) async {
       final snap = await tx.get(ref);
@@ -160,6 +163,9 @@ class ItemSummaryService {
       if (newStatus == 'completed' && oldStatus != 'completed') {
         updates['totalEarnings'] = FieldValue.increment(finalFee.toDouble());
         updates['totalRentalDays'] = FieldValue.increment(rentalDays);
+        updates['earningsByMonth.$monthKey.earnings'] = FieldValue.increment(finalFee.toDouble());
+        updates['earningsByMonth.$monthKey.rentalDays'] = FieldValue.increment(rentalDays);
+        updates['earningsByMonth.$monthKey.completedBookings'] = FieldValue.increment(1);
         updates['lastCompletedAt'] = FieldValue.serverTimestamp();
       }
 
@@ -167,6 +173,9 @@ class ItemSummaryService {
       if (oldStatus == 'completed' && newStatus != 'completed') {
         updates['totalEarnings'] = FieldValue.increment(-finalFee.toDouble());
         updates['totalRentalDays'] = FieldValue.increment(-rentalDays);
+        updates['earningsByMonth.$monthKey.earnings'] = FieldValue.increment(-finalFee.toDouble());
+        updates['earningsByMonth.$monthKey.rentalDays'] = FieldValue.increment(-rentalDays);
+        updates['earningsByMonth.$monthKey.completedBookings'] = FieldValue.increment(-1);
       }
 
       tx.set(ref, updates, SetOptions(merge: true));

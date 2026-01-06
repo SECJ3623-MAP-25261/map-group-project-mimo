@@ -9,6 +9,22 @@ class ItemSummaryScreen extends StatelessWidget {
 
   const ItemSummaryScreen({super.key, required this.itemId});
 
+  Map<String, dynamic> _asMap(dynamic v) {
+    if (v is Map<String, dynamic>) return v;
+    if (v is Map) return Map<String, dynamic>.from(v);
+    return {};
+  }
+
+  num _num(dynamic v) {
+    if (v == null) return 0;
+    if (v is num) return v;
+    return num.tryParse(v.toString()) ?? 0;
+  }
+
+  String _monthKey(DateTime dt) {
+    return '${dt.year.toString().padLeft(4, '0')}-${dt.month.toString().padLeft(2, '0')}';
+  }
+
   @override
   Widget build(BuildContext context) {
     final ref = FirebaseFirestore.instance.collection('item_summaries').doc(itemId);
@@ -52,6 +68,18 @@ class ItemSummaryScreen extends StatelessWidget {
           final totalRentalDays = (d['totalRentalDays'] ?? 0) as num;
           final totalEarnings = (d['totalEarnings'] ?? 0) as num;
 
+          final earningsByMonth = _asMap(d['earningsByMonth']);
+
+          final now = DateTime.now();
+          final thisKey = _monthKey(now);
+          final lastMonth = DateTime(now.year, now.month - 1, 1);
+          final lastKey = _monthKey(lastMonth);
+
+          final thisMonthEarnings = _num(_asMap(earningsByMonth[thisKey])['earnings']);
+          final lastMonthEarnings = _num(_asMap(earningsByMonth[lastKey])['earnings']);
+
+          final sortedMonths = earningsByMonth.keys.toList()..sort((a, b) => b.compareTo(a));
+
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
@@ -79,6 +107,53 @@ class ItemSummaryScreen extends StatelessWidget {
                 _metricCard('Total Earnings (RM)', totalEarnings.toStringAsFixed(2), Icons.payments),
                 _metricCard('Total Rental Days', totalRentalDays.toStringAsFixed(0), Icons.calendar_month),
               ]),
+
+              const SizedBox(height: 12),
+              _sectionTitle('Monthly Earnings'),
+              _metricRow([
+                _metricCard('This Month (RM)', thisMonthEarnings.toStringAsFixed(2), Icons.trending_up),
+                _metricCard('Last Month (RM)', lastMonthEarnings.toStringAsFixed(2), Icons.history),
+              ]),
+              const SizedBox(height: 10),
+
+              Container(
+                padding: const EdgeInsets.all(14),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(16),
+                  boxShadow: [
+                    BoxShadow(color: Colors.black.withOpacity(0.06), blurRadius: 12, offset: const Offset(0, 4)),
+                  ],
+                ),
+                child: sortedMonths.isEmpty
+                    ? Text(
+                        'No monthly earnings yet.\nComplete a booking to generate monthly report.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(color: Colors.grey[600]),
+                      )
+                    : Column(
+                        children: sortedMonths.take(6).map((k) {
+                          final m = _asMap(earningsByMonth[k]);
+                          final e = _num(m['earnings']);
+                          final days = _num(m['rentalDays']);
+                          final b = _num(m['completedBookings']);
+
+                          return Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 6),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                              children: [
+                                Text(k, style: TextStyle(color: Colors.grey[700])),
+                                Text(
+                                  'RM ${e.toStringAsFixed(2)} • ${days.toStringAsFixed(0)} days • ${b.toStringAsFixed(0)}',
+                                  style: const TextStyle(fontWeight: FontWeight.w600),
+                                ),
+                              ],
+                            ),
+                          );
+                        }).toList(),
+                      ),
+              ),
             ],
           );
         },

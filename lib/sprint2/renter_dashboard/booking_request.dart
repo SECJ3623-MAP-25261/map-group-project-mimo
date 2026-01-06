@@ -202,6 +202,8 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
         if (v is int) return v;
         return int.tryParse(v.toString()) ?? 0;
       })();
+      
+      final completedAt = (booking['returnDate'] ?? booking['endDate']) as DateTime? ?? DateTime.now();
 
       // 2) Update booking status in Firestore (your existing logic)
       final success = await _bookingService.updateBookingStatus(bookingId, newStatus);
@@ -217,6 +219,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
             newStatus: newStatus,
             finalFee: finalFee,
             rentalDays: rentalDays,
+            completedAt: completedAt,
           );
         }
 
