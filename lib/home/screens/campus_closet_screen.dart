@@ -12,6 +12,9 @@ import 'package:profile_managemenr/services/item_service.dart';
 import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
 import 'package:profile_managemenr/sprint2/AIChatbot/aichatbotscreen.dart';
 import '../../widgets/notification_badges.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+
 
 
 class CampusClosetScreen extends StatefulWidget {
@@ -86,6 +89,25 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
       appBar: _buildAppBar(context, isSmallScreen),
       body: Column(
         children: [
+          Padding(
+      padding: const EdgeInsets.all(12),
+      child: ElevatedButton(
+        onPressed: () async {
+          await FirebaseFirestore.instance
+              .collection('notifications')
+              .add({
+            'userId': FirebaseAuth.instance.currentUser!.uid,
+            'title': 'TEST',
+            'body': 'Notification is working',
+            'type': 'test',
+            'isRead': false,
+            'createdAt': FieldValue.serverTimestamp(),
+          });
+        },
+        child: const Text('TEST NOTIFICATION'),
+      ),
+    ),
+
           FilterChipList(
             filters: AppConstants.categories,
             activeFilter: _activeFilter,

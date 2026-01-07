@@ -2,7 +2,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class NotificationService {
@@ -17,86 +16,75 @@ class NotificationService {
 
   String? _currentUserFcmToken;
 
-  // Initialize notifications
   Future<void> initialize() async {
-    // Request permission
-    NotificationSettings settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
-
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('✅ Notification permission granted');
-      
-      // Get FCM token
-      _currentUserFcmToken = await _fcm.getToken();
-      print('📱 FCM Token: $_currentUserFcmToken');
-
-      // Initialize local notifications
-      await _initializeLocalNotifications();
-
-      // Handle foreground messages
-      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
-
-      // Handle background messages
-      FirebaseMessaging.onMessageOpenedApp.listen(_handleBackgroundMessage);
-    } else {
-      print('❌ Notification permission denied');
-    }
-  }
-
-  // Initialize local notifications for foreground display
-  Future<void> _initializeLocalNotifications() async {
-    const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
-    const iosSettings = DarwinInitializationSettings();
+    print('🔔 ========== NOTIFICATION INIT START ==========');
     
-    const initSettings = InitializationSettings(
-      android: androidSettings,
-      iOS: iosSettings,
-    );
+    try {
+      // Request permission
+      NotificationSettings settings = await _fcm.requestPermission(
+        alert: true,
+        badge: true,
+        sound: true,
+      );
 
-    await _localNotifications.initialize(
-      initSettings,
-      onDidReceiveNotificationResponse: _onNotificationTap,
-    );
+      print('🔔 Permission: ${settings.authorizationStatus}');
+
+      if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+        // Get FCM token
+        _currentUserFcmToken = await _fcm.getToken();
+        
+        if (_currentUserFcmToken != null) {
+          print('✅ FCM Token: ${_currentUserFcmToken!.substring(0, 30)}...');
+        } else {
+          print('❌ No FCM token received');
+        }
+
+        // Initialize local notifications
+        const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+        const iosSettings = DarwinInitializationSettings();
+        const initSettings = InitializationSettings(
+          android: androidSettings,
+          iOS: iosSettings,
+        );
+
+        await _localNotifications.initialize(
+          initSettings,
+          onDidReceiveNotificationResponse: (response) {
+            print('📬 Notification tapped: ${response.payload}');
+          },
+        );
+
+        // Handle foreground messages
+        FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+          print('📬 Foreground: ${message.notification?.title}');
+          _showLocalNotification(message);
+        });
+
+        // Handle background taps
+        FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+          print('📬 Background tap: ${message.notification?.title}');
+        });
+        
+        print('✅ Notification service ready');
+      } else {
+        print('❌ Permission denied');
+      }
+    } catch (e) {
+      print('❌ Init error: $e');
+    }
+    
+    print('🔔 ========== NOTIFICATION INIT END ==========');
   }
 
-  // Handle foreground messages
-  void _handleForegroundMessage(RemoteMessage message) {
-    print('📬 Foreground notification: ${message.notification?.title}');
-    _showLocalNotification(message);
-  }
-
-  // Handle background message tap
-  void _handleBackgroundMessage(RemoteMessage message) {
-    print('📬 Background notification tapped: ${message.notification?.title}');
-    // Navigate to relevant screen based on message data
-  }
-
-  // Handle local notification tap
-  void _onNotificationTap(NotificationResponse response) {
-    print('📬 Local notification tapped: ${response.payload}');
-    // Navigate based on payload
-  }
-
-  // Show local notification
   Future<void> _showLocalNotification(RemoteMessage message) async {
     const androidDetails = AndroidNotificationDetails(
       'rental_channel',
       'Rental Notifications',
-      channelDescription: 'Notifications for rental requests and updates',
       importance: Importance.high,
       priority: Priority.high,
-      icon: '@mipmap/ic_launcher',
     );
 
-    const iosDetails = DarwinNotificationDetails();
-
-    const details = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
+    const details = NotificationDetails(android: androidDetails);
 
     await _localNotifications.show(
       message.hashCode,
@@ -107,18 +95,41 @@ class NotificationService {
     );
   }
 
-  // Save FCM token to Firestore
   Future<void> saveFcmToken(String userId) async {
-    if (_currentUserFcmToken != null) {
-      await _firestore.collection('users').doc(userId).update({
+    print('💾 ========== SAVE FCM TOKEN ==========');
+    print('💾 User: $userId');
+    print('💾 Token: ${_currentUserFcmToken?.substring(0, 30)}...');
+    
+    if (_currentUserFcmToken == null) {
+      print('❌ No token to save');
+      return;
+    }
+    
+    try {
+      // Use set with merge to avoid overwriting
+      await _firestore.collection('users').doc(userId).set({
         'fcmToken': _currentUserFcmToken,
         'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
-      });
-      print('✅ FCM token saved for user: $userId');
+      }, SetOptions(merge: true));
+      
+      print('✅ Token saved to Firestore');
+      
+      // VERIFY
+      final doc = await _firestore.collection('users').doc(userId).get();
+      if (doc.exists && doc.data()?['fcmToken'] != null) {
+        print('✅ VERIFIED in Firestore');
+      } else {
+        print('❌ NOT FOUND in Firestore - Check security rules!');
+      }
+      
+    } catch (e) {
+      print('❌ Save error: $e');
+      print('❌ Check Firestore security rules!');
     }
+    
+    print('💾 ========================================');
   }
 
-  // Send notification when rentee requests an item
   Future<void> notifyRenterOfBookingRequest({
     required String renterId,
     required String renteeId,
@@ -126,48 +137,48 @@ class NotificationService {
     required String itemName,
     required String bookingId,
   }) async {
+    print('');
+    print('🔔 ========== CREATE NOTIFICATION ==========');
+    print('🔔 Type: Booking Request');
+    print('🔔 To: $renterId');
+    print('🔔 From: $renteeName');
+    print('🔔 Item: $itemName');
+    
     try {
-      // Get renter's FCM token
-      final renterDoc = await _firestore.collection('users').doc(renterId).get();
-      final renterToken = renterDoc.data()?['fcmToken'] as String?;
-
-      if (renterToken == null) {
-        print('⚠️ No FCM token for renter: $renterId');
-        return;
-      }
-
-      // Create in-app notification record
-      await _firestore.collection('notifications').add({
+      final data = {
         'userId': renterId,
         'type': 'booking_request',
         'title': 'New Booking Request',
-        'body': '$renteeName has requested to rent your $itemName',
+        'body': '$renteeName wants to rent your $itemName',
         'bookingId': bookingId,
         'itemName': itemName,
-        'renteeName': renteeName,
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      // Send push notification
-      await _sendPushNotification(
-        token: renterToken,
-        title: 'New Booking Request 📦',
-        body: '$renteeName wants to rent your $itemName',
-        data: {
-          'type': 'booking_request',
-          'bookingId': bookingId,
-          'renterId': renterId,
-        },
-      );
-
-      print('✅ Booking request notification sent to renter');
+      };
+      
+      print('📝 Data: $data');
+      
+      final docRef = await _firestore.collection('notifications').add(data);
+      
+      print('✅ Created: ${docRef.id}');
+      
+      // VERIFY
+      final doc = await docRef.get();
+      if (doc.exists) {
+        print('✅ VERIFIED in Firestore');
+      } else {
+        print('❌ NOT FOUND - Check security rules!');
+      }
+      
     } catch (e) {
-      print('❌ Error sending booking request notification: $e');
+      print('❌ Create error: $e');
+      print('❌ FIRESTORE RULES ISSUE!');
     }
+    
+    print('🔔 ========================================');
+    print('');
   }
 
-  // Send notification when renter approves booking
   Future<void> notifyRenteeOfBookingApproval({
     required String renteeId,
     required String itemName,
@@ -175,56 +186,34 @@ class NotificationService {
     required String meetUpAddress,
     required DateTime startDate,
   }) async {
+    print('🔔 Creating approval notification...');
+    
     try {
-      final renteeDoc = await _firestore.collection('users').doc(renteeId).get();
-      final renteeToken = renteeDoc.data()?['fcmToken'] as String?;
-
-      if (renteeToken == null) {
-        print('⚠️ No FCM token for rentee: $renteeId');
-        return;
-      }
-
       await _firestore.collection('notifications').add({
         'userId': renteeId,
         'type': 'booking_approved',
         'title': 'Booking Approved ✅',
-        'body': 'Your request for $itemName has been approved!',
+        'body': 'Your request for $itemName was approved!',
         'bookingId': bookingId,
         'itemName': itemName,
         'meetUpAddress': meetUpAddress,
-        'startDate': startDate,
+        'startDate': Timestamp.fromDate(startDate),
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      await _sendPushNotification(
-        token: renteeToken,
-        title: 'Booking Approved ✅',
-        body: 'Your request for $itemName has been approved! Meet-up: $meetUpAddress',
-        data: {
-          'type': 'booking_approved',
-          'bookingId': bookingId,
-        },
-      );
-
-      print('✅ Booking approval notification sent to rentee');
+      print('✅ Approval notification created');
     } catch (e) {
-      print('❌ Error sending booking approval notification: $e');
+      print('❌ Error: $e');
     }
   }
 
-  // Send notification when renter rejects booking
   Future<void> notifyRenteeOfBookingRejection({
     required String renteeId,
     required String itemName,
     required String bookingId,
   }) async {
     try {
-      final renteeDoc = await _firestore.collection('users').doc(renteeId).get();
-      final renteeToken = renteeDoc.data()?['fcmToken'] as String?;
-
-      if (renteeToken == null) return;
-
       await _firestore.collection('notifications').add({
         'userId': renteeId,
         'type': 'booking_cancelled',
@@ -235,24 +224,11 @@ class NotificationService {
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
-
-      await _sendPushNotification(
-        token: renteeToken,
-        title: 'Booking Not Approved',
-        body: 'Sorry, your request for $itemName was not approved',
-        data: {
-          'type': 'booking_cancelled',
-          'bookingId': bookingId,
-        },
-      );
-
-      print('✅ Booking rejection notification sent to rentee');
     } catch (e) {
-      print('❌ Error sending booking rejection notification: $e');
+      print('❌ Error: $e');
     }
   }
 
-  // Send notification when pickup is verified
   Future<void> notifyRenteeOfPickupConfirmation({
     required String renteeId,
     required String itemName,
@@ -260,139 +236,43 @@ class NotificationService {
     required DateTime endDate,
   }) async {
     try {
-      final renteeDoc = await _firestore.collection('users').doc(renteeId).get();
-      final renteeToken = renteeDoc.data()?['fcmToken'] as String?;
-
-      if (renteeToken == null) return;
-
       await _firestore.collection('notifications').add({
         'userId': renteeId,
         'type': 'pickup_confirmed',
         'title': 'Pickup Confirmed ✅',
-        'body': 'You have successfully picked up $itemName. Enjoy!',
+        'body': 'You picked up $itemName. Enjoy!',
         'bookingId': bookingId,
         'itemName': itemName,
-        'endDate': endDate,
+        'endDate': Timestamp.fromDate(endDate),
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
-
-      await _sendPushNotification(
-        token: renteeToken,
-        title: 'Pickup Confirmed ✅',
-        body: 'Enjoy your $itemName! Remember to return it by ${_formatDate(endDate)}',
-        data: {
-          'type': 'pickup_confirmed',
-          'bookingId': bookingId,
-        },
-      );
-
-      print('✅ Pickup confirmation notification sent to rentee');
     } catch (e) {
-      print('❌ Error sending pickup confirmation notification: $e');
+      print('❌ Error: $e');
     }
   }
 
-  // Send notification when return is verified
   Future<void> notifyRenteeOfReturnConfirmation({
     required String renteeId,
     required String itemName,
     required String bookingId,
   }) async {
     try {
-      final renteeDoc = await _firestore.collection('users').doc(renteeId).get();
-      final renteeToken = renteeDoc.data()?['fcmToken'] as String?;
-
-      if (renteeToken == null) return;
-
       await _firestore.collection('notifications').add({
         'userId': renteeId,
         'type': 'return_confirmed',
         'title': 'Return Confirmed ✅',
-        'body': 'Your return of $itemName has been confirmed. Thank you!',
+        'body': 'Thank you for returning $itemName!',
         'bookingId': bookingId,
         'itemName': itemName,
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
-
-      await _sendPushNotification(
-        token: renteeToken,
-        title: 'Return Confirmed ✅',
-        body: 'Thank you for returning $itemName on time! 🎉',
-        data: {
-          'type': 'return_confirmed',
-          'bookingId': bookingId,
-        },
-      );
-
-      print('✅ Return confirmation notification sent to rentee');
     } catch (e) {
-      print('❌ Error sending return confirmation notification: $e');
+      print('❌ Error: $e');
     }
   }
 
-  // Send reminder notification before rental ends
-  Future<void> sendReturnReminder({
-    required String renteeId,
-    required String itemName,
-    required String bookingId,
-    required DateTime endDate,
-  }) async {
-    try {
-      final renteeDoc = await _firestore.collection('users').doc(renteeId).get();
-      final renteeToken = renteeDoc.data()?['fcmToken'] as String?;
-
-      if (renteeToken == null) return;
-
-      await _firestore.collection('notifications').add({
-        'userId': renteeId,
-        'type': 'return_reminder',
-        'title': 'Return Reminder ⏰',
-        'body': 'Please return $itemName by ${_formatDate(endDate)}',
-        'bookingId': bookingId,
-        'itemName': itemName,
-        'endDate': endDate,
-        'isRead': false,
-        'createdAt': FieldValue.serverTimestamp(),
-      });
-
-      await _sendPushNotification(
-        token: renteeToken,
-        title: 'Return Reminder ⏰',
-        body: 'Don\'t forget to return $itemName by ${_formatDate(endDate)}',
-        data: {
-          'type': 'return_reminder',
-          'bookingId': bookingId,
-        },
-      );
-
-      print('✅ Return reminder notification sent to rentee');
-    } catch (e) {
-      print('❌ Error sending return reminder notification: $e');
-    }
-  }
-
-  // Core function to send push notification via FCM
-  Future<void> _sendPushNotification({
-    required String token,
-    required String title,
-    required String body,
-    required Map<String, dynamic> data,
-  }) async {
-    // Note: This requires FCM Server Key in your backend
-    // For production, implement this on your backend server
-    // This is a simplified example
-    
-    print('📤 Sending push notification to token: ${token.substring(0, 20)}...');
-    print('   Title: $title');
-    print('   Body: $body');
-    
-    // In a real app, call your backend API here
-    // Example: await http.post('https://your-backend.com/send-notification', ...);
-  }
-
-  // Get unread notifications count
   Stream<int> getUnreadNotificationsCount(String userId) {
     return _firestore
         .collection('notifications')
@@ -402,7 +282,6 @@ class NotificationService {
         .map((snapshot) => snapshot.docs.length);
   }
 
-  // Get all notifications for user
   Stream<List<Map<String, dynamic>>> getNotifications(String userId) {
     return _firestore
         .collection('notifications')
@@ -417,7 +296,6 @@ class NotificationService {
             }).toList());
   }
 
-  // Mark notification as read
   Future<void> markAsRead(String notificationId) async {
     await _firestore.collection('notifications').doc(notificationId).update({
       'isRead': true,
@@ -425,7 +303,6 @@ class NotificationService {
     });
   }
 
-  // Mark all notifications as read
   Future<void> markAllAsRead(String userId) async {
     final batch = _firestore.batch();
     final notifications = await _firestore
@@ -444,13 +321,7 @@ class NotificationService {
     await batch.commit();
   }
 
-  // Delete notification
   Future<void> deleteNotification(String notificationId) async {
     await _firestore.collection('notifications').doc(notificationId).delete();
-  }
-
-  // Helper to format date
-  String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
   }
 }

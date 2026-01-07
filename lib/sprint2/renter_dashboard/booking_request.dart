@@ -1,40 +1,14 @@
+// lib/sprint4/booking_requests_screen.dart - FIXED VERSION
+
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'dart:convert';
 import 'package:profile_managemenr/sprint3/FaceVerification/face_capture_screen.dart';
 import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
-
-
-// CORRECTED IMPORT: Use the standard path for the package
-import 'package:url_launcher/url_launcher.dart'; 
-
-// Placeholder BookingService (Update this with the actual implementation if necessary)
-class BookingService {
-  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-
-  Future<bool> updateBookingStatus(String bookingId, String newStatus) async {
-    try {
-      await _firestore.collection('bookings').doc(bookingId).update({
-        'status': newStatus,
-        'lastUpdated': FieldValue.serverTimestamp(),
-      });
-      return true;
-    } catch (e) {
-      print('Error updating booking status: $e');
-      return false;
-    }
-  }
-
-  // Placeholder methods needed by BookingScreen 
-  Future<List<Map<String, dynamic>>> getItemBookings(String itemId) async {
-    return [];
-  }
-
-  Set<DateTime> getUnavailableDates(List<Map<String, dynamic>> bookings) {
-    return {};
-  }
-}
+import 'package:profile_managemenr/services/notification_service.dart';
+import 'package:profile_managemenr/services/booking_service.dart'; // Use the real one
+import 'package:url_launcher/url_launcher.dart';
 
 class BookingRequestsScreen extends StatefulWidget {
   final String renterId;
@@ -46,7 +20,8 @@ class BookingRequestsScreen extends StatefulWidget {
 }
 
 class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
-  final BookingService _bookingService = BookingService();
+  final BookingService _bookingService = BookingService(); // ✅ Use real BookingService
+  final NotificationService _notificationService = NotificationService();
   String _filterStatus = 'all';
   bool _isLoading = true;
   String? _errorMessage;
@@ -59,7 +34,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     _checkFirestoreConnection();
   }
 
-  // Check Firestore connection and data
   Future<void> _checkFirestoreConnection() async {
     try {
       print('🔍 Checking Firestore connection...');
@@ -68,9 +42,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
           .limit(1)
           .get();
       print('✅ Firestore connection successful');
-      print('📊 Total bookings in collection: ${snapshot.docs.length}');
       
-      // Check bookings for this renter
       final renterBookings = await FirebaseFirestore.instance
           .collection('bookings')
           .where('renterId', isEqualTo: widget.renterId)
@@ -79,7 +51,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
       
       if (renterBookings.docs.isEmpty) {
         setState(() {
-          _errorMessage = 'No bookings found for this account. Make sure bookings have the correct renterId field.';
+          _errorMessage = 'No bookings found for this account.';
         });
       }
     } catch (e) {
@@ -95,21 +67,13 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
   }
 
   Stream<QuerySnapshot> _getBookingsStream() {
-    print('🔍 Fetching bookings for renterId: ${widget.renterId}');
-    print('🔍 Filter status: $_filterStatus');
-
     Query query = FirebaseFirestore.instance
         .collection('bookings')
         .where('renterId', isEqualTo: widget.renterId);
 
-    // Apply status filter if not 'all'
     if (_filterStatus != 'all') {
       query = query.where('status', isEqualTo: _filterStatus);
-      print('🔍 Filtering by status: $_filterStatus');
     }
-
-    // Note: orderBy removed to avoid needing composite index
-    // Bookings will be sorted in the UI instead
 
     return query.snapshots();
   }
@@ -142,79 +106,56 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     }
   }
 
-  Future<void> _updateBookingStatus(String bookingId, String newStatus) async {
-    final success = await _bookingService.updateBookingStatus(bookingId, newStatus);
-    
-    if (!mounted) return;
-    
-    if (success) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Booking status set to ${newStatus.toUpperCase()}!'),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Failed to update booking status'),
-          backgroundColor: Colors.red,
-          duration: Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
+  // ✅ FIXED: Use BookingService which has notifications built-in
   Future<void> _updateBookingStatusWithSummary(String bookingId, String newStatus) async {
     try {
-      // 1) Read booking BEFORE updating so we can capture oldStatus and needed fields
+      print('🔄 Updating booking $bookingId to status: $newStatus');
+      
+      // Get booking data BEFORE updating
       final bookingSnap = await FirebaseFirestore.instance
           .collection('bookings')
           .doc(bookingId)
           .get();
 
       if (!bookingSnap.exists) {
-        // fallback: still update booking status normally
-        await _updateBookingStatus(bookingId, newStatus);
-        return;
+        throw Exception('Booking not found');
       }
 
       final booking = bookingSnap.data() as Map<String, dynamic>;
-
       final String oldStatus = (booking['status'] ?? 'pending').toString();
+      final String itemId = (booking['itemId'] ?? '').toString();
 
-      // Support different field naming just in case
-      final String itemId = (booking['itemId'] ??
-              booking['itemID'] ??
-              booking['item_id'] ??
-              '')
-          .toString();
+      print('📝 Booking data retrieved:');
+      print('   Old status: $oldStatus');
+      print('   New status: $newStatus');
+      print('   Rentee ID: ${booking['userId']}');
+      print('   Item: ${booking['itemName']}');
 
-      final num finalFee = (() {
-        final v = booking['finalFee'] ?? booking['totalAmount'] ?? 0;
-        if (v is num) return v;
-        return num.tryParse(v.toString()) ?? 0;
-      })();
-
-      final int rentalDays = (() {
-        final v = booking['rentalDays'] ?? booking['days'] ?? 0;
-        if (v is int) return v;
-        return int.tryParse(v.toString()) ?? 0;
-      })();
-      
-      //final completedAt = (booking['returnDate'] ?? booking['endDate']) as DateTime? ?? DateTime.now();
-      final rawDate = booking['returnDate'] ?? booking['endDate'];
-      final DateTime completedAt = (rawDate as Timestamp?)?.toDate() ?? DateTime.now();
-
-      // 2) Update booking status in Firestore (your existing logic)
+      // ✅ UPDATE STATUS (this triggers notifications automatically in BookingService)
       final success = await _bookingService.updateBookingStatus(bookingId, newStatus);
 
       if (!mounted) return;
 
       if (success) {
-        // 3) Update item summary AFTER booking status updated successfully
+        print('✅ Booking status updated successfully');
+        
+        // Update item summary
         if (itemId.isNotEmpty) {
+          final num finalFee = (() {
+            final v = booking['finalFee'] ?? booking['totalAmount'] ?? 0;
+            if (v is num) return v;
+            return num.tryParse(v.toString()) ?? 0;
+          })();
+
+          final int rentalDays = (() {
+            final v = booking['rentalDays'] ?? booking['days'] ?? 0;
+            if (v is int) return v;
+            return int.tryParse(v.toString()) ?? 0;
+          })();
+
+          final rawDate = booking['returnDate'] ?? booking['endDate'];
+          final DateTime completedAt = (rawDate as Timestamp?)?.toDate() ?? DateTime.now();
+
           await ItemSummaryService().recordBookingStatusChange(
             itemId: itemId,
             oldStatus: oldStatus,
@@ -233,6 +174,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
           ),
         );
       } else {
+        print('❌ Failed to update booking status');
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text('Failed to update booking status'),
@@ -241,9 +183,12 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
           ),
         );
       }
-    } catch (e) {
-      print('Error in _updateBookingStatusWithSummary: $e');
+    } catch (e, stackTrace) {
+      print('❌ Error in _updateBookingStatusWithSummary: $e');
+      print('Stack trace: $stackTrace');
+      
       if (!mounted) return;
+      
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Error updating status: $e'),
@@ -253,14 +198,10 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     }
   }
 
-  
-  // LOGIC: Function to launch an external map application using url_launcher
   Future<void> _launchMap(double latitude, double longitude, String address) async {
-    // Construct the standard Google Maps URL using coordinates
-    final url = 'http://googleusercontent.com/maps.google.com/7';
+    final url = 'https://www.google.com/maps/search/?api=1&query=$latitude,$longitude';
     final uri = Uri.parse(url);
     
-    // Check if the URI can be launched
     if (await canLaunchUrl(uri)) {
       await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
@@ -288,7 +229,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     );
 
     if (result != null && result['success'] == true) {
-      await _updateBookingStatusWithSummary(bookingId.toString(), 'ongoing');
+      await _updateBookingStatusWithSummary(bookingId, 'ongoing');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -320,7 +261,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     );
 
     if (result != null && result['success'] == true) {
-      await _updateBookingStatusWithSummary(bookingId.toString(), 'completed');
+      await _updateBookingStatusWithSummary(bookingId, 'completed');
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
@@ -339,7 +280,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     }
   }
 
-  // MODIFIED METHOD: To show meet-up point details
   void _showBookingDetails(Map<String, dynamic> booking) {
     final bookingId = booking['id'];
     final status = booking['status'] ?? 'pending';
@@ -348,7 +288,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     final isReadyForPickup = status == 'confirmed';
     final isReadyForReturn = status == 'ongoing';
     
-    // NEW: Extract location data
     final meetUpAddress = booking['meetUpAddress'] as String?;
     final meetUpLatitude = booking['meetUpLatitude'] as double?;
     final meetUpLongitude = booking['meetUpLongitude'] as double?;
@@ -381,7 +320,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
               
               const Divider(height: 20),
               
-              // NEW UI BLOCK: Meet Up Point Details
               const Text(
                 'Meet Up Location', 
                 style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.accentColor),
@@ -394,16 +332,15 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                       children: [
                         _buildDetailRow('Address', meetUpAddress!),
                         
-                        // Button to launch map
                         Padding(
                           padding: const EdgeInsets.only(top: 8.0),
                           child: TextButton.icon(
                             onPressed: () {
-                                Navigator.pop(context); // Close dialog first
+                                Navigator.pop(context);
                                 _launchMap(meetUpLatitude!, meetUpLongitude!, meetUpAddress);
                             },
                             icon: const Icon(Icons.map, size: 20, color: Colors.blue),
-                            label: const Text('View on Map (Tap to open)'),
+                            label: const Text('View on Map'),
                             style: TextButton.styleFrom(
                               padding: EdgeInsets.zero,
                               alignment: Alignment.centerLeft,
@@ -415,13 +352,11 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                   : _buildDetailRow('Address', 'Location data missing'),
               
               const Divider(height: 20),
-              // END NEW UI BLOCK
-              
               
               const SizedBox(height: 12),
               Text(
                 'Total: RM ${booking['totalAmount']?.toStringAsFixed(2) ?? '0.00'}',
-                style: TextStyle(
+                style: const TextStyle(
                   fontWeight: FontWeight.bold, 
                   fontSize: 18, 
                   color: AppColors.accentColor,
@@ -582,18 +517,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
               style: const TextStyle(color: Colors.red),
             ),
           ],
-          const SizedBox(height: 8),
-          const Text(
-            'Expected Firestore Structure:',
-            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
-          ),
-          const Text(
-            '• Collection: "bookings"\n'
-            '• Field: "renterId" (must match above)\n'
-            '• Field: "status" (pending/confirmed/etc)\n'
-            '• Field: "timestamp" (Timestamp)',
-            style: TextStyle(fontSize: 11),
-          ),
         ],
       ),
     );
@@ -624,10 +547,8 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
       ),
       body: Column(
         children: [
-          // Show debug info if there's an error
           if (_errorMessage != null) _buildDebugInfo(),
 
-          // Filter chips
           Container(
             padding: const EdgeInsets.all(12),
             decoration: BoxDecoration(
@@ -660,7 +581,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
             ),
           ),
 
-          // Main content
           Expanded(
             child: _isLoading
                 ? const Center(
@@ -669,11 +589,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                 : StreamBuilder<QuerySnapshot>(
                       stream: _getBookingsStream(),
                       builder: (context, snapshot) {
-                        // Debug logging
-                        if (snapshot.connectionState == ConnectionState.active) {
-                          print('📊 Stream active - docs count: ${snapshot.data?.docs.length ?? 0}');
-                        }
-
                         if (snapshot.connectionState == ConnectionState.waiting) {
                           return const Center(
                             child: CircularProgressIndicator(color: AppColors.accentColor),
@@ -681,7 +596,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                         }
 
                         if (snapshot.hasError) {
-                          print('❌ Stream error: ${snapshot.error}');
                           return Center(
                             child: Padding(
                               padding: const EdgeInsets.all(20.0),
@@ -736,15 +650,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                                     fontWeight: FontWeight.w500,
                                   ),
                                 ),
-                                const SizedBox(height: 8),
-                                Text(
-                                  'Check that bookings have renterId: ${widget.renterId}',
-                                  style: TextStyle(
-                                    fontSize: 14,
-                                    color: Colors.grey[500],
-                                  ),
-                                  textAlign: TextAlign.center,
-                                ),
                               ],
                             ),
                           );
@@ -756,7 +661,6 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                           return data;
                         }).toList();
 
-                        // Sort by timestamp manually (since we can't use orderBy without index)
                         bookings.sort((a, b) {
                           final aTime = a['timestamp'];
                           final bTime = b['timestamp'];
@@ -764,10 +668,8 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                           if (bTime == null) return -1;
                           final aDate = aTime is Timestamp ? aTime.toDate() : DateTime.now();
                           final bDate = bTime is Timestamp ? bTime.toDate() : DateTime.now();
-                          return bDate.compareTo(aDate); // descending order
+                          return bDate.compareTo(aDate);
                         });
-
-                        print('✅ Displaying ${bookings.length} bookings');
 
                         return RefreshIndicator(
                           onRefresh: () async {
