@@ -163,9 +163,16 @@ class ItemSummaryService {
       if (newStatus == 'completed' && oldStatus != 'completed') {
         updates['totalEarnings'] = FieldValue.increment(finalFee.toDouble());
         updates['totalRentalDays'] = FieldValue.increment(rentalDays);
-        updates['earningsByMonth.$monthKey.earnings'] = FieldValue.increment(finalFee.toDouble());
-        updates['earningsByMonth.$monthKey.rentalDays'] = FieldValue.increment(rentalDays);
-        updates['earningsByMonth.$monthKey.completedBookings'] = FieldValue.increment(1);
+        //updates['earningsByMonth.$monthKey.earnings'] = FieldValue.increment(finalFee.toDouble());
+        //updates['earningsByMonth.$monthKey.rentalDays'] = FieldValue.increment(rentalDays);
+        //updates['earningsByMonth.$monthKey.completedBookings'] = FieldValue.increment(1);
+        updates['earningsByMonth'] = {
+          monthKey: {
+            'earnings': FieldValue.increment(finalFee.toDouble()),
+            'rentalDays': FieldValue.increment(rentalDays),
+            'completedBookings': FieldValue.increment(1),
+          }
+        };
         updates['lastCompletedAt'] = FieldValue.serverTimestamp();
       }
 
@@ -173,9 +180,16 @@ class ItemSummaryService {
       if (oldStatus == 'completed' && newStatus != 'completed') {
         updates['totalEarnings'] = FieldValue.increment(-finalFee.toDouble());
         updates['totalRentalDays'] = FieldValue.increment(-rentalDays);
-        updates['earningsByMonth.$monthKey.earnings'] = FieldValue.increment(-finalFee.toDouble());
-        updates['earningsByMonth.$monthKey.rentalDays'] = FieldValue.increment(-rentalDays);
-        updates['earningsByMonth.$monthKey.completedBookings'] = FieldValue.increment(-1);
+        //updates['earningsByMonth.$monthKey.earnings'] = FieldValue.increment(-finalFee.toDouble());
+        //updates['earningsByMonth.$monthKey.rentalDays'] = FieldValue.increment(-rentalDays);
+        //updates['earningsByMonth.$monthKey.completedBookings'] = FieldValue.increment(-1);
+        updates['earningsByMonth'] = {
+          monthKey: {
+            'earnings': FieldValue.increment(-finalFee.toDouble()),
+            'rentalDays': FieldValue.increment(-rentalDays),
+            'completedBookings': FieldValue.increment(-1),
+          }
+        };
       }
 
       tx.set(ref, updates, SetOptions(merge: true));

@@ -19,7 +19,7 @@ dependencies:
   cloud_functions: 6.0.5
   
   # Notifications
-  flutter_local_notifications: ^16.3.3
+  flutter_local_notifications: ^17.0.0
   
   # Media & Camera
   image_picker: ^1.0.4
