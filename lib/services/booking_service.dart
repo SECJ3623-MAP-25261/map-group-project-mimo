@@ -1,5 +1,3 @@
-// lib/services/booking_service.dart
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 import 'notification_service.dart';
