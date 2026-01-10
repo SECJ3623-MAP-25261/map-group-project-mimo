@@ -336,6 +336,7 @@ class _BookingScreenState extends State<BookingScreen> {
         rentalDays: _rentalDays,
         totalAmount: _estimatedTotal,
         paymentMethod: _selectedPaymentMethod,
+        
         // 👇 NEW FIELDS
         meetUpAddress: _meetUpAddress,
         meetUpLatitude: _meetUpLatitude!,
