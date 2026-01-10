@@ -66,7 +66,7 @@ class _BookingScreenState extends State<BookingScreen> {
     }
     return [];
   }
-  double get _ratePerDay => widget.itemData?['price'] ?? 6.00;
+  double get _ratePerDay => widget.itemData?['pricePerDay'] ?? 6.00;
 
   int get _rentalDays {
     if (_startDate == null || _endDate == null) return 0;
