@@ -8,7 +8,8 @@ import 'package:profile_managemenr/sprint2/Rentee/ReviewRentee/review_rentee.dar
 class HistoryRenteeScreen extends StatefulWidget {
   final bool isRenter;
 
-  const HistoryRenteeScreen({
+  const 
+  HistoryRenteeScreen({
     super.key,
     this.isRenter = false,
   });
@@ -284,7 +285,7 @@ class _HistoryRenteeScreenState extends State<HistoryRenteeScreen> {
                 _buildDetailRow(
                   icon: Icons.event_available_rounded,
                   label: 'Return Date',
-                  value: _formatDate(booking['actualReturnDate']),
+                  value: _formatDate(booking['endDate']),
                   isSmallScreen: isSmallScreen,
                   isVerySmallScreen: isVerySmallScreen,
                 ),
