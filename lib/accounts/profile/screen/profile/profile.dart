@@ -7,7 +7,7 @@ import '../profile/change_password.dart';
 import '../profile/notification.dart';
 import '../profile/delete_account.dart';
 import 'package:profile_managemenr/sprint2/Rentee/HistoryRentee/history_rentee.dart';
-import 'package:profile_managemenr/sprint4/ReportAnalysis/report_analysis.dart';
+import 'package:profile_managemenr/sprint4/ReportAnalysis/report_spending_analysis.dart';
 
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
