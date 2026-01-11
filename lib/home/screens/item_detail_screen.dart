@@ -28,8 +28,6 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
 
     if (itemId.isNotEmpty) {
       // Item summary is now maintained fully by backend (Cloud Functions).
-      // Log a lightweight view event; a Cloud Function will increment
-      // item_summaries/{itemId}.views.
       FirebaseFirestore.instance.collection('item_views').add({
         'itemId': itemId,
         'createdAt': FieldValue.serverTimestamp(),

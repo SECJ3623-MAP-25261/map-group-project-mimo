@@ -264,10 +264,10 @@ exports.onItemUpdated = functions.firestore
   });
 
 /**
- * Optional: write a tiny "view event" doc from the client and let the backend increment the summary.
+ * Write a tiny "view event" doc from the client and let the backend increment the summary.
  *
- * Client writes: item_views/{autoId}
- * Fields: { itemId, userId?, createdAt }
+ * Client writes: item_views/{viewId}
+ * Fields: { itemId, createdAt }
  */
 exports.onItemViewCreated = functions.firestore
   .document("item_views/{viewId}")
