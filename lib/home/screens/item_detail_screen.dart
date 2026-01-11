@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import '../item_detail/widgets/image_carousel.dart';
 import '../item_detail/widgets/item_action_widget.dart';
 import '../item_detail/widgets/review_summary_widget.dart';
 import 'package:profile_managemenr/sprint2/Rentee/searchRentee/search.dart';
-import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 
 class ItemDetailScreen extends StatefulWidget {
   final Map item;
@@ -16,8 +16,6 @@ class ItemDetailScreen extends StatefulWidget {
 }
 
 class _ItemDetailScreenState extends State<ItemDetailScreen> {
-  final ItemSummaryService _summaryService = ItemSummaryService();
-
   Map get item => widget.item;
 
   @override
@@ -29,10 +27,13 @@ class _ItemDetailScreenState extends State<ItemDetailScreen> {
     final String itemId = (rawId ?? '').toString();
 
     if (itemId.isNotEmpty) {
-      _summaryService.recordView(
-        itemId: itemId,
-        itemDataForInit: Map<String, dynamic>.from(item),
-      );
+      // Item summary is now maintained fully by backend (Cloud Functions).
+      // Log a lightweight view event; a Cloud Function will increment
+      // item_summaries/{itemId}.views.
+      FirebaseFirestore.instance.collection('item_views').add({
+        'itemId': itemId,
+        'createdAt': FieldValue.serverTimestamp(),
+      });
     }
   }
 

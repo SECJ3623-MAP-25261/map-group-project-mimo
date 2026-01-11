@@ -12,7 +12,6 @@ import 'package:connectivity_plus/connectivity_plus.dart';
 
 import '../../constants/app_colors.dart';
 import '../../sprint4/offline_support.dart';
-import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 
 class AddItemPage extends StatefulWidget {
   const AddItemPage({super.key});
@@ -335,10 +334,7 @@ class _AddItemPageState extends State<AddItemPage> {
           "updatedAt": FieldValue.serverTimestamp(),
         });
 
-        await ItemSummaryService().initializeSummaryIfNeeded(
-          itemId: docRef.id,
-          itemData: itemData,
-        );
+        // Item summary is now maintained fully by backend (Cloud Functions).
 
 
         if (!mounted) return;

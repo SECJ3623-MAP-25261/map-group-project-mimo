@@ -5,7 +5,6 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:profile_managemenr/constants/app_colors.dart';
 import 'dart:convert';
 import 'package:profile_managemenr/sprint3/FaceVerification/face_capture_screen.dart';
-import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 import 'package:profile_managemenr/services/notification_service.dart';
 import 'package:profile_managemenr/services/booking_service.dart'; // Use the real one
 import 'package:url_launcher/url_launcher.dart';
@@ -175,33 +174,8 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
 
       if (success) {
         print('✅ Booking status updated successfully');
-        
-        // Update item summary
-        if (itemId.isNotEmpty) {
-          final num finalFee = (() {
-            final v = booking['finalFee'] ?? booking['totalAmount'] ?? 0;
-            if (v is num) return v;
-            return num.tryParse(v.toString()) ?? 0;
-          })();
-
-          final int rentalDays = (() {
-            final v = booking['rentalDays'] ?? booking['days'] ?? 0;
-            if (v is int) return v;
-            return int.tryParse(v.toString()) ?? 0;
-          })();
-
-          final rawDate = booking['returnDate'] ?? booking['endDate'];
-          final DateTime completedAt = (rawDate as Timestamp?)?.toDate() ?? DateTime.now();
-
-          await ItemSummaryService().recordBookingStatusChange(
-            itemId: itemId,
-            oldStatus: oldStatus,
-            newStatus: newStatus,
-            finalFee: finalFee,
-            rentalDays: rentalDays,
-            completedAt: completedAt,
-          );
-        }
+        // Item summary is now maintained fully by backend (Cloud Functions)
+        // via Firestore triggers on bookings.
 
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(

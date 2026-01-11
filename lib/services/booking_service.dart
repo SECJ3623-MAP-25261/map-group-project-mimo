@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 import 'notification_service.dart';
 
 class BookingService {
@@ -147,11 +146,8 @@ class BookingService {
       final docRef = await _firestore.collection(_bookingsCollection).add(bookingData);
       final bookingId = docRef.id;
 
-      // Record in item summary
-      await ItemSummaryService().recordBookingCreated(
-        itemId: itemId,
-        status: (bookingData['status'] ?? 'pending').toString(),
-      );
+      // Item summary is now maintained fully by backend (Cloud Functions)
+      // via Firestore triggers on bookings.
 
       // 🔔 SEND NOTIFICATION TO RENTER
      try {

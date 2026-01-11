@@ -9,7 +9,6 @@ import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
 import '../../constants/app_colors.dart';
-import 'package:profile_managemenr/sprint4/item_summary/item_summary_service.dart';
 
 class EditItemPage extends StatefulWidget {
   final String itemId;
@@ -313,17 +312,8 @@ Future<void> _replaceNewWithCamera(int index) async {
         "images": finalImages,
         "updatedAt": FieldValue.serverTimestamp(),
       });
-      await ItemSummaryService().recordEdit(
-  itemId: widget.itemId,
-  itemDataForInit: {
-    ...widget.itemData,
-    "name": nameCtrl.text.trim(),
-    "category": selectedCategory,
-    "size": selectedSize,
-    "pricePerDay": double.parse(priceCtrl.text),
-    "renterId": widget.itemData["renterId"],
-  },
-);
+      // Item summary is now maintained fully by backend (Cloud Functions)
+      // via Firestore triggers on items.
 
 
       if (!mounted) return;

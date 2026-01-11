@@ -80,11 +80,6 @@ class ItemSummaryScreen extends StatelessWidget {
 
           final sortedMonths = earningsByMonth.keys.toList()..sort((a, b) => b.compareTo(a));
 
-          print('ItemSummary itemId = $itemId');
-          print('Doc keys = ${d.keys}');
-          print('earningsByMonth = ${d['earningsByMonth']}');
-
-
           return ListView(
             padding: const EdgeInsets.all(16),
             children: [
