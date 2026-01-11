@@ -1,4 +1,5 @@
 <<<<<<< Updated upstream
+<<<<<<< Updated upstream
 const admin = require("firebase-admin");
 admin.initializeApp();
 
@@ -14,6 +15,8 @@ exports.scheduledSpendingAnalysisUpdate = spending.scheduledSpendingAnalysisUpda
 // Notification Functions
 exports.sendNotificationOnCreate = notifications.sendNotificationOnCreate;
 =======
+=======
+>>>>>>> Stashed changes
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
 
@@ -287,4 +290,7 @@ exports.scheduledSpendingAnalysisUpdate = functions.pubsub
       return null;
     }
   });
+<<<<<<< Updated upstream
+>>>>>>> Stashed changes
+=======
 >>>>>>> Stashed changes
