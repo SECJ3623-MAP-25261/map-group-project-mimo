@@ -89,25 +89,6 @@ class _CampusClosetScreenState extends State<CampusClosetScreen> {
       appBar: _buildAppBar(context, isSmallScreen),
       body: Column(
         children: [
-          Padding(
-      padding: const EdgeInsets.all(12),
-      child: ElevatedButton(
-        onPressed: () async {
-          await FirebaseFirestore.instance
-              .collection('notifications')
-              .add({
-            'userId': FirebaseAuth.instance.currentUser!.uid,
-            'title': 'TEST',
-            'body': 'Notification is working',
-            'type': 'test',
-            'isRead': false,
-            'createdAt': FieldValue.serverTimestamp(),
-          });
-        },
-        child: const Text('TEST NOTIFICATION'),
-      ),
-    ),
-
           FilterChipList(
             filters: AppConstants.categories,
             activeFilter: _activeFilter,

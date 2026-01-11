@@ -372,7 +372,7 @@ class NotificationService {
           ),
         ),
       );
-    } else if (type == 'booking_approved' || type == 'booking_cancelled') {
+    } else if (type == 'booking_approved' || type == 'booking_cancelled' ||type == 'booking_rejected') {
       navigatorKey.currentState?.push(
         MaterialPageRoute(
           builder: (_) => const HistoryRenteeScreen(
