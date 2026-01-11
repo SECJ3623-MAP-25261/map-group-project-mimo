@@ -1,18 +1,15 @@
-// lib/screens/notifications_screen.dart
 import 'package:flutter/material.dart';
-import 'package:profile_managemenr/services/notification_service.dart';
-import 'package:profile_managemenr/services/auth_service.dart';
-import 'package:profile_managemenr/constants/app_colors.dart';
 import 'package:intl/intl.dart';
+import 'package:profile_managemenr/services/auth_service.dart';
+import 'package:profile_managemenr/services/notification_service.dart';
+import 'package:profile_managemenr/constants/app_colors.dart';
+import 'package:profile_managemenr/sprint2/renter_dashboard/booking_request.dart';
+import 'package:profile_managemenr/sprint2/Rentee/HistoryRentee/history_rentee.dart';
+import 'package:profile_managemenr/sprint4/notications_navigator.dart';
 
-class NotificationsScreen extends StatefulWidget {
-  const NotificationsScreen({Key? key}) : super(key: key);
+class NotificationsScreen extends StatelessWidget {
+  NotificationsScreen({super.key});
 
-  @override
-  State<NotificationsScreen> createState() => _NotificationsScreenState();
-}
-
-class _NotificationsScreenState extends State<NotificationsScreen> {
   final NotificationService _notificationService = NotificationService();
   final AuthService _authService = AuthService();
 
@@ -20,269 +17,137 @@ class _NotificationsScreenState extends State<NotificationsScreen> {
   Widget build(BuildContext context) {
     final userId = _authService.userId;
 
-    if (userId == null) {
-      return Scaffold(
-        appBar: AppBar(
-          title: const Text('Notifications'),
-          backgroundColor: AppColors.accentColor,
-        ),
-        body: const Center(child: Text('Please log in to view notifications')),
-      );
-    }
-
     return Scaffold(
-      backgroundColor: AppColors.lightBackground,
       appBar: AppBar(
-        backgroundColor: AppColors.accentColor,
-        foregroundColor: Colors.white,
         title: const Text('Notifications'),
+        backgroundColor: AppColors.accentColor,
         actions: [
-          IconButton(
-            icon: const Icon(Icons.done_all),
-            onPressed: () => _markAllAsRead(userId),
-            tooltip: 'Mark all as read',
-          ),
+          if (userId != null)
+            IconButton(
+              icon: const Icon(Icons.done_all),
+              onPressed: () => _notificationService.markAllAsRead(userId),
+            ),
         ],
       ),
-      body: StreamBuilder<List<Map<String, dynamic>>>(
-        stream: _notificationService.getNotifications(userId),
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(
-              child: CircularProgressIndicator(color: AppColors.accentColor),
-            );
-          }
+      body: userId == null
+          ? const Center(child: Text('Please login'))
+          : StreamBuilder<List<Map<String, dynamic>>>(
+              stream: _notificationService.getNotifications(userId),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                }
 
-          if (snapshot.hasError) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  const Icon(Icons.error_outline, size: 60, color: Colors.red),
-                  const SizedBox(height: 16),
-                  Text('Error: ${snapshot.error}'),
-                ],
-              ),
-            );
-          }
+                final notifications = snapshot.data ?? [];
 
-          final notifications = snapshot.data ?? [];
+                if (notifications.isEmpty) {
+                  return const Center(child: Text('No notifications'));
+                }
 
-          if (notifications.isEmpty) {
-            return Center(
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Icon(Icons.notifications_none, 
-                      size: 80, color: Colors.grey[400]),
-                  const SizedBox(height: 16),
-                  Text(
-                    'No notifications yet',
-                    style: TextStyle(fontSize: 18, color: Colors.grey[600]),
-                  ),
-                ],
-              ),
-            );
-          }
-
-          return ListView.builder(
-            padding: const EdgeInsets.all(12),
-            itemCount: notifications.length,
-            itemBuilder: (context, index) {
-              final notification = notifications[index];
-              return _buildNotificationCard(notification);
-            },
-          );
-        },
-      ),
+                return ListView.separated(
+                  itemCount: notifications.length,
+                  separatorBuilder: (_, __) => const Divider(height: 1),
+                  itemBuilder: (context, index) {
+                    final n = notifications[index];
+                    return _notificationTile(context, n);
+                  },
+                );
+              },
+            ),
     );
   }
 
-  Widget _buildNotificationCard(Map<String, dynamic> notification) {
-    final notificationId = notification['id'] as String;
-    final type = notification['type'] as String? ?? 'general';
-    final title = notification['title'] as String? ?? 'Notification';
-    final body = notification['body'] as String? ?? '';
-    final isRead = notification['isRead'] as bool? ?? false;
-    final createdAt = notification['createdAt'];
-
-    final icon = _getIconForType(type);
-    final color = _getColorForType(type);
+  Widget _notificationTile(BuildContext context, Map<String, dynamic> n) {
+    final id = n['id'];
+    final bookingId = n['bookingId'];
+    if (id == null) return SizedBox(); // skip this notification if no id
+    final title = n['title'] ?? 'Notification';
+    final message = n['body'] ?? '';
+    final isRead = n['isRead'] ?? false;
+    final createdAt = n['createdAt'];
 
     return Dismissible(
-      key: Key(notificationId),
-      direction: DismissDirection.endToStart,
+      key: ValueKey(id),
+      direction: DismissDirection.horizontal,
       background: Container(
-        alignment: Alignment.centerRight,
-        padding: const EdgeInsets.only(right: 20),
-        decoration: BoxDecoration(
-          color: Colors.red,
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: const Icon(Icons.delete, color: Colors.white, size: 28),
+        alignment: Alignment.centerLeft,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
       ),
-      onDismissed: (direction) {
-        _notificationService.deleteNotification(notificationId);
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Notification deleted')),
-        );
+      secondaryBackground: Container(
+        alignment: Alignment.centerRight,
+        padding: const EdgeInsets.symmetric(horizontal: 20),
+        color: Colors.red,
+        child: const Icon(Icons.delete, color: Colors.white),
+      ),
+      onDismissed: (_) async {
+        try {
+          await _notificationService.deleteNotification(id);
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Notification deleted')));
+        } catch (e) {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to delete: $e')));
+        }
       },
       child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        decoration: BoxDecoration(
-          color: isRead ? Colors.white : color.withOpacity(0.1),
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isRead ? Colors.grey[300]! : color.withOpacity(0.3),
-            width: isRead ? 1 : 2,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withOpacity(0.05),
-              blurRadius: 8,
-              offset: const Offset(0, 2),
-            ),
-          ],
-        ),
+        color: isRead ? Colors.white : Colors.grey.shade100,
         child: ListTile(
-          contentPadding: const EdgeInsets.all(12),
-          leading: Container(
-            padding: const EdgeInsets.all(10),
-            decoration: BoxDecoration(
-              color: color.withOpacity(0.2),
-              borderRadius: BorderRadius.circular(10),
-            ),
-            child: Icon(icon, color: color, size: 28),
+          leading: Icon(
+            Icons.notifications,
+            color: isRead ? Colors.grey : AppColors.accentColor,
           ),
           title: Text(
             title,
             style: TextStyle(
-              fontWeight: isRead ? FontWeight.w500 : FontWeight.bold,
-              fontSize: 16,
+              fontWeight: isRead ? FontWeight.normal : FontWeight.bold,
             ),
           ),
           subtitle: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
             children: [
+              Text(message),
               const SizedBox(height: 4),
               Text(
-                body,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Colors.grey[700],
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                _formatTimestamp(createdAt),
-                style: TextStyle(
-                  fontSize: 12,
-                  color: Colors.grey[500],
-                ),
+                _formatTime(createdAt),
+                style: const TextStyle(fontSize: 12, color: Colors.grey),
               ),
             ],
           ),
-          trailing: !isRead
-              ? Container(
-                  width: 10,
-                  height: 10,
-                  decoration: BoxDecoration(
-                    color: color,
-                    shape: BoxShape.circle,
-                  ),
-                )
-              : null,
-          onTap: () {
-            if (!isRead) {
-              _notificationService.markAsRead(notificationId);
-            }
-            _handleNotificationTap(notification);
-          },
+
+          onTap: () async {
+  if (!isRead) {
+    await _notificationService.markAsRead(id);
+  }
+
+    handleNotificationNavigation(
+    context: context,
+    data: n,
+    userId: _authService.userId!,
+  );
+}
+
         ),
       ),
     );
   }
 
-  IconData _getIconForType(String type) {
-    switch (type) {
-      case 'booking_request':
-        return Icons.notification_important;
-      case 'booking_approved':
-        return Icons.check_circle;
-      case 'booking_cancelled':
-        return Icons.cancel;
-      case 'pickup_confirmed':
-        return Icons.shopping_bag;
-      case 'return_confirmed':
-        return Icons.assignment_turned_in;
-      case 'return_reminder':
-        return Icons.alarm;
-      default:
-        return Icons.notifications;
-    }
-  }
-
-  Color _getColorForType(String type) {
-    switch (type) {
-      case 'booking_request':
-        return Colors.orange;
-      case 'booking_approved':
-        return Colors.green;
-      case 'booking_cancelled':
-        return Colors.red;
-      case 'pickup_confirmed':
-        return Colors.purple;
-      case 'return_confirmed':
-        return Colors.blue;
-      case 'return_reminder':
-        return Colors.amber;
-      default:
-        return AppColors.accentColor;
-    }
-  }
-
-  String _formatTimestamp(dynamic timestamp) {
+  String _formatTime(dynamic timestamp) {
     if (timestamp == null) return 'Just now';
-    
-    try {
-      final DateTime dateTime = timestamp.toDate();
-      final now = DateTime.now();
-      final difference = now.difference(dateTime);
 
-      if (difference.inMinutes < 1) {
-        return 'Just now';
-      } else if (difference.inHours < 1) {
-        return '${difference.inMinutes}m ago';
-      } else if (difference.inDays < 1) {
-        return '${difference.inHours}h ago';
-      } else if (difference.inDays < 7) {
-        return '${difference.inDays}d ago';
-      } else {
-        return DateFormat('MMM d, yyyy').format(dateTime);
-      }
-    } catch (e) {
-      return 'Unknown';
-    }
-  }
+    final date = timestamp.toDate();
+    final now = DateTime.now();
+    final diff = now.difference(date);
 
-  void _handleNotificationTap(Map<String, dynamic> notification) {
-    final type = notification['type'] as String?;
-    final bookingId = notification['bookingId'] as String?;
+    if (diff.inMinutes < 1) return 'Just now';
+    if (diff.inHours < 1) return '${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return '${diff.inHours}h ago';
+    if (diff.inDays < 7) return '${diff.inDays}d ago';
 
-    // Navigate based on notification type
-    if (bookingId != null) {
-      // Navigate to booking details screen
-      // Navigator.pushNamed(context, '/booking-details', arguments: bookingId);
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Opening booking: $bookingId')),
-      );
-    }
-  }
-
-  Future<void> _markAllAsRead(String userId) async {
-    await _notificationService.markAllAsRead(userId);
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('All notifications marked as read')),
-    );
+    return DateFormat('dd MMM yyyy').format(date);
   }
 }

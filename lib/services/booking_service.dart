@@ -154,19 +154,18 @@ class BookingService {
       );
 
       // 🔔 SEND NOTIFICATION TO RENTER
-      try {
-        await _notificationService.notifyRenterOfBookingRequest(
-          renterId: renterId,
-          renteeId: userId,
-          renteeName: userName,
-          itemName: itemName,
-          bookingId: bookingId,
-        );
-        print('✅ Notification sent to renter');
-      } catch (e) {
-        print('⚠️ Failed to send notification (non-critical): $e');
-        // Don't fail the booking if notification fails
-      }
+     try {
+  await _notificationService.notifyRenterOfBookingRequest(
+    renterId: renterId,
+    renteeId: userId,
+    renteeName: userName,
+    itemName: itemName,
+    bookingId: bookingId,
+    itemId: itemId,
+  );
+} catch (e) {
+  print('⚠️ Notification creation failed: $e');
+}
 
       print('✅ Booking created successfully with ID: $bookingId');
       return bookingId;
@@ -223,23 +222,21 @@ class BookingService {
       try {
         switch (newStatus) {
           case 'confirmed':
-            await _notificationService.notifyRenteeOfBookingApproval(
-              renteeId: renteeId,
-              itemName: itemName,
-              bookingId: bookingId,
-              meetUpAddress: meetUpAddress,
-              startDate: startDate,
-            );
-            print('✅ Approval notification sent to rentee');
-            break;
+          await _notificationService.notifyRenteeOfBookingApproval(
+            renteeId: renteeId,
+            itemName: itemName,
+            bookingId: bookingId,
+            renterId: booking['renterId'],
+          );
+          break;
 
           case 'cancelled':
             await _notificationService.notifyRenteeOfBookingRejection(
               renteeId: renteeId,
               itemName: itemName,
               bookingId: bookingId,
+              renterId: booking['renterId'],
             );
-            print('✅ Rejection notification sent to rentee');
             break;
 
           case 'ongoing':

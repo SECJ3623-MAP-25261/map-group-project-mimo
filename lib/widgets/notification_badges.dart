@@ -1,4 +1,3 @@
-// lib/widgets/notification_badge.dart
 import 'package:flutter/material.dart';
 import 'package:profile_managemenr/services/notification_service.dart';
 import 'package:profile_managemenr/services/auth_service.dart';
@@ -14,9 +13,7 @@ class NotificationBadge extends StatelessWidget {
     final notificationService = NotificationService();
     final userId = authService.userId;
 
-    if (userId == null) {
-      return const SizedBox.shrink();
-    }
+    if (userId == null) return const SizedBox.shrink();
 
     return StreamBuilder<int>(
       stream: notificationService.getUnreadNotificationsCount(userId),
@@ -26,31 +23,28 @@ class NotificationBadge extends StatelessWidget {
         return Stack(
           children: [
             IconButton(
-              icon: const Icon(Icons.notifications),
+              icon: const Icon(Icons.notifications,color: Colors.white),
               onPressed: () {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => const NotificationsScreen(),
+                    builder: (_) => NotificationsScreen(),
                   ),
                 );
               },
             ),
             if (unreadCount > 0)
               Positioned(
-                right: 8,
-                top: 8,
+                right: 6,
+                top: 6,
                 child: Container(
                   padding: const EdgeInsets.all(4),
                   decoration: BoxDecoration(
                     color: Colors.red,
-                    borderRadius: BorderRadius.circular(10),
+                    borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.white, width: 1.5),
                   ),
-                  constraints: const BoxConstraints(
-                    minWidth: 18,
-                    minHeight: 18,
-                  ),
+                  constraints: const BoxConstraints(minWidth: 18, minHeight: 18),
                   child: Text(
                     unreadCount > 99 ? '99+' : '$unreadCount',
                     style: const TextStyle(

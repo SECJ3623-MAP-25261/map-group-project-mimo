@@ -12,6 +12,7 @@ import 'package:profile_managemenr/home/core/widgets/auth_wrapper.dart';
 import 'package:profile_managemenr/constants/app_theme.dart';
 import 'firebase_options.dart';
 
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
@@ -65,6 +66,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => OfflineSupport()),
       ],
       child: MaterialApp(
+        navigatorKey: navigatorKey,
         title: 'Campus Closet',
         theme: AppTheme.lightTheme,
         darkTheme: AppTheme.darkTheme,

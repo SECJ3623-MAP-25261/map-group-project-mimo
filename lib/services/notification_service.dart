@@ -3,6 +3,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:convert';
+import 'package:flutter/material.dart';
+import '../main.dart';
+import '../sprint2/renter_dashboard/booking_request.dart';
+import 'package:profile_managemenr/sprint2/Rentee/HistoryRentee/history_rentee.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
@@ -11,14 +15,14 @@ class NotificationService {
 
   final FirebaseMessaging _fcm = FirebaseMessaging.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  final FlutterLocalNotificationsPlugin _localNotifications = 
+  final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
 
   String? _currentUserFcmToken;
 
   Future<void> initialize() async {
     print('🔔 ========== NOTIFICATION INIT START ==========');
-    
+
     try {
       // Request permission
       NotificationSettings settings = await _fcm.requestPermission(
@@ -32,7 +36,7 @@ class NotificationService {
       if (settings.authorizationStatus == AuthorizationStatus.authorized) {
         // Get FCM token
         _currentUserFcmToken = await _fcm.getToken();
-        
+
         if (_currentUserFcmToken != null) {
           print('✅ FCM Token: ${_currentUserFcmToken!.substring(0, 30)}...');
         } else {
@@ -40,7 +44,9 @@ class NotificationService {
         }
 
         // Initialize local notifications
-        const androidSettings = AndroidInitializationSettings('@mipmap/ic_launcher');
+        const androidSettings = AndroidInitializationSettings(
+          '@mipmap/ic_launcher',
+        );
         const iosSettings = DarwinInitializationSettings();
         const initSettings = InitializationSettings(
           android: androidSettings,
@@ -50,7 +56,10 @@ class NotificationService {
         await _localNotifications.initialize(
           initSettings,
           onDidReceiveNotificationResponse: (response) {
-            print('📬 Notification tapped: ${response.payload}');
+            if (response.payload != null) {
+              final data = jsonDecode(response.payload!);
+              _handleNotificationTap(data);
+            }
           },
         );
 
@@ -62,9 +71,17 @@ class NotificationService {
 
         // Handle background taps
         FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
-          print('📬 Background tap: ${message.notification?.title}');
+          print('🧪 onMessageOpenedApp DATA: ${message.data}');
+          _handleNotificationTap(message.data);
         });
-        
+
+        FirebaseMessaging.instance.getInitialMessage().then((message) {
+          if (message != null) {
+            print('🧪 getInitialMessage DATA: ${message.data}');
+            _handleNotificationTap(message.data);
+          } //cold start
+        });
+
         print('✅ Notification service ready');
       } else {
         print('❌ Permission denied');
@@ -72,7 +89,7 @@ class NotificationService {
     } catch (e) {
       print('❌ Init error: $e');
     }
-    
+
     print('🔔 ========== NOTIFICATION INIT END ==========');
   }
 
@@ -86,12 +103,19 @@ class NotificationService {
 
     const details = NotificationDetails(android: androidDetails);
 
+    final data = Map<String, dynamic>.from(message.data);
+
+    // 🔴 ENSURE notificationId exists
+    if (!data.containsKey('notificationId')) {
+      print('⚠️ notificationId missing in payload');
+    }
+
     await _localNotifications.show(
       message.hashCode,
       message.notification?.title,
       message.notification?.body,
       details,
-      payload: jsonEncode(message.data),
+      payload: jsonEncode(data),
     );
   }
 
@@ -99,21 +123,21 @@ class NotificationService {
     print('💾 ========== SAVE FCM TOKEN ==========');
     print('💾 User: $userId');
     print('💾 Token: ${_currentUserFcmToken?.substring(0, 30)}...');
-    
+
     if (_currentUserFcmToken == null) {
       print('❌ No token to save');
       return;
     }
-    
+
     try {
       // Use set with merge to avoid overwriting
       await _firestore.collection('users').doc(userId).set({
         'fcmToken': _currentUserFcmToken,
         'fcmTokenUpdatedAt': FieldValue.serverTimestamp(),
       }, SetOptions(merge: true));
-      
+
       print('✅ Token saved to Firestore');
-      
+
       // VERIFY
       final doc = await _firestore.collection('users').doc(userId).get();
       if (doc.exists && doc.data()?['fcmToken'] != null) {
@@ -121,12 +145,11 @@ class NotificationService {
       } else {
         print('❌ NOT FOUND in Firestore - Check security rules!');
       }
-      
     } catch (e) {
       print('❌ Save error: $e');
       print('❌ Check Firestore security rules!');
     }
-    
+
     print('💾 ========================================');
   }
 
@@ -136,75 +159,49 @@ class NotificationService {
     required String renteeName,
     required String itemName,
     required String bookingId,
+    required String itemId,
   }) async {
-    print('');
-    print('🔔 ========== CREATE NOTIFICATION ==========');
-    print('🔔 Type: Booking Request');
-    print('🔔 To: $renterId');
-    print('🔔 From: $renteeName');
-    print('🔔 Item: $itemName');
-    
-    try {
-      final data = {
-        'userId': renterId,
-        'type': 'booking_request',
-        'title': 'New Booking Request',
-        'body': '$renteeName wants to rent your $itemName',
-        'bookingId': bookingId,
-        'itemName': itemName,
-        'isRead': false,
-        'createdAt': FieldValue.serverTimestamp(),
-      };
-      
-      print('📝 Data: $data');
-      
-      final docRef = await _firestore.collection('notifications').add(data);
-      
-      print('✅ Created: ${docRef.id}');
-      
-      // VERIFY
-      final doc = await docRef.get();
-      if (doc.exists) {
-        print('✅ VERIFIED in Firestore');
-      } else {
-        print('❌ NOT FOUND - Check security rules!');
-      }
-      
-    } catch (e) {
-      print('❌ Create error: $e');
-      print('❌ FIRESTORE RULES ISSUE!');
-    }
-    
-    print('🔔 ========================================');
-    print('');
+    final docRef = await _firestore.collection('notifications').add({
+      'userId': renterId,
+      'fromUserId': renteeId,
+      'renterId': renterId,
+      'type': 'booking_request',
+      'title': 'New Booking Request',
+      'body': '$renteeName requested to book $itemName',
+      'bookingId': bookingId,
+      'itemId': itemId,
+      'itemName': itemName,
+      'isRead': false,
+      'createdAt': FieldValue.serverTimestamp(),
+    });
+    await docRef.update({'notificationId': docRef.id});
+
+    final notificationId = docRef.id;
+    print('✅ Notification ID: $notificationId');
   }
 
   Future<void> notifyRenteeOfBookingApproval({
     required String renteeId,
     required String itemName,
     required String bookingId,
-    required String meetUpAddress,
-    required DateTime startDate,
+    required String renterId,
   }) async {
-    print('🔔 Creating approval notification...');
-    
     try {
-      await _firestore.collection('notifications').add({
+      final docRef = await _firestore.collection('notifications').add({
         'userId': renteeId,
         'type': 'booking_approved',
         'title': 'Booking Approved ✅',
         'body': 'Your request for $itemName was approved!',
         'bookingId': bookingId,
+        'renterId': renterId,
         'itemName': itemName,
-        'meetUpAddress': meetUpAddress,
-        'startDate': Timestamp.fromDate(startDate),
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
 
-      print('✅ Approval notification created');
+      print('✅ Approval notification ID: ${docRef.id}');
     } catch (e) {
-      print('❌ Error: $e');
+      print('❌ Error creating approval notification: $e');
     }
   }
 
@@ -212,22 +209,43 @@ class NotificationService {
     required String renteeId,
     required String itemName,
     required String bookingId,
+    required String renterId,
   }) async {
     try {
-      await _firestore.collection('notifications').add({
+      final docRef = await _firestore.collection('notifications').add({
         'userId': renteeId,
-        'type': 'booking_cancelled',
-        'title': 'Booking Cancelled',
-        'body': 'Your request for $itemName was not approved',
+        'type': 'booking_rejected',
+        'title': 'Booking Rejected ❌',
+        'body': 'Your request for $itemName was rejected',
         'bookingId': bookingId,
+        'renterId': renterId,
         'itemName': itemName,
         'isRead': false,
         'createdAt': FieldValue.serverTimestamp(),
       });
+
+      print('❌ Rejection notification ID: ${docRef.id}');
     } catch (e) {
-      print('❌ Error: $e');
+      print('❌ Error creating rejection notification: $e');
     }
   }
+
+
+      Future<void> notifyRenteeApproved({
+        required String renteeId,
+        required String bookingId,
+        required String itemName,
+      }) async {
+        await FirebaseFirestore.instance.collection('notifications').add({
+          'userId': renteeId,
+          'type': 'booking_approved',
+          'title': 'Booking Approved ✅',
+          'body': 'Your booking for $itemName was approved',
+          'bookingId': bookingId,
+          'isRead': false,
+          'createdAt': FieldValue.serverTimestamp(),
+        });
+      }
 
   Future<void> notifyRenteeOfPickupConfirmation({
     required String renteeId,
@@ -289,11 +307,13 @@ class NotificationService {
         .orderBy('createdAt', descending: true)
         .limit(50)
         .snapshots()
-        .map((snapshot) => snapshot.docs.map((doc) {
-              final data = doc.data();
-              data['id'] = doc.id;
-              return data;
-            }).toList());
+        .map(
+          (snapshot) => snapshot.docs.map((doc) {
+            final data = doc.data();
+            data['id'] = doc.id;
+            return data;
+          }).toList(),
+        );
   }
 
   Future<void> markAsRead(String notificationId) async {
@@ -322,6 +342,44 @@ class NotificationService {
   }
 
   Future<void> deleteNotification(String notificationId) async {
-    await _firestore.collection('notifications').doc(notificationId).delete();
+    try {
+      await _firestore.collection('notifications').doc(notificationId).delete();
+      print('✅ Notification deleted: $notificationId');
+    } catch (e) {
+      print('❌ Failed to delete notification $notificationId: $e');
+    }
+  }
+
+  Future<void> _handleNotificationTap(Map<String, dynamic> data) async {
+    final bookingId = data['bookingId'];
+    final renterId = data['renterId'];
+    final notificationId = data['notificationId'];
+    final type = data['type'];
+
+    if (notificationId != null) {
+      await _firestore.collection('notifications').doc(notificationId).update({
+        'isRead': true,
+        'readAt': FieldValue.serverTimestamp(),
+      });
+    }
+
+    if (type == 'booking_request') {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => BookingRequestsScreen(
+            renterId: renterId,
+            focusBookingId: bookingId,
+          ),
+        ),
+      );
+    } else if (type == 'booking_approved' || type == 'booking_cancelled') {
+      navigatorKey.currentState?.push(
+        MaterialPageRoute(
+          builder: (_) => const HistoryRenteeScreen(
+            isRenter: false, // rentee history
+          ),
+        ),
+      );
+    }
   }
 }

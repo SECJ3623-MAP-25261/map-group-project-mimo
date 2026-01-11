@@ -12,9 +12,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 class BookingRequestsScreen extends StatefulWidget {
   final String renterId;
+  final String? focusBookingId; // ✅ ADD
 
-  const BookingRequestsScreen({Key? key, required this.renterId}) : super(key: key);
-
+  const BookingRequestsScreen({
+    Key? key,
+    required this.renterId,
+    this.focusBookingId,
+}) : super(key: key);
   @override
   State<BookingRequestsScreen> createState() => _BookingRequestsScreenState();
 }
@@ -22,6 +26,7 @@ class BookingRequestsScreen extends StatefulWidget {
 class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
   final BookingService _bookingService = BookingService(); // ✅ Use real BookingService
   final NotificationService _notificationService = NotificationService();
+  String? _selectedBookingId;
   String _filterStatus = 'all';
   bool _isLoading = true;
   String? _errorMessage;
@@ -32,7 +37,38 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     print('🔍 BookingRequestsScreen initialized');
     print('🔍 RenterId: ${widget.renterId}');
     _checkFirestoreConnection();
+    if (widget.focusBookingId != null) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _openSpecificBooking(widget.focusBookingId!);
+    });
   }
+  }
+
+  Future<void> _openSpecificBooking(String bookingId) async {
+  try {
+    final snap = await FirebaseFirestore.instance
+        .collection('bookings')
+        .doc(bookingId)
+        .get();
+
+    if (!snap.exists) return;
+
+    final booking = snap.data()!;
+    booking['id'] = snap.id;
+
+    setState(() {
+      _selectedBookingId = bookingId; // 🔥 IMPORTANT
+    });
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        _showBookingDetails(booking);
+      }
+    });
+  } catch (e) {
+    print('❌ Failed to open booking: $e');
+  }
+}
 
   Future<void> _checkFirestoreConnection() async {
     try {
@@ -111,6 +147,7 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
     try {
       print('🔄 Updating booking $bookingId to status: $newStatus');
       
+      _selectedBookingId = bookingId;
       // Get booking data BEFORE updating
       final bookingSnap = await FirebaseFirestore.instance
           .collection('bookings')
@@ -173,6 +210,12 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
             duration: const Duration(seconds: 2),
           ),
         );
+
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (_selectedBookingId != null) {
+          _openSpecificBooking(_selectedBookingId!);
+        }
+      });
       } else {
         print('❌ Failed to update booking status');
         ScaffoldMessenger.of(context).showSnackBar(
@@ -795,7 +838,12 @@ class _BookingRequestsScreenState extends State<BookingRequestsScreen> {
                                     isConfirmed ? Icons.face_retouching_natural : Icons.chevron_right,
                                     color: isConfirmed ? Colors.purple : Colors.grey,
                                   ),
-                                  onTap: () => _showBookingDetails(booking),
+                                  onTap: () {
+                                    setState(() {
+                                      _selectedBookingId = booking['id']; // 🔥 IMPORTANT
+                                    });
+                                    _showBookingDetails(booking);
+                                  },
                                 ),
                               );
                             },
