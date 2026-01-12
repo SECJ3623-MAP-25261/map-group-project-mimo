@@ -30,7 +30,7 @@ async function updateUserSpendingAnalysis(userId) {
 
   const analysisData = {
     monthly: calculateMonthlyAnalysis(resolvedBookings),
-    weeklyGroups: calculateWeeklyByMonth(resolvedBookings), // New Structure
+    weeklyGroups: calculateWeeklyByMonth(resolvedBookings), 
     category: calculateCategoryAnalysis(resolvedBookings),
     summary: {
       totalSpent: resolvedBookings.reduce((sum, b) => sum + b.finalFee, 0),
@@ -41,6 +41,7 @@ async function updateUserSpendingAnalysis(userId) {
     lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
   };
 
+  //create collection at firestore
   await db.collection("spendingAnalysis").doc(userId).set(analysisData);
   return analysisData;
 }

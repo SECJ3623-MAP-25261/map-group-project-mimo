@@ -51,7 +51,7 @@ class PeriodSelector extends StatelessWidget {
   }
 }
 
-// --- SUMMARY CARDS ---
+//summary cards
 class SummaryCards extends StatelessWidget {
   final Map<String, dynamic> summary;
   const SummaryCards({super.key, required this.summary});
@@ -87,7 +87,7 @@ class SummaryCards extends StatelessWidget {
   }
 }
 
-// --- BREAKDOWN LIST ---
+//breakdown list
 class BreakdownList extends StatelessWidget {
   final String selectedPeriod;
   final Map<String, dynamic> analysisData;

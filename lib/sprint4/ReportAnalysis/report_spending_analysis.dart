@@ -128,18 +128,18 @@ class _SpendingAnalysisScreenState extends State<SpendingAnalysisScreen> {
                   padding: const EdgeInsets.all(16),
                   child: Column(
                     children: [
-                      // 1. Period Switcher (Monthly/Weekly/Category)
+                      // Period Switcher (Monthly/Weekly/Category)
                       PeriodSelector(
                         selectedPeriod: _selectedPeriod,
                         onChanged: (val) => setState(() => _selectedPeriod = val),
                       ),
                       const SizedBox(height: 16),
                       
-                      // 2. Small Summary Cards
+                      //Small Summary Cards
                       SummaryCards(summary: _analysisData['summary'] ?? {}),
                       const SizedBox(height: 20),
                       
-                      // 3. The Big Chart
+                      //The Big Chart
                       AnalysisChartSection(
                         selectedPeriod: _selectedPeriod,
                         analysisData: _analysisData,
@@ -148,7 +148,7 @@ class _SpendingAnalysisScreenState extends State<SpendingAnalysisScreen> {
                       ),
                       const SizedBox(height: 16),
                       
-                      // 4. List of details at the bottom
+                      //List of details at the bottom
                       BreakdownList(
                         selectedPeriod: _selectedPeriod,
                         analysisData: _analysisData,

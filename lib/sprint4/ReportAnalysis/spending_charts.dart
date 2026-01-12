@@ -71,7 +71,7 @@ class AnalysisChartSection extends StatelessWidget {
   }
 }
 
-// BAR CHART LOGIC 
+//bar chart logic
 class _BarChartWidget extends StatelessWidget {
   final List<Map<String, dynamic>> data;
   final bool isMonthly;
@@ -114,7 +114,7 @@ class _BarChartWidget extends StatelessWidget {
   }
 }
 
-//PIE CHART LOGIC
+//pie chart logic
 class _PieChartWidget extends StatelessWidget {
   final List<Map<String, dynamic>> data;
   _PieChartWidget({required this.data});
